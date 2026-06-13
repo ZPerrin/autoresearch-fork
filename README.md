@@ -12,6 +12,14 @@ Forked from karpathy's [autoresearch](https://github.com/karpathy/autoresearch) 
 model and a fast train → evaluate → keep/discard loop against a frozen metric — but repoint it
 from text language modeling onto 2D structured prediction over positioned tokens.
 
+## Layout
+
+- `harness/` — Python module: generator, model, training, artifacts (`tablelab/`)
+- `viewer/` — Vite/React review app
+- `runs/` — git-tracked run artifacts
+- `docs/` — specs and plans
+- `reference/` — upstream LM files (karpathy/autoresearch) parked for reference
+
 ## What we're building
 
 See the active spec: [docs/specs/2026-06-13-v0-loop-closes-design.md](docs/specs/2026-06-13-v0-loop-closes-design.md).
@@ -52,8 +60,8 @@ foundation.)
 ## Status
 
 Building v0 ([plan](docs/plans/2026-06-13-v0-loop-closes-plan.md)): Phase 0 env ✓ · Phase 1
-contract ✓ · Phase 2 viewer (next) · Phases 3–4 (generator, model) pending. Upstream LM files
-(`train.py`, `prepare.py`, `program.md`) stay as reference until v0 lands.
+contract ✓ · Phase 2 viewer (thin slice ✓) · Phase 3 generator (next) · Phase 4 model pending.
+Upstream LM files (`train.py`, `prepare.py`, `program.md`) are parked in `reference/`.
 
 ## License
 

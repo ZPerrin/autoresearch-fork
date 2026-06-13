@@ -27,25 +27,27 @@ Execution **stops at each gate** for human validation before the next phase star
 ## File structure (v0)
 
 ```
-pyproject.toml             modify  device-aware torch, shed LM-only deps, add pytest
-tablelab/__init__.py       create  package marker
-tablelab/device.py         create  get_device() — cuda → mps → cpu
-tablelab/artifacts.py      create  schema dataclasses + read/write/validate (the contract)
-tablelab/generate.py       create  synthetic layout generator (Phase 3)
-tablelab/model.py          create  from-scratch layout transformer (Phase 4)
-tablelab/metric.py         create  frozen metric + baselines (Phase 4)
-tablelab/train.py          create  editable experiment: wire-up + fixed-step loop + emit (Phase 4)
-tests/test_device.py       create  Phase 0
-tests/test_artifacts.py    create  Phase 1
-tests/test_generate.py     create  Phase 3
-tests/test_model.py        create  Phase 4
-tests/test_metric.py       create  Phase 4
-runs/_fixture/             create  hand-authored fixture run (Phase 1)
-runs/index.json            create  run list, seeded with the fixture (Phase 1)
-viewer/                    create  Vite + React + TS app (Phase 2)
+harness/pyproject.toml             modify  device-aware torch, shed LM-only deps, add pytest
+harness/tablelab/__init__.py       create  package marker
+harness/tablelab/device.py         create  get_device() — cuda → mps → cpu
+harness/tablelab/artifacts.py      create  schema dataclasses + read/write/validate (the contract)
+harness/tablelab/generate.py       create  synthetic layout generator (Phase 3)
+harness/tablelab/model.py          create  from-scratch layout transformer (Phase 4)
+harness/tablelab/metric.py         create  frozen metric + baselines (Phase 4)
+harness/tablelab/train.py          create  editable experiment: wire-up + fixed-step loop + emit (Phase 4)
+harness/tests/test_device.py       create  Phase 0
+harness/tests/test_artifacts.py    create  Phase 1
+harness/tests/test_generate.py     create  Phase 3
+harness/tests/test_model.py        create  Phase 4
+harness/tests/test_metric.py       create  Phase 4
+runs/_fixture/                     create  hand-authored fixture run (Phase 1)
+runs/index.json                    create  run list, seeded with the fixture (Phase 1)
+viewer/                            create  Vite + React + TS app (Phase 2)
+reference/                         exists  upstream LM files parked here (train.py, prepare.py,
+                                           program.md, analysis.ipynb, progress.png)
 ```
 
-Upstream LM files (`train.py`, `prepare.py`, `program.md`) stay at root as reference and are removed only once v0 works (final cleanup task in Phase 4).
+Upstream LM files are parked in `reference/` and will be removed from there only once v0 is complete (final cleanup task in Phase 4).
 
 ---
 
@@ -96,16 +98,16 @@ Expected: completes without error; on macOS pulls a non-CUDA torch wheel.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add pyproject.toml uv.lock
+git add harness/pyproject.toml harness/uv.lock
 git commit -m "build: device-aware torch deps, shed LM-only packages"
 ```
 
 ### Task 0.2: `get_device()`
 
 **Files:**
-- Create: `tablelab/__init__.py` (empty)
-- Create: `tablelab/device.py`
-- Test: `tests/test_device.py`
+- Create: `harness/tablelab/__init__.py` (empty)
+- Create: `harness/tablelab/device.py`
+- Test: `harness/tests/test_device.py`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -160,7 +162,7 @@ Expected: PASS (3 passed)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add tablelab/__init__.py tablelab/device.py tests/test_device.py
+git add harness/tablelab/__init__.py harness/tablelab/device.py harness/tests/test_device.py
 git commit -m "feat: device-agnostic get_device()"
 ```
 
@@ -168,7 +170,7 @@ git commit -m "feat: device-agnostic get_device()"
 
 Run on the M4 and on the 3080 Ti:
 ```bash
-uv sync
+cd harness && uv sync
 uv run python -c "from tablelab.device import get_device; print(get_device())"
 ```
 Expected: `mps` on the Mac, `cuda` on the 3080 Ti, `uv sync` clean on both. **Stop. Confirm before Phase 1.**
@@ -180,8 +182,8 @@ Expected: `mps` on the Mac, `cuda` on the 3080 Ti, `uv sync` clean on both. **St
 ### Task 1.1: Schema dataclasses + read/write/validate
 
 **Files:**
-- Create: `tablelab/artifacts.py`
-- Test: `tests/test_artifacts.py`
+- Create: `harness/tablelab/artifacts.py`
+- Test: `harness/tests/test_artifacts.py`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -353,7 +355,7 @@ Expected: PASS (3 passed)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add tablelab/artifacts.py tests/test_artifacts.py
+git add harness/tablelab/artifacts.py harness/tests/test_artifacts.py
 git commit -m "feat: artifact schema (the contract) — read/write/validate"
 ```
 
@@ -364,14 +366,14 @@ git commit -m "feat: artifact schema (the contract) — read/write/validate"
 
 - [ ] **Step 1: Generate the fixture from the schema (guarantees conformance)**
 
-Run:
+Run from `harness/`:
 ```bash
 uv run python -c "
 from pathlib import Path
 from tablelab.artifacts import RunRecord, Sample, Token, write_run
 toks = [Token(0.05,0.10,0.40,0.16,1,0,1,0), Token(0.05,0.10,0.40,0.16,2,0,1,0),
         Token(0.55,0.10,0.70,0.16,1,1,1,1), Token(0.80,0.10,0.95,0.16,1,2,1,3)]
-write_run(Path('runs'), RunRecord(
+write_run(Path('../runs'), RunRecord(
     run_id='_fixture', commit='0000000', branch='exp/v0', device='cpu',
     config={'seed':1,'generator_version':1,
             'difficulty':{'rows':[2,6],'cols':[2,6],'jitter':0.0,'text':False,'background':False}},
@@ -388,7 +390,7 @@ Expected: `fixture written`; files appear under `runs/_fixture/` and `runs/index
 
 - [ ] **Step 2: Verify it validates**
 
-Run: `uv run python -c "from pathlib import Path; from tablelab.artifacts import validate_run_dir; print(validate_run_dir(Path('runs/_fixture')))"`
+Run from `harness/`: `uv run python -c "from pathlib import Path; from tablelab.artifacts import validate_run_dir; print(validate_run_dir(Path('../runs/_fixture')))"`
 Expected: `[]`
 
 - [ ] **Step 3: Commit**
@@ -424,9 +426,9 @@ Read `runs/_fixture/run.json` and `runs/_fixture/samples.json`. Confirm the shap
 **Builds:** `tablelab/generate.py` — the experiment of section 2 of the spec.
 
 **Tasks (to expand):**
-- 3.1 `generate_sample(rng, difficulty)` — sample grid (rows/cols ∈ [2,6]), lay normalized boxes, optional jitter, shuffle token order, attach `(true_r,true_c)`; boxes-only (`text=None`).
+- 3.1 `generate_sample(rng, difficulty)` — sample grid (rows/cols ∈ [2,6]), lay normalized boxes, optional jitter, shuffle token order, attach `(true_r,true_c)`; boxes-only (`text=None`). (`harness/tablelab/generate.py`)
 - 3.2 `generate_batch(seed, n, difficulty)` — deterministic by seed; carries `generator_version`.
-- 3.3 Tests: determinism by seed; labels consistent with geometry; token count == rows*cols; raising `jitter` changes output.
+- 3.3 Tests: determinism by seed; labels consistent with geometry; token count == rows*cols; raising `jitter` changes output. (`harness/tests/test_generate.py`)
 - 3.4 Preview script: write N generated samples as a `runs/<id>/samples.json` (truth only, `pred=None`) so the viewer renders generated data.
 
 **Gate 3:** render generated samples in the viewer; validate task realism + difficulty-knob behavior. Locks: task design, formulation, difficulty knobs. *(Decides §12: variable token count → padding/mask; fixed vs relative row/col width.)*
@@ -438,11 +440,11 @@ Read `runs/_fixture/run.json` and `runs/_fixture/samples.json`. Confirm the shap
 **Builds:** `tablelab/model.py`, `tablelab/metric.py`, `tablelab/train.py` — the first real experiments.
 
 **Tasks (to expand):**
-- 4.1 `metric.py`: `row_acc`, `col_acc`, `cell_exact`; baselines `majority` and `geosort`. Tests on hand-constructed inputs.
-- 4.2 `model.py`: linear box embedding `4→d_model` → transformer encoder → row/col heads. Padding + attention mask per Gate 3 decision. Test forward output shapes.
-- 4.3 `train.py`: wire generator → model → summed CE loss → fixed-step loop → eval → `write_run()` with curve + metrics + a few rendered eval samples (truth + prediction). Smoke test: a few steps emit a schema-valid run.
+- 4.1 `metric.py`: `row_acc`, `col_acc`, `cell_exact`; baselines `majority` and `geosort`. Tests on hand-constructed inputs. (`harness/tablelab/metric.py`, `harness/tests/test_metric.py`)
+- 4.2 `model.py`: linear box embedding `4→d_model` → transformer encoder → row/col heads. Padding + attention mask per Gate 3 decision. Test forward output shapes. (`harness/tablelab/model.py`, `harness/tests/test_model.py`)
+- 4.3 `train.py`: wire generator → model → summed CE loss → fixed-step loop → eval → `write_run()` with curve + metrics + a few rendered eval samples (truth + prediction). Smoke test: a few steps emit a schema-valid run. (`harness/tablelab/train.py`)
 - 4.4 Run the baseline experiment on `exp/v0`; validate H1 (beats majority), H2 (attention ablation worse), H3 (jitter degrades cell_exact).
-- 4.5 Cleanup: remove upstream `train.py`/`prepare.py`/`program.md` reference files now that v0 stands on its own.
+- 4.5 Cleanup: remove upstream reference files from `reference/` now that v0 stands on its own.
 
 **Gate 4:** first real run renders in the viewer; H1–H3 confirmed. Locks: model size, budget value, hyperparams (cheap to revisit — append-only ledger).
 

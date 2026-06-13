@@ -204,10 +204,14 @@ Designed so each unit is testable alone, joined only by the artifact contract.
 
 1. **Artifact schema + a hand-authored fixture** (`runs/_fixture/`) — define the contract; the
    fixture unblocks the viewer immediately.
-2. **Env foundation** — device-aware deps, `get_device()`.
+2. **Env foundation** — device-aware deps, `get_device()`. Python package lives in `harness/`
+   (`harness/pyproject.toml`, `harness/tablelab/`). Upstream LM reference files are parked in
+   `reference/`.
 3. **Synthetic generator** — testable in isolation: emits valid samples; round-trips the schema.
+   (`harness/tablelab/generate.py`, `harness/tests/test_generate.py`)
 4. **Model + train + eval + emitter** — consumes generator output, emits artifacts conforming to
-   the schema; validates H1–H3.
+   the schema; validates H1–H3. (`harness/tablelab/model.py`, `harness/tablelab/train.py`,
+   `harness/tablelab/metric.py`, `harness/tests/`)
 5. **Viewer** — built against the fixture first, then pointed at real `runs/`.
 
 ## 10. Repo workflow (assumed by this spec)
