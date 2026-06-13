@@ -39,8 +39,8 @@ export interface Token {
   x1: number
   y1: number
   text: string | null
-  label: Record<string, unknown>
-  pred: Record<string, unknown>
+  label: Record<string, unknown> | null
+  pred: Record<string, unknown> | null
 }
 
 export interface Sample {

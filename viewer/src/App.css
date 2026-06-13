@@ -204,6 +204,11 @@
   border-color: #E24B4A;
 }
 
+.swatch-gt {
+  background: rgba(55, 138, 221, 0.10);
+  border-color: #378ADD;
+}
+
 /* ---- SVG ---- */
 .svg-wrapper {
   overflow-x: auto;
