@@ -21,3 +21,7 @@ dev/
 
 # Results file
 results.tsv
+
+# Viewer (Vite/React)
+viewer/node_modules/
+viewer/dist/
