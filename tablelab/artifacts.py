@@ -9,10 +9,9 @@ SCHEMA_VERSION = 1
 @dataclass
 class Token:
     x0: float; y0: float; x1: float; y1: float
-    true_r: int; true_c: int
-    pred_r: int | None = None
-    pred_c: int | None = None
     text: str | None = None
+    label: dict | None = None   # ground-truth target for this experiment's task
+    pred: dict | None = None    # model output for the same task (may include confidence)
 
 
 @dataclass
