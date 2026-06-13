@@ -30,12 +30,12 @@ Execution **stops at each gate** for human validation before the next phase star
 
 ```
 harness/pyproject.toml             device-aware torch + Pillow; LM-only deps shed
-harness/tablelab/device.py         get_device() — cuda → mps → cpu
-harness/tablelab/artifacts.py      contract v2: dataset manifest + samples + run records
-harness/tablelab/generate.py       dataset builder: render PNG + boxes/text/labels → datasets/<id>/
-harness/tablelab/model.py          from-scratch M0 spatial model (later rungs: +text, +visual)
-harness/tablelab/metric.py         frozen metric + baselines
-harness/tablelab/train.py          editable experiment: train on a dataset, emit run artifacts
+harness/src/tablelab/device.py     get_device() — cuda → mps → cpu
+harness/src/tablelab/artifacts.py  contract v2: dataset manifest + samples + run records
+harness/src/tablelab/generate.py   dataset builder: render PNG + boxes/text/labels → datasets/<id>/
+harness/src/tablelab/model.py      from-scratch M0 spatial model (later rungs: +text, +visual)
+harness/src/tablelab/metric.py     frozen metric + baselines
+harness/src/tablelab/train.py      editable experiment: train on a dataset, emit run artifacts
 datasets/<id>/                     curated synthetic data — local & gitignored: manifest + samples + images/
 runs/                              git-tracked experiment ledger (JSON only): index.json + <run>/
 runs/_fixture/                     tiny committed contract example (incl. a small image)

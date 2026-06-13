@@ -16,7 +16,7 @@ spatial-only upward.
 
 ## Layout
 
-- `harness/` — Python module: dataset builder, model, training, artifacts (`tablelab/`)
+- `harness/` — Python module: dataset builder, model, training, artifacts (`src/tablelab/`)
 - `viewer/` — Vite/React review app (overlays predictions on the page image)
 - `runs/` — git-tracked experiment ledger (JSON only, no binaries)
 - `datasets/` — curated synthetic datasets (images + samples), **local & gitignored**
