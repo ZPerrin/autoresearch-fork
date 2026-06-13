@@ -1,118 +1,176 @@
 import { useEffect, useState } from 'react'
-import type { RunIndex, RunDetail, SamplesFile } from './types'
-import RunTable from './RunTable'
-import PredictionOverlay from './PredictionOverlay'
+import type {
+  DatasetsIndex,
+  DatasetManifest,
+  RunIndex,
+  RunSummary,
+  SamplesFile,
+  RunDetail,
+  ActiveSource,
+  Token,
+} from './types'
+import SourceSelector from './SourceSelector'
+import DocumentViewer from './DocumentViewer'
+import MetaPanel from './MetaPanel'
 import './App.css'
 
-type LoadState = 'idle' | 'loading' | 'error'
+const DEFAULT_DATASET = 'grid-invoice-v1'
 
 export default function App() {
-  const [index, setIndex] = useState<RunIndex | null>(null)
-  const [indexState, setIndexState] = useState<LoadState>('idle')
+  // Index state
+  const [datasets, setDatasets]           = useState<DatasetManifest[]>([])
+  const [runs, setRuns]                   = useState<RunSummary[]>([])
+  const [indexLoading, setIndexLoading]   = useState(true)
+  const [indexError, setIndexError]       = useState<string | null>(null)
 
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [runDetail, setRunDetail] = useState<RunDetail | null>(null)
-  const [samples, setSamples] = useState<SamplesFile | null>(null)
-  const [detailState, setDetailState] = useState<LoadState>('idle')
+  // Active source
+  const [activeSource, setActiveSource]   = useState<ActiveSource | null>(null)
+  const [sourceLoading, setSourceLoading] = useState(false)
+  const [sourceError, setSourceError]     = useState<string | null>(null)
+  const [activeKind, setActiveKind]       = useState<'dataset' | 'run' | null>(null)
+  const [activeId, setActiveId]           = useState<string | null>(null)
 
-  // Fetch index on mount
+  // Selected token
+  const [selectedToken, setSelectedToken] = useState<Token | null>(null)
+
+  // Load both indices on mount
   useEffect(() => {
-    setIndexState('loading')
-    fetch('/runs/index.json')
-      .then(r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    setIndexLoading(true)
+    Promise.all([
+      fetch('/datasets/index.json').then(r => {
+        if (!r.ok) throw new Error(`datasets/index.json HTTP ${r.status}`)
+        return r.json() as Promise<DatasetsIndex>
+      }),
+      fetch('/runs/index.json').then(r => {
+        if (!r.ok) throw new Error(`runs/index.json HTTP ${r.status}`)
         return r.json() as Promise<RunIndex>
+      }),
+    ])
+      .then(([dsIdx, runsIdx]) => {
+        setDatasets(dsIdx.datasets ?? [])
+        setRuns(runsIdx.runs ?? [])
+        setIndexLoading(false)
+        // Auto-load default dataset if present
+        const defaultDs = dsIdx.datasets?.find(d => d.dataset_id === DEFAULT_DATASET)
+          ?? dsIdx.datasets?.[0]
+        if (defaultDs) {
+          loadDataset(defaultDs.dataset_id)
+        }
       })
-      .then(data => {
-        setIndex(data)
-        setIndexState('idle')
+      .catch(err => {
+        setIndexError(String(err))
+        setIndexLoading(false)
       })
-      .catch(() => setIndexState('error'))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Fetch run detail + samples when selection changes
-  useEffect(() => {
-    if (!selectedId) return
-    setDetailState('loading')
-    setRunDetail(null)
-    setSamples(null)
+  function loadDataset(id: string) {
+    setActiveKind('dataset')
+    setActiveId(id)
+    setSourceLoading(true)
+    setSourceError(null)
+    setSelectedToken(null)
+    setActiveSource(null)
 
     Promise.all([
-      fetch(`/runs/${selectedId}/run.json`).then(r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
-        return r.json() as Promise<RunDetail>
+      fetch(`/datasets/${id}/manifest.json`).then(r => {
+        if (!r.ok) throw new Error(`manifest HTTP ${r.status}`)
+        return r.json() as Promise<DatasetManifest>
       }),
-      fetch(`/runs/${selectedId}/samples.json`).then(r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+      fetch(`/datasets/${id}/samples.json`).then(r => {
+        if (!r.ok) throw new Error(`samples HTTP ${r.status}`)
         return r.json() as Promise<SamplesFile>
       }),
     ])
-      .then(([detail, samp]) => {
-        setRunDetail(detail)
-        setSamples(samp)
-        setDetailState('idle')
+      .then(([manifest, samples]) => {
+        setActiveSource({ kind: 'dataset', manifest, samples })
+        setSourceLoading(false)
       })
-      .catch(() => setDetailState('error'))
-  }, [selectedId])
+      .catch(err => {
+        setSourceError(String(err))
+        setSourceLoading(false)
+      })
+  }
+
+  function loadRun(id: string) {
+    setActiveKind('run')
+    setActiveId(id)
+    setSourceLoading(true)
+    setSourceError(null)
+    setSelectedToken(null)
+    setActiveSource(null)
+
+    Promise.all([
+      fetch(`/runs/${id}/run.json`).then(r => {
+        if (!r.ok) throw new Error(`run.json HTTP ${r.status}`)
+        return r.json() as Promise<RunDetail>
+      }),
+      fetch(`/runs/${id}/samples.json`).then(r => {
+        if (!r.ok) throw new Error(`samples.json HTTP ${r.status}`)
+        return r.json() as Promise<SamplesFile>
+      }),
+    ])
+      .then(([detail, samples]) => {
+        setActiveSource({ kind: 'run', detail, samples })
+        setSourceLoading(false)
+      })
+      .catch(err => {
+        setSourceError(String(err))
+        setSourceLoading(false)
+      })
+  }
+
+  const samples = activeSource?.samples.samples ?? []
+  const task = activeSource?.kind === 'run'
+    ? activeSource.detail.config.task
+    : activeSource?.kind === 'dataset'
+    ? activeSource.manifest.task
+    : undefined
 
   return (
     <div className="app">
       <header className="app-header">
-        <h1>autoresearch · run viewer</h1>
+        <h1>autoresearch · viewer</h1>
       </header>
 
-      <main>
-        {/* Run list */}
-        <section className="section">
-          <h2>Runs</h2>
-          {indexState === 'loading' && <p className="loading-note">Loading index…</p>}
-          {indexState === 'error'   && <p className="error-note">Failed to load /runs/index.json. Is the dev server running?</p>}
-          {index && (
-            <RunTable
-              runs={index.runs}
-              selectedId={selectedId}
-              onSelect={id => {
-                setSelectedId(id)
-                setRunDetail(null)
-                setSamples(null)
-              }}
+      <div className="split-layout">
+        {/* LEFT: document viewer */}
+        <div className="pane pane-left">
+          {sourceLoading && <p className="loading-note">Loading source…</p>}
+          {sourceError  && <p className="error-note">{sourceError}</p>}
+          {!sourceLoading && !sourceError && samples.length === 0 && activeSource == null && (
+            <p className="empty-note" style={{ padding: 24 }}>Select a dataset or run →</p>
+          )}
+          {samples.length > 0 && (
+            <DocumentViewer
+              samples={samples}
+              task={task}
+              selectedToken={selectedToken}
+              onSelectToken={setSelectedToken}
             />
           )}
-        </section>
+        </div>
 
-        {/* Run detail */}
-        {selectedId && (
-          <section className="section detail-section">
-            <h2>
-              Run: <span className="mono">{selectedId}</span>
-            </h2>
+        {/* RIGHT: metadata panel */}
+        <div className="pane pane-right">
+          {indexError && <p className="error-note" style={{ marginBottom: 12 }}>{indexError}</p>}
 
-            {detailState === 'loading' && <p className="loading-note">Loading run data…</p>}
-            {detailState === 'error'   && <p className="error-note">Failed to load run data.</p>}
+          <SourceSelector
+            datasets={datasets}
+            runs={runs}
+            activeKind={activeKind}
+            activeId={activeId}
+            onSelectDataset={loadDataset}
+            onSelectRun={loadRun}
+            loading={indexLoading}
+          />
 
-            {runDetail && samples && (
-              <>
-                <div className="run-meta">
-                  <dl>
-                    <dt>Branch</dt><dd className="mono">{runDetail.branch}</dd>
-                    <dt>Commit</dt><dd className="mono">{runDetail.commit}</dd>
-                    <dt>Device</dt><dd>{runDetail.device}</dd>
-                    <dt>Task</dt>  <dd className="mono">{runDetail.config.task}</dd>
-                    <dt>Status</dt><dd><span className={`status-badge status-${runDetail.status}`}>{runDetail.status}</span></dd>
-                    <dt>Wall time</dt><dd>{runDetail.wall_seconds.toFixed(1)} s</dd>
-                  </dl>
-                </div>
-
-                <h3>Prediction overlay</h3>
-                <PredictionOverlay
-                  task={runDetail.config.task}
-                  samples={samples.samples}
-                />
-              </>
-            )}
-          </section>
-        )}
-      </main>
+          <MetaPanel
+            source={activeSource}
+            selectedToken={selectedToken}
+          />
+        </div>
+      </div>
     </div>
   )
 }

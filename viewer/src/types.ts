@@ -1,4 +1,32 @@
-// ---- Artifact schema types (mirrors runs/ JSON contract) ----
+// ---- Artifact schema types (mirrors runs/ and datasets/ JSON contract v2) ----
+
+// ---- Shared ----
+
+export interface Token {
+  x0: number
+  y0: number
+  x1: number
+  y1: number
+  text: string | null
+  label: { record?: number; field?: number; [key: string]: unknown } | null
+  pred:  { record?: number; field?: number; confidence?: number; [key: string]: unknown } | null
+}
+
+export interface Sample {
+  id: number
+  image: string        // URL like /datasets/<id>/images/0.png
+  width: number        // page pixel width
+  height: number       // page pixel height
+  tokens: Token[]
+}
+
+export interface SamplesFile {
+  schema_version: number
+  dataset_id?: string
+  samples: Sample[]
+}
+
+// ---- Runs ----
 
 export interface RunSummary {
   run_id: string
@@ -7,6 +35,7 @@ export interface RunSummary {
   device: string
   status: string
   description: string
+  dataset_id?: string
   metrics: Record<string, number>
 }
 
@@ -23,7 +52,7 @@ export interface RunDetail {
   device: string
   config: {
     task: string
-    seed: number
+    seed?: number
     [key: string]: unknown
   }
   metrics: Record<string, number>
@@ -31,24 +60,34 @@ export interface RunDetail {
   wall_seconds: number
   status: string
   description: string
+  dataset_id?: string
 }
 
-export interface Token {
-  x0: number
-  y0: number
-  x1: number
-  y1: number
-  text: string | null
-  label: Record<string, unknown> | null
-  pred: Record<string, unknown> | null
-}
+// ---- Datasets ----
 
-export interface Sample {
-  id: number
-  tokens: Token[]
-}
-
-export interface SamplesFile {
+export interface DatasetManifest {
   schema_version: number
-  samples: Sample[]
+  dataset_id: string
+  generator_version?: number
+  task: string
+  modalities: string[]
+  count: number
+  config: {
+    schema_name?: string
+    fields?: string[]
+    page?: [number, number]
+    difficulty?: Record<string, unknown>
+    [key: string]: unknown
+  }
 }
+
+export interface DatasetsIndex {
+  schema_version: number
+  datasets: DatasetManifest[]
+}
+
+// ---- Source (what the left pane is currently showing) ----
+
+export type ActiveSource =
+  | { kind: 'dataset'; manifest: DatasetManifest; samples: SamplesFile }
+  | { kind: 'run';     detail: RunDetail;         samples: SamplesFile }
