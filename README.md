@@ -25,12 +25,13 @@ spatial-only upward.
 
 ## What we're building
 
-See the active spec: [docs/specs/2026-06-13-v0-loop-closes-design.md](docs/specs/2026-06-13-v0-loop-closes-design.md).
+Authoritative design & roadmap:
+[docs/specs/2026-06-13-design-and-roadmap.md](docs/specs/2026-06-13-design-and-roadmap.md).
 
-**v0 — "the loop closes":** synthetic dataset builder → from-scratch model → frozen metric →
-static run artifacts → local viewer overlaying predictions on the page. The data is multimodal
-from the start; the first model is spatial-only. Specs live in `docs/specs/`; each milestone gets
-its own.
+The harness is in place — env, contract v2, multimodal dataset builder, split-pane viewer. The
+**active milestone is the synthetic data toolkit**: a CLI + compositional API to declare document
+classes, compose structural features, and curate/fork datasets — before we build the model loop.
+Specs live in `docs/specs/`; each milestone gets its own.
 
 ## How to work in this repo
 
@@ -64,9 +65,10 @@ just need to train and evaluate.
 
 ## Status
 
-Building v0 — **multimodal data foundation** (spatial / semantic / visual). Env ✓. Revising the
-contract → dataset-builder → image-overlay viewer (schema v2), then the spatial (M0) model.
-Upstream LM files (`train.py`, `prepare.py`, `program.md`) are parked in `reference/`.
+Harness built: env ✓, contract v2 ✓, multimodal dataset builder ✓, split-pane viewer ✓.
+**Active: the synthetic data toolkit** (CLI + compositional API → structural realism →
+document-class breadth; visual realism deferred). The model loop comes after. Upstream LM files
+(`train.py`, `prepare.py`, `program.md`) are parked in `reference/`.
 
 ## License
 

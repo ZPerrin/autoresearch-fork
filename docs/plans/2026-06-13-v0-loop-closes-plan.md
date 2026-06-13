@@ -6,7 +6,7 @@
 
 **Architecture:** A Python module (`harness/tablelab/`) builds curated synthetic **datasets** (`datasets/<id>/`, local & gitignored — images + samples) and trains models that emit a git-tracked, binary-free experiment ledger under `runs/`; a static Vite/React app (`viewer/`) serves and composes both, overlaying predictions on the page image. Joined only by the artifact contract (schema v2). Data is multimodal (spatial/semantic/visual); the model climbs M0 (spatial) → M3 (fusion). Built in phases, each ending at a human-review gate.
 
-> **Revision note (multimodal):** v0 pivoted to a multimodal data foundation with a `datasets/` vs `runs/` split. The authoritative build order and contract live in the revised spec (§6, §9). The detailed Phase 0–1 steps below are historical — TDD was skipped, and the contract is now schema v2 (per-token `text`, per-sample `image`, `dataset_id` on runs).
+> **Revision note:** Authoritative current design + roadmap is [`docs/specs/2026-06-13-design-and-roadmap.md`](../specs/2026-06-13-design-and-roadmap.md). The foundation below (env, contract, dataset builder, viewer) is **built**; the **active milestone is now the synthetic data toolkit** (CLI + compositional API), and the model-loop phases (Phase 4) are **deferred** until it matures. The detailed Phase 0–1 steps below are historical (TDD was skipped; contract is schema v2).
 
 **Tech Stack:** Python 3.10+, PyTorch (device-agnostic, no Muon/compile/bf16), `uv`, pytest; Vite + React + TypeScript for the viewer.
 

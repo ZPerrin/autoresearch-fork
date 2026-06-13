@@ -1,8 +1,10 @@
 # v0 — "the loop closes"
 
-- Status: draft for review
+- Status: **deferred milestone — the model loop.** Authoritative current design + roadmap is
+  [design-and-roadmap](2026-06-13-design-and-roadmap.md); the active milestone is the synthetic
+  data toolkit. This spec covers the *model-loop* milestone, to resume once the toolkit matures.
 - Date: 2026-06-13 (revised: multimodal data foundation + dataset/run split)
-- Scope: the first end-to-end milestone for the from-scratch **multimodal** document-extraction harness
+- Scope: the model-loop milestone — train a from-scratch model on a dataset and close the loop
 
 ## 1. Goal
 
