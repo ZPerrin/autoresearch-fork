@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "run_id": "_genpreview",
+  "commit": "0000000",
+  "branch": "exp/v0",
+  "device": "cpu",
+  "config": {
+    "task": "grid_record_field",
+    "seed": 7,
+    "generator_version": 1,
+    "difficulty": {
+      "rows": [
+        2,
+        6
+      ],
+      "cols": [
+        2,
+        6
+      ],
+      "jitter": 0.0,
+      "text": false,
+      "background": false
+    }
+  },
+  "metrics": {},
+  "curve": [],
+  "wall_seconds": 0.0,
+  "status": "keep",
+  "description": "generator preview (ground truth only)"
+}

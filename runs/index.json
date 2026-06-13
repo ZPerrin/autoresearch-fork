@@ -15,6 +15,15 @@
         "baseline_majority_exact": 0.08,
         "baseline_geosort_exact": 0.86
       }
+    },
+    {
+      "run_id": "_genpreview",
+      "commit": "0000000",
+      "branch": "exp/v0",
+      "device": "cpu",
+      "status": "keep",
+      "description": "generator preview (ground truth only)",
+      "metrics": {}
     }
   ]
 }

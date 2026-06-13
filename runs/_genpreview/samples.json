@@ -1,0 +1,1391 @@
+{
+  "schema_version": 1,
+  "samples": [
+    {
+      "id": 0,
+      "tokens": [
+        {
+          "x0": 0.086,
+          "y0": 0.3155,
+          "x1": 0.314,
+          "y1": 0.4595,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.686,
+          "y0": 0.7655,
+          "x1": 0.914,
+          "y1": 0.9095,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.686,
+          "y0": 0.3155,
+          "x1": 0.914,
+          "y1": 0.4595,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.386,
+          "y0": 0.5405,
+          "x1": 0.614,
+          "y1": 0.6845,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.086,
+          "y0": 0.7655,
+          "x1": 0.314,
+          "y1": 0.9095,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.386,
+          "y0": 0.3155,
+          "x1": 0.614,
+          "y1": 0.4595,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.686,
+          "y0": 0.0905,
+          "x1": 0.914,
+          "y1": 0.2345,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.686,
+          "y0": 0.5405,
+          "x1": 0.914,
+          "y1": 0.6845,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.386,
+          "y0": 0.0905,
+          "x1": 0.614,
+          "y1": 0.2345,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.086,
+          "y0": 0.0905,
+          "x1": 0.314,
+          "y1": 0.2345,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.386,
+          "y0": 0.7655,
+          "x1": 0.614,
+          "y1": 0.9095,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.086,
+          "y0": 0.5405,
+          "x1": 0.314,
+          "y1": 0.6845,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 0
+          },
+          "pred": null
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "tokens": [
+        {
+          "x0": 0.0716,
+          "y0": 0.2624,
+          "x1": 0.2084,
+          "y1": 0.3776,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.7916,
+          "y0": 0.0824,
+          "x1": 0.9284,
+          "y1": 0.1976,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 4
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.4316,
+          "y0": 0.4424,
+          "x1": 0.5684,
+          "y1": 0.5576,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.0716,
+          "y0": 0.8024,
+          "x1": 0.2084,
+          "y1": 0.9176,
+          "text": null,
+          "label": {
+            "record": 4,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.0716,
+          "y0": 0.6224,
+          "x1": 0.2084,
+          "y1": 0.7376,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.0716,
+          "y0": 0.4424,
+          "x1": 0.2084,
+          "y1": 0.5576,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.2516,
+          "y0": 0.6224,
+          "x1": 0.3884,
+          "y1": 0.7376,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.4316,
+          "y0": 0.8024,
+          "x1": 0.5684,
+          "y1": 0.9176,
+          "text": null,
+          "label": {
+            "record": 4,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.6116,
+          "y0": 0.2624,
+          "x1": 0.7484,
+          "y1": 0.3776,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 3
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.2516,
+          "y0": 0.4424,
+          "x1": 0.3884,
+          "y1": 0.5576,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.2516,
+          "y0": 0.8024,
+          "x1": 0.3884,
+          "y1": 0.9176,
+          "text": null,
+          "label": {
+            "record": 4,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.0716,
+          "y0": 0.0824,
+          "x1": 0.2084,
+          "y1": 0.1976,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.2516,
+          "y0": 0.2624,
+          "x1": 0.3884,
+          "y1": 0.3776,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.7916,
+          "y0": 0.4424,
+          "x1": 0.9284,
+          "y1": 0.5576,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 4
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.7916,
+          "y0": 0.2624,
+          "x1": 0.9284,
+          "y1": 0.3776,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 4
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.7916,
+          "y0": 0.6224,
+          "x1": 0.9284,
+          "y1": 0.7376,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 4
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.6116,
+          "y0": 0.8024,
+          "x1": 0.7484,
+          "y1": 0.9176,
+          "text": null,
+          "label": {
+            "record": 4,
+            "field": 3
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.6116,
+          "y0": 0.0824,
+          "x1": 0.7484,
+          "y1": 0.1976,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 3
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.6116,
+          "y0": 0.6224,
+          "x1": 0.7484,
+          "y1": 0.7376,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 3
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.2516,
+          "y0": 0.0824,
+          "x1": 0.3884,
+          "y1": 0.1976,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.6116,
+          "y0": 0.4424,
+          "x1": 0.7484,
+          "y1": 0.5576,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 3
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.4316,
+          "y0": 0.6224,
+          "x1": 0.5684,
+          "y1": 0.7376,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.7916,
+          "y0": 0.8024,
+          "x1": 0.9284,
+          "y1": 0.9176,
+          "text": null,
+          "label": {
+            "record": 4,
+            "field": 4
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.4316,
+          "y0": 0.2624,
+          "x1": 0.5684,
+          "y1": 0.3776,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.4316,
+          "y0": 0.0824,
+          "x1": 0.5684,
+          "y1": 0.1976,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 2
+          },
+          "pred": null
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "tokens": [
+        {
+          "x0": 0.386,
+          "y0": 0.527,
+          "x1": 0.614,
+          "y1": 0.623,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.386,
+          "y0": 0.827,
+          "x1": 0.614,
+          "y1": 0.923,
+          "text": null,
+          "label": {
+            "record": 5,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.086,
+          "y0": 0.677,
+          "x1": 0.314,
+          "y1": 0.773,
+          "text": null,
+          "label": {
+            "record": 4,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.686,
+          "y0": 0.077,
+          "x1": 0.914,
+          "y1": 0.173,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.386,
+          "y0": 0.677,
+          "x1": 0.614,
+          "y1": 0.773,
+          "text": null,
+          "label": {
+            "record": 4,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.386,
+          "y0": 0.227,
+          "x1": 0.614,
+          "y1": 0.323,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.686,
+          "y0": 0.227,
+          "x1": 0.914,
+          "y1": 0.323,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.386,
+          "y0": 0.377,
+          "x1": 0.614,
+          "y1": 0.473,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.686,
+          "y0": 0.827,
+          "x1": 0.914,
+          "y1": 0.923,
+          "text": null,
+          "label": {
+            "record": 5,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.086,
+          "y0": 0.077,
+          "x1": 0.314,
+          "y1": 0.173,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.086,
+          "y0": 0.527,
+          "x1": 0.314,
+          "y1": 0.623,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.686,
+          "y0": 0.677,
+          "x1": 0.914,
+          "y1": 0.773,
+          "text": null,
+          "label": {
+            "record": 4,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.086,
+          "y0": 0.827,
+          "x1": 0.314,
+          "y1": 0.923,
+          "text": null,
+          "label": {
+            "record": 5,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.686,
+          "y0": 0.377,
+          "x1": 0.914,
+          "y1": 0.473,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.386,
+          "y0": 0.077,
+          "x1": 0.614,
+          "y1": 0.173,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.686,
+          "y0": 0.527,
+          "x1": 0.914,
+          "y1": 0.623,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.086,
+          "y0": 0.377,
+          "x1": 0.314,
+          "y1": 0.473,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.086,
+          "y0": 0.227,
+          "x1": 0.314,
+          "y1": 0.323,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 0
+          },
+          "pred": null
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "tokens": [
+        {
+          "x0": 0.527,
+          "y0": 0.5405,
+          "x1": 0.698,
+          "y1": 0.6845,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.077,
+          "y0": 0.0905,
+          "x1": 0.248,
+          "y1": 0.2345,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.077,
+          "y0": 0.5405,
+          "x1": 0.248,
+          "y1": 0.6845,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.527,
+          "y0": 0.3155,
+          "x1": 0.698,
+          "y1": 0.4595,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.527,
+          "y0": 0.7655,
+          "x1": 0.698,
+          "y1": 0.9095,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.302,
+          "y0": 0.3155,
+          "x1": 0.473,
+          "y1": 0.4595,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.302,
+          "y0": 0.7655,
+          "x1": 0.473,
+          "y1": 0.9095,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.752,
+          "y0": 0.7655,
+          "x1": 0.923,
+          "y1": 0.9095,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 3
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.077,
+          "y0": 0.3155,
+          "x1": 0.248,
+          "y1": 0.4595,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.302,
+          "y0": 0.5405,
+          "x1": 0.473,
+          "y1": 0.6845,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.302,
+          "y0": 0.0905,
+          "x1": 0.473,
+          "y1": 0.2345,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.752,
+          "y0": 0.0905,
+          "x1": 0.923,
+          "y1": 0.2345,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 3
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.752,
+          "y0": 0.5405,
+          "x1": 0.923,
+          "y1": 0.6845,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 3
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.527,
+          "y0": 0.0905,
+          "x1": 0.698,
+          "y1": 0.2345,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.077,
+          "y0": 0.7655,
+          "x1": 0.248,
+          "y1": 0.9095,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.752,
+          "y0": 0.3155,
+          "x1": 0.923,
+          "y1": 0.4595,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 3
+          },
+          "pred": null
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "tokens": [
+        {
+          "x0": 0.668,
+          "y0": 0.131,
+          "x1": 0.782,
+          "y1": 0.419,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 4
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.818,
+          "y0": 0.581,
+          "x1": 0.932,
+          "y1": 0.869,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 5
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.218,
+          "y0": 0.131,
+          "x1": 0.332,
+          "y1": 0.419,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.368,
+          "y0": 0.581,
+          "x1": 0.482,
+          "y1": 0.869,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.518,
+          "y0": 0.581,
+          "x1": 0.632,
+          "y1": 0.869,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 3
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.068,
+          "y0": 0.131,
+          "x1": 0.182,
+          "y1": 0.419,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.518,
+          "y0": 0.131,
+          "x1": 0.632,
+          "y1": 0.419,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 3
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.218,
+          "y0": 0.581,
+          "x1": 0.332,
+          "y1": 0.869,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.668,
+          "y0": 0.581,
+          "x1": 0.782,
+          "y1": 0.869,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 4
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.818,
+          "y0": 0.131,
+          "x1": 0.932,
+          "y1": 0.419,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 5
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.368,
+          "y0": 0.131,
+          "x1": 0.482,
+          "y1": 0.419,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.068,
+          "y0": 0.581,
+          "x1": 0.182,
+          "y1": 0.869,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 0
+          },
+          "pred": null
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "tokens": [
+        {
+          "x0": 0.7916,
+          "y0": 0.077,
+          "x1": 0.9284,
+          "y1": 0.173,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 4
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.2516,
+          "y0": 0.227,
+          "x1": 0.3884,
+          "y1": 0.323,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.2516,
+          "y0": 0.527,
+          "x1": 0.3884,
+          "y1": 0.623,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.7916,
+          "y0": 0.677,
+          "x1": 0.9284,
+          "y1": 0.773,
+          "text": null,
+          "label": {
+            "record": 4,
+            "field": 4
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.6116,
+          "y0": 0.377,
+          "x1": 0.7484,
+          "y1": 0.473,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 3
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.2516,
+          "y0": 0.377,
+          "x1": 0.3884,
+          "y1": 0.473,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.6116,
+          "y0": 0.077,
+          "x1": 0.7484,
+          "y1": 0.173,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 3
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.7916,
+          "y0": 0.527,
+          "x1": 0.9284,
+          "y1": 0.623,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 4
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.0716,
+          "y0": 0.677,
+          "x1": 0.2084,
+          "y1": 0.773,
+          "text": null,
+          "label": {
+            "record": 4,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.6116,
+          "y0": 0.677,
+          "x1": 0.7484,
+          "y1": 0.773,
+          "text": null,
+          "label": {
+            "record": 4,
+            "field": 3
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.4316,
+          "y0": 0.227,
+          "x1": 0.5684,
+          "y1": 0.323,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.0716,
+          "y0": 0.077,
+          "x1": 0.2084,
+          "y1": 0.173,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.0716,
+          "y0": 0.227,
+          "x1": 0.2084,
+          "y1": 0.323,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.0716,
+          "y0": 0.377,
+          "x1": 0.2084,
+          "y1": 0.473,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.4316,
+          "y0": 0.527,
+          "x1": 0.5684,
+          "y1": 0.623,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.4316,
+          "y0": 0.377,
+          "x1": 0.5684,
+          "y1": 0.473,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.7916,
+          "y0": 0.827,
+          "x1": 0.9284,
+          "y1": 0.923,
+          "text": null,
+          "label": {
+            "record": 5,
+            "field": 4
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.4316,
+          "y0": 0.827,
+          "x1": 0.5684,
+          "y1": 0.923,
+          "text": null,
+          "label": {
+            "record": 5,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.7916,
+          "y0": 0.227,
+          "x1": 0.9284,
+          "y1": 0.323,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 4
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.2516,
+          "y0": 0.077,
+          "x1": 0.3884,
+          "y1": 0.173,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.6116,
+          "y0": 0.827,
+          "x1": 0.7484,
+          "y1": 0.923,
+          "text": null,
+          "label": {
+            "record": 5,
+            "field": 3
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.2516,
+          "y0": 0.677,
+          "x1": 0.3884,
+          "y1": 0.773,
+          "text": null,
+          "label": {
+            "record": 4,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.4316,
+          "y0": 0.677,
+          "x1": 0.5684,
+          "y1": 0.773,
+          "text": null,
+          "label": {
+            "record": 4,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.0716,
+          "y0": 0.527,
+          "x1": 0.2084,
+          "y1": 0.623,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.6116,
+          "y0": 0.227,
+          "x1": 0.7484,
+          "y1": 0.323,
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 3
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.2516,
+          "y0": 0.827,
+          "x1": 0.3884,
+          "y1": 0.923,
+          "text": null,
+          "label": {
+            "record": 5,
+            "field": 1
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.4316,
+          "y0": 0.077,
+          "x1": 0.5684,
+          "y1": 0.173,
+          "text": null,
+          "label": {
+            "record": 0,
+            "field": 2
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.7916,
+          "y0": 0.377,
+          "x1": 0.9284,
+          "y1": 0.473,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 4
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.0716,
+          "y0": 0.827,
+          "x1": 0.2084,
+          "y1": 0.923,
+          "text": null,
+          "label": {
+            "record": 5,
+            "field": 0
+          },
+          "pred": null
+        },
+        {
+          "x0": 0.6116,
+          "y0": 0.527,
+          "x1": 0.7484,
+          "y1": 0.623,
+          "text": null,
+          "label": {
+            "record": 3,
+            "field": 3
+          },
+          "pred": null
+        }
+      ]
+    }
+  ]
+}
