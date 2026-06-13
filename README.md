@@ -52,7 +52,7 @@ foundation.)
 ## Status
 
 Building v0 ([plan](docs/plans/2026-06-13-v0-loop-closes-plan.md)): Phase 0 env ✓ · Phase 1
-contract (in progress) · Phases 2–4 (viewer, generator, model) pending. Upstream LM files
+contract ✓ · Phase 2 viewer (next) · Phases 3–4 (generator, model) pending. Upstream LM files
 (`train.py`, `prepare.py`, `program.md`) stay as reference until v0 lands.
 
 ## License
