@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "runs": [
     {
       "run_id": "_fixture",
@@ -8,6 +8,7 @@
       "device": "cpu",
       "status": "keep",
       "description": "hand-authored fixture",
+      "dataset_id": "_fixture-ds",
       "metrics": {
         "exact": 0.5,
         "record_acc": 0.75,
@@ -15,15 +16,6 @@
         "baseline_majority_exact": 0.08,
         "baseline_geosort_exact": 0.86
       }
-    },
-    {
-      "run_id": "_genpreview",
-      "commit": "0000000",
-      "branch": "exp/v0",
-      "device": "cpu",
-      "status": "keep",
-      "description": "generator preview (ground truth only)",
-      "metrics": {}
     }
   ]
 }

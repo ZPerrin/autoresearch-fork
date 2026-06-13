@@ -1,25 +1,25 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "run_id": "_fixture",
   "commit": "0000000",
   "branch": "exp/v0",
   "device": "cpu",
   "config": {
     "task": "grid_record_field",
-    "seed": 1,
-    "generator_version": 1,
-    "difficulty": {
-      "rows": [
-        2,
-        6
-      ],
-      "cols": [
-        2,
-        6
-      ],
-      "jitter": 0.0,
-      "text": false,
-      "background": false
+    "modalities": [
+      "spatial",
+      "semantic"
+    ],
+    "model": {
+      "d_model": 128,
+      "n_layers": 4,
+      "n_heads": 4,
+      "max_records": 16,
+      "max_fields": 16
+    },
+    "budget": {
+      "kind": "steps",
+      "value": 2000
     }
   },
   "metrics": {
@@ -29,6 +29,7 @@
     "baseline_majority_exact": 0.08,
     "baseline_geosort_exact": 0.86
   },
+  "dataset_id": "_fixture-ds",
   "curve": [
     {
       "step": 100,

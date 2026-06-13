@@ -1,5 +1,6 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "dataset_id": "_fixture-ds",
   "samples": [
     {
       "id": 0,
@@ -9,7 +10,7 @@
           "y0": 0.1,
           "x1": 0.4,
           "y1": 0.16,
-          "text": null,
+          "text": "Office chair",
           "label": {
             "record": 1,
             "field": 0
@@ -25,7 +26,7 @@
           "y0": 0.18,
           "x1": 0.4,
           "y1": 0.24,
-          "text": null,
+          "text": "Desk lamp",
           "label": {
             "record": 2,
             "field": 0
@@ -41,7 +42,7 @@
           "y0": 0.1,
           "x1": 0.7,
           "y1": 0.16,
-          "text": null,
+          "text": "2",
           "label": {
             "record": 1,
             "field": 1
@@ -57,7 +58,7 @@
           "y0": 0.1,
           "x1": 0.95,
           "y1": 0.16,
-          "text": null,
+          "text": "149.00",
           "label": {
             "record": 1,
             "field": 2
@@ -68,7 +69,10 @@
             "confidence": 0.4
           }
         }
-      ]
+      ],
+      "image": null,
+      "width": null,
+      "height": null
     }
   ]
 }
