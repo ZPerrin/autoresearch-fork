@@ -51,9 +51,9 @@ foundation.)
 
 ## Status
 
-v0 is in design. The upstream language-modeling files (`train.py`, `prepare.py`, `program.md`)
-are still present as reference and will be replaced as the from-scratch harness is built.
-`program.md` is upstream's autonomous-loop spec — deferred until after v0.
+Building v0 ([plan](docs/plans/2026-06-13-v0-loop-closes-plan.md)): Phase 0 env ✓ · Phase 1
+contract (in progress) · Phases 2–4 (viewer, generator, model) pending. Upstream LM files
+(`train.py`, `prepare.py`, `program.md`) stay as reference until v0 lands.
 
 ## License
 
