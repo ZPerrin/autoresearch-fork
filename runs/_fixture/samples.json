@@ -9,44 +9,64 @@
           "y0": 0.1,
           "x1": 0.4,
           "y1": 0.16,
-          "true_r": 1,
-          "true_c": 0,
-          "pred_r": 1,
-          "pred_c": 0,
-          "text": null
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 0
+          },
+          "pred": {
+            "record": 1,
+            "field": 0,
+            "confidence": 0.98
+          }
         },
         {
           "x0": 0.05,
-          "y0": 0.1,
+          "y0": 0.18,
           "x1": 0.4,
-          "y1": 0.16,
-          "true_r": 2,
-          "true_c": 0,
-          "pred_r": 1,
-          "pred_c": 0,
-          "text": null
+          "y1": 0.24,
+          "text": null,
+          "label": {
+            "record": 2,
+            "field": 0
+          },
+          "pred": {
+            "record": 1,
+            "field": 0,
+            "confidence": 0.55
+          }
         },
         {
           "x0": 0.55,
           "y0": 0.1,
           "x1": 0.7,
           "y1": 0.16,
-          "true_r": 1,
-          "true_c": 1,
-          "pred_r": 1,
-          "pred_c": 1,
-          "text": null
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 1
+          },
+          "pred": {
+            "record": 1,
+            "field": 1,
+            "confidence": 0.91
+          }
         },
         {
           "x0": 0.8,
           "y0": 0.1,
           "x1": 0.95,
           "y1": 0.16,
-          "true_r": 1,
-          "true_c": 2,
-          "pred_r": 1,
-          "pred_c": 3,
-          "text": null
+          "text": null,
+          "label": {
+            "record": 1,
+            "field": 2
+          },
+          "pred": {
+            "record": 1,
+            "field": 3,
+            "confidence": 0.4
+          }
         }
       ]
     }

@@ -5,6 +5,7 @@
   "branch": "exp/v0",
   "device": "cpu",
   "config": {
+    "task": "grid_record_field",
     "seed": 1,
     "generator_version": 1,
     "difficulty": {
@@ -22,22 +23,22 @@
     }
   },
   "metrics": {
-    "cell_exact": 0.5,
-    "row_acc": 0.75,
-    "col_acc": 0.75,
-    "baseline_majority_cell_exact": 0.08,
-    "baseline_geosort_cell_exact": 0.86
+    "exact": 0.5,
+    "record_acc": 0.75,
+    "field_acc": 0.75,
+    "baseline_majority_exact": 0.08,
+    "baseline_geosort_exact": 0.86
   },
   "curve": [
     {
       "step": 100,
       "train_loss": 2.3,
-      "val_cell_exact": 0.12
+      "val_exact": 0.12
     },
     {
       "step": 200,
       "train_loss": 1.4,
-      "val_cell_exact": 0.5
+      "val_exact": 0.5
     }
   ],
   "wall_seconds": 42.0,

@@ -9,11 +9,11 @@
       "status": "keep",
       "description": "hand-authored fixture",
       "metrics": {
-        "cell_exact": 0.5,
-        "row_acc": 0.75,
-        "col_acc": 0.75,
-        "baseline_majority_cell_exact": 0.08,
-        "baseline_geosort_cell_exact": 0.86
+        "exact": 0.5,
+        "record_acc": 0.75,
+        "field_acc": 0.75,
+        "baseline_majority_exact": 0.08,
+        "baseline_geosort_exact": 0.86
       }
     }
   ]
