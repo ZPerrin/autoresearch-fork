@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "run_id": "_fixture",
+  "commit": "0000000",
+  "branch": "exp/v0",
+  "device": "cpu",
+  "config": {
+    "seed": 1,
+    "generator_version": 1,
+    "difficulty": {
+      "rows": [
+        2,
+        6
+      ],
+      "cols": [
+        2,
+        6
+      ],
+      "jitter": 0.0,
+      "text": false,
+      "background": false
+    }
+  },
+  "metrics": {
+    "cell_exact": 0.5,
+    "row_acc": 0.75,
+    "col_acc": 0.75,
+    "baseline_majority_cell_exact": 0.08,
+    "baseline_geosort_cell_exact": 0.86
+  },
+  "curve": [
+    {
+      "step": 100,
+      "train_loss": 2.3,
+      "val_cell_exact": 0.12
+    },
+    {
+      "step": 200,
+      "train_loss": 1.4,
+      "val_cell_exact": 0.5
+    }
+  ],
+  "wall_seconds": 42.0,
+  "status": "keep",
+  "description": "hand-authored fixture"
+}

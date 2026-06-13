@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "samples": [
+    {
+      "id": 0,
+      "tokens": [
+        {
+          "x0": 0.05,
+          "y0": 0.1,
+          "x1": 0.4,
+          "y1": 0.16,
+          "true_r": 1,
+          "true_c": 0,
+          "pred_r": 1,
+          "pred_c": 0,
+          "text": null
+        },
+        {
+          "x0": 0.05,
+          "y0": 0.1,
+          "x1": 0.4,
+          "y1": 0.16,
+          "true_r": 2,
+          "true_c": 0,
+          "pred_r": 1,
+          "pred_c": 0,
+          "text": null
+        },
+        {
+          "x0": 0.55,
+          "y0": 0.1,
+          "x1": 0.7,
+          "y1": 0.16,
+          "true_r": 1,
+          "true_c": 1,
+          "pred_r": 1,
+          "pred_c": 1,
+          "text": null
+        },
+        {
+          "x0": 0.8,
+          "y0": 0.1,
+          "x1": 0.95,
+          "y1": 0.16,
+          "true_r": 1,
+          "true_c": 2,
+          "pred_r": 1,
+          "pred_c": 3,
+          "text": null
+        }
+      ]
+    }
+  ]
+}

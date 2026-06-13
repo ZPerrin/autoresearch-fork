@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "runs": [
+    {
+      "run_id": "_fixture",
+      "commit": "0000000",
+      "branch": "exp/v0",
+      "device": "cpu",
+      "status": "keep",
+      "description": "hand-authored fixture",
+      "metrics": {
+        "cell_exact": 0.5,
+        "row_acc": 0.75,
+        "col_acc": 0.75,
+        "baseline_majority_cell_exact": 0.08,
+        "baseline_geosort_cell_exact": 0.86
+      }
+    }
+  ]
+}
