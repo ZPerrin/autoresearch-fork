@@ -26,6 +26,9 @@ results.tsv
 viewer/node_modules/
 viewer/dist/
 
+# Local curated synthetic datasets (images + samples; not committed)
+datasets/
+
 # IDE / editor / agent tooling
 .idea/
 .claude/

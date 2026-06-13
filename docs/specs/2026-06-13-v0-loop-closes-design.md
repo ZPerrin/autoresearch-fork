@@ -1,19 +1,20 @@
 # v0 — "the loop closes"
 
 - Status: draft for review
-- Date: 2026-06-13
-- Scope: the first end-to-end milestone for the from-scratch table-extraction harness
+- Date: 2026-06-13 (revised: multimodal data foundation + dataset/run split)
+- Scope: the first end-to-end milestone for the from-scratch **multimodal** document-extraction harness
 
 ## 1. Goal
 
 Prove the full loop closes end-to-end on the smallest honest task:
 
-> **generate synthetic layouts → train a from-scratch model → evaluate against a frozen metric
-> → emit static artifacts → see the result rendered in a local web app.**
+> **build a synthetic dataset → train a from-scratch model → evaluate against a frozen metric
+> → emit static run artifacts → see predictions overlaid on the page in a local web app.**
 
 v0 succeeds when we can run an experiment on either machine (MPS or CUDA) and review its
 prediction overlay and metrics in the Vite/React viewer. **Accuracy is not the goal** — the
-*loop* is. A model that decisively beats the trivial baseline on clean grids is enough.
+*loop* is. The first model uses one modality (spatial); a model that decisively beats the
+trivial baseline on clean grids is enough.
 
 ### End-state context (what we're teeing up for, not building in v0)
 
@@ -21,32 +22,60 @@ The real target is **repeated-record extraction against a class-defined schema**
 class (e.g. medical EOB), recover the tokens — bbox, text, confidence — that answer, per line
 item, fields like `service_date`, `amount_owed`, `description`, `copay`. Records are variable in
 count; fields are semantic and class-defined; a document may hold global/singleton fields
-(`member`, `provider`) *and* multiple table instances (two claim tables). The modeling approach
-is open (token classification, extractive QA, structure+QA, set prediction). v0 commits to none
-of this — it just must not paint the contract into a positional-row/col corner. See §3.
+(`member`, `provider`) *and* multiple table instances. The modeling approach is open. v0 commits
+to none of this — it just must not corner the contract. See §3.
 
-## 2. The synthetic data experiment
+### Modalities & the model ladder
+
+The data is **multimodal from the start** — the LayoutLMv3 stack:
+
+- **spatial** — token bounding boxes (geometry)
+- **semantic** — token text (the OCR strings)
+- **visual** — the rendered page image (pixels)
+
+The synthetic generator emits all three, perfectly aligned and labeled (synthetic = free,
+exact ground truth). We are multimodal at the **data layer** and walk unimodal→multimodal at the
+**model layer** — modality is a `config` knob, so the autoresearch loop becomes a clean
+**modality-ablation** rig:
+
+| Model | Modalities | What it teaches |
+|---|---|---|
+| M0 (v0) | spatial | from-scratch transformer over box geometry |
+| M1 | spatial + semantic | fusing learned text embeddings with layout |
+| M2 | spatial + visual | per-token visual features (ROI crop) / ViT patches |
+| M3 | full fusion | LayoutLMv3-style tri-modal model |
+
+## 2. The synthetic dataset builder
 
 The generator is **not assumed correct** — designing it is itself an experiment. v0 validates
-three hypotheses:
+three hypotheses (spatial modality):
 
 - **H1 (learnable):** a small transformer can group tokens into **records** and type each into a
   **field** from box geometry alone, decisively beating a majority-class baseline.
-- **H2 (relational):** structure comes from *comparing* boxes — so attention matters; an
-  ablation with attention removed (per-token MLP only) should do markedly worse.
-- **H3 (meaningful metric):** the exact-match metric moves sensibly as we perturb difficulty
-  (e.g. adding jitter degrades it), confirming the metric tracks what we care about.
+- **H2 (relational):** structure comes from *comparing* boxes — attention matters; an
+  attention-ablation (per-token MLP only) should do markedly worse.
+- **H3 (meaningful metric):** the exact-match metric moves sensibly as we perturb difficulty.
+
+### Datasets are curated local assets
+
+Synthetic data lives in **`datasets/<dataset-id>/`** — **local, gitignored**, not seed-ephemeral.
+A dataset is a curated, reusable asset you build, browse, **cull** bad samples from, and **fork**
+into variants ("same but jitter +0.1"). Each holds a `manifest.json` (id, generator version, the
+difficulty/config it was built with, count, modalities), `samples.json` (ground truth), and
+`images/*.png`. Experiments reference a dataset by `dataset_id`; the data itself is never
+committed. (Proper dataset versioning/registry is a deferred "later store correctly" concern.)
 
 ### Generator design (v0, easiest setting)
 
 - Sample a grid: records (rows) ∈ `[2,6]`, fields (cols) ∈ `[2,6]`, uniform. v0's "table" is
-  simply "the tokens inside one table."
-- Lay cells on a regular grid in a normalized page (coords in `[0,1]`), one token per cell, with
-  small optional jitter (default `0.0` for v0).
-- **Boxes only — no text content** in v0 (`text: null`). The structure lives in geometry.
-- Emit tokens in **shuffled order**, each with `(x0,y0,x1,y1)` and a `label = {record, field}`.
-- Fully **regenerable from a seed**. We commit the seed + `generator_version`, never datasets.
-- Difficulty knobs exist in the config but are pinned to easiest; turning them up is post-v0.
+  "the tokens inside one table."
+- Lay cells on a regular grid; **render the page to a PNG** (Pillow), capturing each word's pixel
+  bbox (normalized to `[0,1]`) and its text string. So every sample carries **image + text + box
+  + label** even though the first model uses only boxes.
+- Emit tokens in **shuffled order**, each with `(x0,y0,x1,y1)`, `text`, and `label={record,field}`.
+- Difficulty knobs present but pinned to easiest; the dial (alignment/jitter → multi-token cells →
+  background tokens → multiple tables → spans → semantic text; plus visual axes: fonts/noise/skew)
+  is post-v0.
 
 ## 3. Task formulation — three layers
 
@@ -54,113 +83,133 @@ The contract separates three things so we stay flexible across modeling approach
 
 | Layer | What it is | v0 stance |
 |---|---|---|
-| **Observables** | `bbox + text` per token — true regardless of task | locked: always present |
+| **Observables** | per-token `bbox + text`, per-sample `image` (spatial/semantic/visual) | locked: always present |
 | **Task labels** | the target for *one* experiment's approach | open: `label`/`pred` dicts, keyed by a `task` tag in `config` |
 | **Annotation schema** | document-class → global fields + table defs + instances | deferred entirely |
 
-v0's experiment is `task = "grid_record_field"`: per-token classification into a **record**
-(which repeated item) and a **field** (which semantic column), with `label = {record, field}` and
-`pred = {record, field, confidence}`. Loss = sum of cross-entropy on record and field. A different
-approach later (e.g. `task = "extractive_qa"`) reuses the same artifact/viewer plumbing with its
-own `label` convention — the contract does not assume token classification.
+v0's experiment is `task = "grid_record_field"`: per-token classification into a **record** and a
+**field**, `label = {record, field}`, `pred = {record, field, confidence}`. Loss = sum of CE on
+record and field. A different approach later (e.g. `task = "extractive_qa"`, or form `kv`) reuses
+the same artifact/viewer plumbing with its own `label` convention.
 
 ## 4. Model (from scratch)
 
-Deliberately small and hand-built — this is the learning artifact, and one instantiation (the
-`grid_record_field` task), not a commitment to a final architecture.
+Deliberately small and hand-built — the learning artifact, and one rung (M0, `grid_record_field`),
+not a final architecture.
 
-- **Input embedding:** linear `4 → d_model` over the box coords. This *is* the positional
-  encoding — a first "click": here position is the input, not a sinusoid bolted on.
-- **Encoder:** a few transformer encoder layers (self-attention + MLP). Self-attention is the
-  point — a token only knows its record/field by comparing its box to the others.
+- **Input embedding:** linear `4 → d_model` over box coords. This *is* the positional encoding —
+  here position is the input, not a sinusoid bolted on.
+- **Encoder:** a few transformer encoder layers; self-attention is the point (a token learns its
+  record/field by comparing its box to the others).
 - **Heads:** two linear heads → record logits, field logits.
-- Default starting size: `d_model=128`, `n_layers=4`, `n_heads=4`, `max_records=max_fields=16`.
-  Starting points an experiment may change.
+- Defaults: `d_model=128`, `n_layers=4`, `n_heads=4`, `max_records=max_fields=16`.
+- Device-agnostic PyTorch — no Muon, no `torch.compile`, no forced bf16.
 
-Written in plain, device-agnostic PyTorch — no Muon, no `torch.compile`, no forced bf16.
+Climbing the ladder (M1+) adds a text-embedding branch and a visual branch fused into the same
+encoder — future specs.
 
 ## 5. Training & evaluation
 
-- **Budget:** a fixed number of **training steps** for v0 (deterministic, device-independent,
-  good for a reproducible learning record). Wall-clock budgets are a later option.
-- **Frozen metric** (the ground truth, higher is better), computed on freshly generated held-out
-  samples: `record_acc`, `field_acc`, and `exact` (both record and field correct).
-- **Baselines** recorded alongside, for sanity: majority-class (everything `record=0,field=0`) and
-  a geometric-sort heuristic (sort by y → record band, by x → field band). Beating majority
-  decisively ⇒ loop works; approaching the geometric heuristic ⇒ attention learned the structure.
+- **Budget:** a fixed number of **training steps** for v0.
+- **Frozen metric** (higher is better): `record_acc`, `field_acc`, `exact` (both correct).
+- **Baselines:** majority-class and a geometric-sort heuristic (sort by y → record, x → field).
+- A run records which dataset it used (`config.dataset_id`).
 
 ## 6. The artifact contract
 
-The seam between Python (produces) and React (consumes). Defined first so the model and viewer
-build independently. **May evolve** — every file carries `schema_version`. All committed under a
-git-tracked `runs/` directory; coordinates are normalized to `[0,1]`. Token observables
-(`bbox + text`) are stable; the task target rides in open `label`/`pred` dicts interpreted via
-`config.task`.
+Two layers, deliberately separated:
 
-### `runs/index.json` — the run list + experiment log
+- **`datasets/`** — the data. **Local, gitignored.** Curatable.
+- **`runs/`** — the experiment ledger. **Git-tracked, binary-free.** References a dataset by id.
+
+Every file carries `schema_version` (now **2**). Coordinates normalized to `[0,1]`. The viewer
+serves both `/runs` and `/datasets` locally and composes them (prediction boxes from a run over
+the page image from its dataset); with no local dataset it still renders boxes/metrics, just no
+image backdrop.
+
+### `datasets/<id>/manifest.json`
 
 ```json
 {
-  "schema_version": 1,
-  "runs": [
+  "schema_version": 2,
+  "dataset_id": "grid-v1-a",
+  "created": "2026-06-13T15:00:00Z",
+  "generator_version": 1,
+  "task": "grid_record_field",
+  "modalities": ["spatial", "semantic", "visual"],
+  "count": 512,
+  "config": { "difficulty": { "rows": [2,6], "cols": [2,6], "jitter": 0.0 } }
+}
+```
+
+### `datasets/<id>/samples.json` — ground truth (no predictions)
+
+```json
+{
+  "schema_version": 2,
+  "samples": [
     {
-      "run_id": "jun13-mps-b2c3d4e",
-      "commit": "b2c3d4e",
-      "branch": "exp/v0",
-      "device": "mps",
-      "created": "2026-06-13T14:21:00Z",
-      "status": "keep",
-      "description": "baseline: 2-layer, box-coords only",
-      "metrics": { "exact": 0.41, "record_acc": 0.62, "field_acc": 0.55 }
+      "id": 0,
+      "image": "/datasets/grid-v1-a/images/0.png",
+      "width": 1000, "height": 1414,
+      "tokens": [
+        { "x0": 0.05, "y0": 0.10, "x1": 0.40, "y1": 0.16, "text": "Office chair",
+          "label": { "record": 1, "field": 0 } }
+      ]
     }
   ]
 }
 ```
 
-### `runs/<run-id>/run.json` — full per-run record
+### `runs/index.json` — run list + experiment log
 
 ```json
 {
-  "schema_version": 1,
-  "run_id": "jun13-mps-b2c3d4e",
-  "commit": "b2c3d4e",
-  "branch": "exp/v0",
-  "device": "mps",
-  "config": {
-    "task": "grid_record_field",
-    "seed": 1234,
-    "generator_version": 1,
-    "difficulty": { "rows": [2, 6], "cols": [2, 6], "jitter": 0.0, "text": false, "background": false },
-    "model": { "d_model": 128, "n_layers": 4, "n_heads": 4, "max_records": 16, "max_fields": 16 },
-    "budget": { "kind": "steps", "value": 2000 },
-    "batch_size": 32,
-    "lr": 0.0003
-  },
-  "metrics": {
-    "exact": 0.41, "record_acc": 0.62, "field_acc": 0.55,
-    "baseline_majority_exact": 0.08,
-    "baseline_geosort_exact": 0.86
-  },
-  "curve": [ { "step": 100, "train_loss": 2.31, "val_exact": 0.12 } ],
-  "wall_seconds": 123.4,
-  "status": "keep"
+  "schema_version": 2,
+  "runs": [
+    { "run_id": "jun13-mps-b2c3d4e", "commit": "b2c3d4e", "branch": "exp/v0",
+      "device": "mps", "status": "keep", "description": "M0 baseline",
+      "dataset_id": "grid-v1-a",
+      "metrics": { "exact": 0.41, "record_acc": 0.62, "field_acc": 0.55 } }
+  ]
 }
 ```
 
-### `runs/<run-id>/samples.json` — a handful of eval samples for rendering
+### `runs/<id>/run.json` — full per-run record
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "run_id": "jun13-mps-b2c3d4e", "commit": "b2c3d4e", "branch": "exp/v0", "device": "mps",
+  "config": {
+    "task": "grid_record_field", "dataset_id": "grid-v1-a", "modalities": ["spatial"],
+    "model": { "d_model": 128, "n_layers": 4, "n_heads": 4, "max_records": 16, "max_fields": 16 },
+    "budget": { "kind": "steps", "value": 2000 }, "batch_size": 32, "lr": 0.0003
+  },
+  "metrics": { "exact": 0.41, "record_acc": 0.62, "field_acc": 0.55,
+               "baseline_majority_exact": 0.08, "baseline_geosort_exact": 0.86 },
+  "curve": [ { "step": 100, "train_loss": 2.31, "val_exact": 0.12 } ],
+  "wall_seconds": 123.4, "status": "keep"
+}
+```
+
+### `runs/<id>/samples.json` — prediction samples for rendering
+
+Same token shape as a dataset sample, plus `pred`, and an `image` ref into the dataset:
+
+```json
+{
+  "schema_version": 2,
+  "dataset_id": "grid-v1-a",
   "samples": [
     {
       "id": 0,
+      "image": "/datasets/grid-v1-a/images/0.png",
+      "width": 1000, "height": 1414,
       "tokens": [
-        {
-          "x0": 0.05, "y0": 0.10, "x1": 0.40, "y1": 0.16, "text": null,
+        { "x0": 0.05, "y0": 0.10, "x1": 0.40, "y1": 0.16, "text": "Office chair",
           "label": { "record": 1, "field": 0 },
-          "pred":  { "record": 1, "field": 0, "confidence": 0.98 }
-        }
+          "pred":  { "record": 1, "field": 0, "confidence": 0.98 } }
       ]
     }
   ]
@@ -169,70 +218,55 @@ git-tracked `runs/` directory; coordinates are normalized to `[0,1]`. Token obse
 
 ## 7. The viewer (Vite/React)
 
-A local web app that reads the artifacts and nothing else — **no backend, pure static fetch**.
-It reads `runs/index.json`, then a selected run's `run.json` and `samples.json`.
+Local web app, **no backend** — a dev-server middleware serves both `/runs` and `/datasets` from
+disk (PNG served with correct content-type).
 
 v0 views:
 
-- **Run selector / experiment log** — table from `index.json` (run id, device, status, metrics,
-  description).
-- **Prediction overlay** — render a sample's boxes on a normalized page; color teal where
-  `pred` matches `label` (record and field), red otherwise, annotated `pred ≠ true`. Sample
-  browser (prev/next) with an "errors only" filter. This is the primary debugging surface. The
-  viewer interprets `label`/`pred` according to `config.task` (v0: `grid_record_field`).
-- **Metric cards** — `record_acc`, `field_acc`, `exact`, and Δ vs the previous run.
-- **Training curve** — loss and `val_exact` over steps from `run.json.curve`.
-
-Because `runs/` is git-tracked, checking out a branch swaps what the viewer shows (per-branch
-view). A global cross-branch timeline is post-v0 (a `collate` read over branches). The exact
-mechanism for the dev server to serve `runs/` (symlink into `public/` vs. a static mount) is an
-implementation detail for the plan; no backend either way.
+- **Run selector / experiment log** — table from `runs/index.json`.
+- **Prediction overlay** — render the sample's **page image** as the backdrop, draw token boxes
+  on top: teal where `pred` matches `label`, red on mismatch, neutral + `record·field` label when
+  `pred` is absent (dataset/ground-truth browsing). Interpreted per `config.task`. Sample browser
+  + "errors only" filter. Degrades gracefully if the image is missing locally.
+- **Metric cards** — `record_acc`, `field_acc`, `exact`, Δ vs previous run.
+- **Training curve** — from `run.json.curve`.
+- (Reuses the same overlay to **browse a dataset** truth-only.)
 
 ## 8. Env foundation
 
-Built first; everything sits on it.
-
-- Keep `uv`. Make the torch dependency **device-aware** so Apple silicon pulls the default
-  (MPS-capable) wheel and the 3080 Ti pulls the CUDA wheel. Upstream's CUDA-only pin must be
-  fixed — it does not install on the Mac.
-- A single `get_device()` (`cuda` → `mps` → `cpu`); never hard-code device.
-- Shed LM-only deps not needed for boxes-only (`tiktoken`, `rustbpe`, `kernels`).
+- `uv`, device-aware torch (MPS + CUDA), `get_device()` (cuda→mps→cpu).
+- Add **Pillow** (rendering). Other LM-only deps stay shed.
 
 ## 9. Component boundaries & build order
 
-Designed so each unit is testable alone, joined only by the artifact contract.
+Each unit testable alone, joined by the artifact contract (datasets/ ↔ runs/).
 
-1. **Artifact schema + a hand-authored fixture** (`runs/_fixture/`) — define the contract; the
-   fixture unblocks the viewer immediately.
-2. **Env foundation** — device-aware deps, `get_device()`. Python package lives in `harness/`
-   (`harness/pyproject.toml`, `harness/tablelab/`). Upstream LM reference files are parked in
-   `reference/`.
-3. **Synthetic generator** — testable in isolation: emits valid samples; round-trips the schema.
-   (`harness/tablelab/generate.py`, `harness/tests/test_generate.py`)
-4. **Model + train + eval + emitter** — consumes generator output, emits artifacts conforming to
-   the schema; validates H1–H3. (`harness/tablelab/model.py`, `harness/tablelab/train.py`,
-   `harness/tablelab/metric.py`, `harness/tests/`)
-5. **Viewer** — built against the fixture first, then pointed at real `runs/`.
+1. **Contract v2 + fixture** — schema (dataset manifest/samples + run records), tiny committed
+   `_fixture` (with a small image) to unblock the viewer.
+2. **Env** — device-aware deps + Pillow.
+3. **Dataset-builder generator** — renders PNG + emits image/text/box/label into `datasets/<id>/`
+   (local, gitignored).
+4. **Model + train + eval + emitter** — trains on a dataset, emits run artifacts (M0, spatial).
+5. **Viewer** — image-overlay over `/datasets`, against the fixture first, then real runs.
 
-## 10. Repo workflow (assumed by this spec)
+## 10. Repo workflow
 
-Conventions live in the README (the operating guide). In brief: append-only git lab notebook;
-`master` = infra + current best; `exp/<line>` branches commit every run (failures kept, "discard"
-is a status label, never `git reset`); globally-unique run ids; artifacts committed under `runs/`;
-review is PR-style (diff + one-line rationale).
+Append-only git lab notebook; `master` = infra + current best; `exp/<line>` branches commit every
+run (failures kept; "discard" is a status label). `runs/` git-tracked (JSON only); `datasets/`
+local & gitignored. Review is PR-style.
 
 ## 11. Success criteria
 
-- One command runs an experiment on MPS and on CUDA, producing schema-valid artifacts.
-- The model decisively beats the majority baseline on clean grids (H1).
-- The attention-ablation does markedly worse (H2).
-- `exact` degrades when jitter is raised (H3).
-- The viewer renders the run's overlay, metrics, curve, and the experiment log from artifacts
-  alone.
+- One command builds a dataset and runs an experiment on MPS and CUDA, producing schema-valid run
+  artifacts.
+- M0 decisively beats the majority baseline (H1); attention-ablation worse (H2); `exact` degrades
+  with jitter (H3).
+- The viewer overlays predictions on the page image and renders metrics/curve/log from artifacts.
 
 ## 12. Open questions (resolve during planning)
 
 - Variable token count per sample → padding + attention mask vs. bucketing.
-- `max_records`/`max_fields` as fixed classification width vs. relative indexing (start fixed at 16).
-- Dev-server mechanism for serving `runs/` (symlink vs. static mount).
-```
+- `max_records`/`max_fields` fixed width vs. relative (start fixed at 16).
+- Synthetic text content for v0 (random tokens vs. field-appropriate strings — the latter
+  pre-stages semantic typing).
+- Page render size / DPI and how small the committed `_fixture` image should be.

@@ -4,7 +4,9 @@
 
 **Goal:** Close the full loop end-to-end — synthetic layouts → from-scratch layout transformer → frozen metric → static artifacts → local Vite/React viewer — on both MPS and CUDA.
 
-**Architecture:** A small Python package (`tablelab/`) produces git-tracked JSON artifacts under `runs/`; a separate static Vite/React app (`viewer/`) consumes them. The two are joined only by the artifact schema (the contract), so they build independently. Built in five phases, each ending at a human-review gate.
+**Architecture:** A Python module (`harness/tablelab/`) builds curated synthetic **datasets** (`datasets/<id>/`, local & gitignored — images + samples) and trains models that emit a git-tracked, binary-free experiment ledger under `runs/`; a static Vite/React app (`viewer/`) serves and composes both, overlaying predictions on the page image. Joined only by the artifact contract (schema v2). Data is multimodal (spatial/semantic/visual); the model climbs M0 (spatial) → M3 (fusion). Built in phases, each ending at a human-review gate.
+
+> **Revision note (multimodal):** v0 pivoted to a multimodal data foundation with a `datasets/` vs `runs/` split. The authoritative build order and contract live in the revised spec (§6, §9). The detailed Phase 0–1 steps below are historical — TDD was skipped, and the contract is now schema v2 (per-token `text`, per-sample `image`, `dataset_id` on runs).
 
 **Tech Stack:** Python 3.10+, PyTorch (device-agnostic, no Muon/compile/bf16), `uv`, pytest; Vite + React + TypeScript for the viewer.
 
@@ -27,27 +29,21 @@ Execution **stops at each gate** for human validation before the next phase star
 ## File structure (v0)
 
 ```
-harness/pyproject.toml             modify  device-aware torch, shed LM-only deps, add pytest
-harness/tablelab/__init__.py       create  package marker
-harness/tablelab/device.py         create  get_device() — cuda → mps → cpu
-harness/tablelab/artifacts.py      create  schema dataclasses + read/write/validate (the contract)
-harness/tablelab/generate.py       create  synthetic layout generator (Phase 3)
-harness/tablelab/model.py          create  from-scratch layout transformer (Phase 4)
-harness/tablelab/metric.py         create  frozen metric + baselines (Phase 4)
-harness/tablelab/train.py          create  editable experiment: wire-up + fixed-step loop + emit (Phase 4)
-harness/tests/test_device.py       create  Phase 0
-harness/tests/test_artifacts.py    create  Phase 1
-harness/tests/test_generate.py     create  Phase 3
-harness/tests/test_model.py        create  Phase 4
-harness/tests/test_metric.py       create  Phase 4
-runs/_fixture/                     create  hand-authored fixture run (Phase 1)
-runs/index.json                    create  run list, seeded with the fixture (Phase 1)
-viewer/                            create  Vite + React + TS app (Phase 2)
-reference/                         exists  upstream LM files parked here (train.py, prepare.py,
-                                           program.md, analysis.ipynb, progress.png)
+harness/pyproject.toml             device-aware torch + Pillow; LM-only deps shed
+harness/tablelab/device.py         get_device() — cuda → mps → cpu
+harness/tablelab/artifacts.py      contract v2: dataset manifest + samples + run records
+harness/tablelab/generate.py       dataset builder: render PNG + boxes/text/labels → datasets/<id>/
+harness/tablelab/model.py          from-scratch M0 spatial model (later rungs: +text, +visual)
+harness/tablelab/metric.py         frozen metric + baselines
+harness/tablelab/train.py          editable experiment: train on a dataset, emit run artifacts
+datasets/<id>/                     curated synthetic data — local & gitignored: manifest + samples + images/
+runs/                              git-tracked experiment ledger (JSON only): index.json + <run>/
+runs/_fixture/                     tiny committed contract example (incl. a small image)
+viewer/                            Vite + React + TS: serves /runs + /datasets, overlays on page image
+reference/                         upstream LM files parked (train.py, prepare.py, program.md, …)
 ```
 
-Upstream LM files are parked in `reference/` and will be removed from there only once v0 is complete (final cleanup task in Phase 4).
+No TDD — implement and verify by running. Upstream LM files stay in `reference/` until v0 completes.
 
 ---
 
