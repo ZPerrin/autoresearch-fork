@@ -53,6 +53,7 @@ def _inspect(args):
     spec = m.config.get("spec", {})
     tables = spec.get("tables", [])
     fields = [f["name"] for t in tables for f in t.get("fields", [])]
+    glds = [f["name"] for f in spec.get("globals", [])]
     page = spec.get("layout", {}).get("page")
     ntok = sum(len(s.tokens) for s in samples)
     print(f"id:       {m.dataset_id}")
@@ -62,6 +63,7 @@ def _inspect(args):
     print(f"tokens:   {ntok} ({ntok / max(m.count, 1):.1f}/sample)")
     print(f"tables:   {[t.get('name') for t in tables]}")
     print(f"fields:   {fields}")
+    print(f"globals:  {glds}")
     print(f"page:     {page}")
 
 
