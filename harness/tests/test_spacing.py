@@ -1,7 +1,7 @@
 import random
 from dataclasses import replace
 from tablelab.fields import field_weight
-from tablelab.specs import FieldSpec, fork
+from tablelab.specs import FieldSpec, TableSpec, DocumentClass, fork
 from tablelab import classes as classlib
 from tablelab.layout import layout, validate_layout_capacity, LayoutCapacityError
 from tablelab.render import render
@@ -71,3 +71,35 @@ def test_content_aware_columns_prevent_overflow():
             continue  # only table columns are content-sized; globals are separate
         cx0, _cy0, cx1, _cy1 = p.cell
         assert b[0] >= cx0 - 1 and b[2] <= cx1 + 1, (p.text, p.cell, b)
+
+
+def test_eob_rich_columns_fit_at_template_width_with_header():
+    # The eob class declares a wide page so its ten claim-line columns fit; verify
+    # no table token overflows its cell when headers are on (the realistic build).
+    dc = fork(classlib.get("eob"),
+              structure=replace(classlib.get("eob").structure, header=True))
+    for seed in range(10):
+        placed = layout(dc, random.Random(seed))
+        _img, boxes = render(placed, dc)
+        for p, b in zip(placed, boxes):
+            if not (p.label and "field" in p.label):
+                continue
+            cx0, _cy0, cx1, _cy1 = p.cell
+            assert b[0] >= cx0 - 1 and b[2] <= cx1 + 1, (p.text, p.cell, b)
+
+
+def test_fill_below_one_leaves_cells_empty():
+    # A field with fill=0.0 is never populated, so it emits no data tokens.
+    sparse = DocumentClass(name="t", tables=(
+        TableSpec(name="x", fields=(
+            FieldSpec("a", "amount", "right", fill=0.0),
+            FieldSpec("b", "amount", "right"),
+        ), rows=(3, 3), instances=(1, 1)),
+    ))
+    placed = layout(sparse, random.Random(0))
+    a_tokens = [p for p in placed if p.label and p.label.get("field") == 0
+                and "record" in p.label]
+    b_tokens = [p for p in placed if p.label and p.label.get("field") == 1
+                and "record" in p.label]
+    assert a_tokens == []      # fill=0.0 column is always empty
+    assert len(b_tokens) == 3  # fill=1.0 column is always populated

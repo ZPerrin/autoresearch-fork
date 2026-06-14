@@ -63,16 +63,19 @@ multi-token cells (`StructureSpec.multi_token` → per-word tokens sharing recor
 header row (`StructureSpec.header` → top field-name row, label `{field, header}`); background tokens
 (`StructureSpec.background` → N non-table tokens with `label = null` in the footer band); multiple
 tables + global fields (`DocumentClass.tables`/`globals`; `TableSpec.instances` → stacked instances
-with a `region` label; the `eob` class is now the full shape — member/provider globals + a
-multi-instance `claim_line` table).
+with a `region` label); realistic spacing + jitter (content-aware column widths = content floor +
+weighted slack; vertical gap knobs `row_gap`/`instance_gap`/`section_gap`; multi-pair globals
+`globals_per_row`; per-axis bounded/zero-sum `JitterSpec` row_h/col_w/offset/baseline; CLI knobs;
+viewer spacing/jitter readout); sparse cells (`FieldSpec.fill` → some data cells empty, no token);
+per-class template page size (`LayoutSpec.page`). The `eob` class is now a representative shape —
+member/provider globals (2-up) + a multi-instance ten-column `claim_line` (billed/allowed/deductible/
+copay/coinsurance/plan-paid/owed, sparse) on a wide `1500x1414` page.
 
-**Active milestone — jitter/irregular structure:** synthetic reviewability is shipped: composed
-documents are page-valid and class-coherent (capacity-aware rows/instances, class-aware reserved
-background content), and the viewer has complete-page fit, zoom/pan, controls help, and
-schema-aware metadata. See `docs/specs/2026-06-14-synthetic-reviewability-design.md`. Next
-structural realism: jitter/irregular row heights and column widths → spanning cells →
-**document-class breadth**. **Visual realism is deferred** but provisioned via the `RenderSpec`
-renderer seam.
+**Active milestone — realistic spacing/jitter is shipped** (see
+`docs/specs/2026-06-14-realistic-spacing-jitter-design.md`). Next structural realism: spanning /
+merged cells + grouped headers → **document-class breadth**. **Font auto-scaling** is a deferred,
+toggleable feature (shrink font to fit a wide table on a narrow page instead of overflowing).
+**Visual realism is deferred** but provisioned via the `RenderSpec` renderer seam.
 
 Deferred next: the **model loop** (M0 spatial → run artifacts → predictions overlaid), see
 `docs/specs/2026-06-13-v0-loop-closes-design.md`. Then the **modality ladder** M0→M3 (spatial → +text

@@ -157,6 +157,25 @@ fit, generation fails before writing a partial dataset, and the error reports th
 - An `eob` dataset regenerated with realistic type-default widths, multi-pair globals, and mild
   jitter renders coherently in the viewer and is visibly less grid-like than the current output.
 
+## Follow-on: sparse cells and class-template page size
+
+After the milestone landed, two small additions made the `eob` class representative of real
+explanation-of-benefits forms:
+
+- **Sparse cells.** `FieldSpec.fill` (default `1.0`) is the probability a data cell is populated; a
+  field with `fill < 1.0` leaves some cells empty and emits no token there. `fill >= 1.0` samples
+  directly with no extra RNG draw, so existing classes stay byte-identical. This mirrors real EOBs,
+  where columns like deductible/copay/coinsurance are blank on most lines. Note that sparsity does
+  not relieve column width: a column is still sized to its header, so adding columns costs width
+  regardless of how empty the data is.
+- **Class-template page size.** Page size is declared per class via `LayoutSpec.page`. The `eob`
+  class now carries a wide page (`1500 x 1414`) because its ten claim-line columns (service date,
+  code, description, billed, allowed, deductible, copay, coinsurance, plan paid, amount owed) need
+  the room. On a narrow page the content floors exceed the usable width and content-aware sizing
+  scales the columns (not the font) below their content, so text overflows. **Font auto-scaling** is
+  therefore deferred as a separate, toggleable feature: when enabled it shrinks the font to fit
+  instead of overflowing, letting a wide table sit on a narrow page on demand.
+
 ## Out of scope
 
 - Spanning/merged cells and grouped multi-level headers.
@@ -166,7 +185,8 @@ fit, generation fails before writing a partial dataset, and the error reports th
 
 ## Roadmap after this milestone
 
-1. Spanning / merged cells and grouped headers.
-2. Document-class breadth.
-3. M0 spatial model loop, then the modality ladder (M0 -> M3), using per-axis jitter as an
+1. Font auto-scaling (toggleable): shrink the font to fit when columns exceed the usable width.
+2. Spanning / merged cells and grouped headers.
+3. Document-class breadth.
+4. M0 spatial model loop, then the modality ladder (M0 -> M3), using per-axis jitter as an
    ablation instrument.

@@ -107,6 +107,15 @@ def _emit(placed: list[PlacedToken], text: str, cell: tuple[float, float, float,
             label=base_label, align=align, font_size=font_size))
 
 
+def _sample_cell(field, rng: random.Random) -> str:
+    """Sample a data cell's value, honoring sparsity: a field with fill < 1.0 leaves
+    some cells empty. fill >= 1.0 samples directly (no extra RNG draw), so existing
+    classes are byte-identical."""
+    if field.fill >= 1.0:
+        return sample(field.type, rng)
+    return sample(field.type, rng) if rng.random() < field.fill else ""
+
+
 def _background_rows(count: int) -> int:
     return (count + _BACKGROUND_COLUMNS - 1) // _BACKGROUND_COLUMNS
 
@@ -381,7 +390,7 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
         C = len(table.fields)
         for rows in table_shape:
             reg = {"region": region} if multi_region else {}
-            grid = [[sample(table.fields[c].type, rng) for c in range(C)]
+            grid = [[_sample_cell(table.fields[c], rng) for c in range(C)]
                     for _ in range(rows)]
             edges = _resolve_column_edges(table.fields, W - 2 * mx, mx, L.pad,
                                           header, grid, dc.render.font_size)
@@ -404,6 +413,8 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
                 for c in range(C):
                     f = table.fields[c]
                     value = grid[r][c]
+                    if not value:
+                        continue  # sparse cell: leave it empty, emit no token
                     x0, x1 = row_edges[c], row_edges[c + 1]
                     cell = (x0, y, x1, y + cell_h)
                     _emit(placed, value, cell,
