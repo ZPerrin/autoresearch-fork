@@ -144,6 +144,35 @@ def _background_rows(count: int) -> int:
     return (count + _BACKGROUND_COLUMNS - 1) // _BACKGROUND_COLUMNS
 
 
+def _validate_span_rows(dc: DocumentClass, table: TableSpec) -> None:
+    """Grouped-header banners need a leaf header row; each span row's cells must tile the
+    columns exactly and each cell is text-xor-type (or empty)."""
+    C = len(table.fields)
+    if any(f.group for f in table.fields) and not dc.structure.header:
+        raise LayoutCapacityError(
+            f"table {table.name!r} sets field group(s) but structure.header is off; "
+            "grouped-header banners require a leaf header row"
+        )
+    for slot, srow in (("section", table.section), ("totals", table.totals)):
+        if srow is None:
+            continue
+        total = 0
+        for cell in srow.cells:
+            if cell.span < 1:
+                raise LayoutCapacityError(
+                    f"table {table.name!r} {slot} cell span {cell.span} < 1"
+                )
+            if cell.text is not None and cell.type is not None:
+                raise LayoutCapacityError(
+                    f"table {table.name!r} {slot} cell sets both text and type"
+                )
+            total += cell.span
+        if total != C:
+            raise LayoutCapacityError(
+                f"table {table.name!r} {slot} spans sum to {total}, expected {C}"
+            )
+
+
 def _validate_layout(dc: DocumentClass) -> None:
     L = dc.layout
     width, height = L.page
@@ -181,6 +210,7 @@ def _validate_layout(dc: DocumentClass) -> None:
             f"invalid background count: {dc.structure.background}"
         )
     for table in dc.tables:
+        _validate_span_rows(dc, table)
         for name, bounds in (("instances", table.instances), ("rows", table.rows)):
             lo, hi = bounds
             if lo < 0 or hi < lo:
