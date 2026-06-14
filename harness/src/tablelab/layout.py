@@ -2,7 +2,9 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 
-from .fields import sample, background_token
+from .fields import sample, background_token, field_weight
+from .jitter import jitter_column_edges, jitter_row_height, jitter_offset
+from .metrics import text_width
 from .specs import DocumentClass, TableSpec
 
 
@@ -14,6 +16,69 @@ Shape = tuple[tuple[int, ...], ...]
 _BACKGROUND_COLUMNS = 2
 
 
+def _row_gap(dc) -> int:
+    return dc.layout.row_gap
+
+def _instance_gap(dc) -> int:
+    L = dc.layout
+    return L.instance_gap if L.instance_gap is not None else L.table_gap
+
+def _section_gap(dc) -> int:
+    L = dc.layout
+    return L.section_gap if L.section_gap is not None else L.table_gap
+
+
+def _column_edges(fields, usable: float, mx: float) -> list[float]:
+    """Left/right pixel edges for each column from normalized field weights.
+    Returns len(fields)+1 edges; columns sum to exactly `usable` by construction."""
+    weights = [field_weight(f) for f in fields]
+    total = sum(weights)
+    edges = [mx]
+    acc = 0.0
+    for w in weights:
+        acc += w
+        edges.append(mx + usable * (acc / total))
+    return edges
+
+
+def _content_column_widths(fields, usable: float, pad: int, header: bool,
+                           grid: list[list[str]], font_size: int) -> list[float]:
+    """Content floor + weighted slack. Each column is at least wide enough for the
+    widest of its header label and sampled values (plus padding); leftover usable
+    width is shared across columns in proportion to their weights."""
+    mins = []
+    for c, f in enumerate(fields):
+        texts = [row[c] for row in grid]
+        if header:
+            texts.append(_header_text(f.name))
+        longest = max((text_width(t, font_size) for t in texts), default=0.0)
+        mins.append(longest + 2 * pad)
+    total_min = sum(mins)
+    if total_min >= usable:
+        scale = usable / total_min if total_min > 0 else 1.0
+        return [m * scale for m in mins]
+    slack = usable - total_min
+    weights = [field_weight(f) for f in fields]
+    wtotal = sum(weights) or 1.0
+    return [mins[c] + slack * weights[c] / wtotal for c in range(len(fields))]
+
+
+def _resolve_column_edges(fields, usable: float, mx: float, pad: int, header: bool,
+                          grid: list[list[str]], font_size: int) -> list[float]:
+    """Pixel edges (len(fields)+1). Tables whose fields all carry an explicit width
+    use pure weighted division (byte-identical legacy path, e.g. invoice); otherwise
+    columns are content-aware sized."""
+    if all(f.width is not None for f in fields):
+        return _column_edges(fields, usable, mx)
+    widths = _content_column_widths(fields, usable, pad, header, grid, font_size)
+    edges = [mx]
+    acc = 0.0
+    for w in widths:
+        acc += w
+        edges.append(mx + acc)
+    return edges
+
+
 @dataclass
 class PlacedToken:
     text: str
@@ -21,6 +86,8 @@ class PlacedToken:
     label: dict | None                        # data {"record": r, "field": c} | header {"field": c, "header": True}; + "region": g when multi-instance, + "seq": k when multi_token; null = background
     align: str = "left"
     font_size: int = 22
+    dx: float = 0.0
+    dy: float = 0.0
 
 
 def _header_text(name: str) -> str:
@@ -107,20 +174,17 @@ def _validate_layout(dc: DocumentClass) -> None:
 
 def _fixed_height(dc: DocumentClass) -> int:
     L = dc.layout
-    globals_height = len(dc.globals) * L.row_h
+    gpr = max(L.globals_per_row, 1)
+    n_global_rows = (len(dc.globals) + gpr - 1) // gpr
+    globals_height = n_global_rows * L.row_h
     if dc.globals:
-        globals_height += L.table_gap
+        globals_height += _section_gap(dc)
     return globals_height + _background_rows(dc.structure.background) * L.row_h
 
 
 def _shape_height(dc: DocumentClass, shape: Shape) -> int:
-    L = dc.layout
-    header_rows = int(dc.structure.header)
-    return sum(
-        (header_rows + rows) * L.row_h + L.table_gap
-        for table_shape in shape
-        for rows in table_shape
-    )
+    return sum(_instance_height(dc, rows)
+               for table_shape in shape for rows in table_shape)
 
 
 def _available_height(dc: DocumentClass) -> int:
@@ -141,7 +205,10 @@ def _is_safe_legacy(dc: DocumentClass) -> bool:
 
 
 def _instance_height(dc: DocumentClass, rows: int) -> int:
-    return (int(dc.structure.header) + rows) * dc.layout.row_h + dc.layout.table_gap
+    L = dc.layout
+    header = int(dc.structure.header)
+    return (header * L.row_h + rows * L.row_h
+            + max(rows - 1, 0) * _row_gap(dc) + _instance_gap(dc))
 
 
 def _minimum_shape_height(dc: DocumentClass) -> int:
@@ -284,47 +351,67 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
     mx, my = L.margin
     multi = dc.structure.multi_token
     header = dc.structure.header
+    J = dc.jitter
     shape = _choose_shape(dc, rng)
     multi_region = len(dc.tables) > 1 or sum(t.instances[1] for t in dc.tables) > 1
     placed: list[PlacedToken] = []
     y = float(my)
     if dc.globals:
-        gw = (W - 2 * mx) * 0.35
-        for f in dc.globals:
-            label_cell = (mx, y, mx + gw, y + L.row_h)
+        gpr = max(L.globals_per_row, 1)
+        usable = W - 2 * mx
+        pair_w = usable / gpr
+        for i, f in enumerate(dc.globals):
+            col = i % gpr
+            if i and col == 0:
+                y += L.row_h
+            px0 = mx + col * pair_w
+            gw = pair_w * 0.35
+            label_cell = (px0, y, px0 + gw, y + L.row_h)
             _emit(placed, _header_text(f.name) + ":", label_cell,
                   {"global": f.name, "header": True}, "left", dc.render.font_size, multi)
-            value_cell = (mx + gw, y, W - mx, y + L.row_h)
+            value_cell = (px0 + gw, y, px0 + pair_w, y + L.row_h)
             _emit(placed, sample(f.type, rng), value_cell,
                   {"global": f.name}, "left", dc.render.font_size, multi)
-            y += L.row_h
-        y += L.table_gap
+        y += L.row_h
+        y += _section_gap(dc)
     region = 0
     for table, table_shape in zip(dc.tables, shape):
         if not table_shape:
             continue
         C = len(table.fields)
-        cell_w = (W - 2 * mx) / C
         for rows in table_shape:
             reg = {"region": region} if multi_region else {}
+            grid = [[sample(table.fields[c].type, rng) for c in range(C)]
+                    for _ in range(rows)]
+            edges = _resolve_column_edges(table.fields, W - 2 * mx, mx, L.pad,
+                                          header, grid, dc.render.font_size)
             if header:
                 for c in range(C):
                     f = table.fields[c]
-                    x0 = mx + c * cell_w
-                    cell = (x0, y, x0 + cell_w, y + L.row_h)
+                    x0, x1 = edges[c], edges[c + 1]
+                    cell = (x0, y, x1, y + L.row_h)
                     _emit(placed, _header_text(f.name), cell,
                           {**reg, "field": c, "header": True}, f.align, dc.render.font_size, multi)
                 y += L.row_h
             for r in range(rows):
+                row_edges = (jitter_column_edges(edges, J.col_w, rng)
+                             if J.col_w > 0 else edges)
+                cell_h = L.row_h
+                gap_after = _row_gap(dc)
+                if J.row_h > 0 and _row_gap(dc) > 0:
+                    cell_h, delta = jitter_row_height(L.row_h, J.row_h, _row_gap(dc), rng)
+                    gap_after = _row_gap(dc) + delta
                 for c in range(C):
                     f = table.fields[c]
-                    value = sample(f.type, rng)
-                    x0 = mx + c * cell_w
-                    cell = (x0, y, x0 + cell_w, y + L.row_h)
+                    value = grid[r][c]
+                    x0, x1 = row_edges[c], row_edges[c + 1]
+                    cell = (x0, y, x1, y + cell_h)
                     _emit(placed, value, cell,
                           {**reg, "record": r, "field": c}, f.align, dc.render.font_size, multi)
-                y += L.row_h
-            y += L.table_gap
+                y += cell_h
+                if r < rows - 1:
+                    y += gap_after
+            y += _instance_gap(dc)
             region += 1
     n_bg = dc.structure.background
     if n_bg:
@@ -338,5 +425,8 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
             placed.append(PlacedToken(
                 text=background_token(dc.background_terms, rng), cell=cell, label=None,
                 align="left", font_size=dc.render.font_size))
+    if J.offset > 0 or J.baseline > 0:
+        for p in placed:
+            p.dx, p.dy = jitter_offset(J.offset, J.baseline, L.pad, rng)
     rng.shuffle(placed)
     return placed

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from .specs import FieldSpec, TableSpec, DocumentClass
+from .specs import FieldSpec, TableSpec, DocumentClass, LayoutSpec
 
 REGISTRY: dict[str, DocumentClass] = {}
 
@@ -19,8 +19,8 @@ def classes() -> list[str]:
     return sorted(REGISTRY)
 
 
-def _f(name: str, type_: str, align: str) -> FieldSpec:
-    return FieldSpec(name=name, type=type_, align=align)
+def _f(name: str, type_: str, align: str, width: float | None = None) -> FieldSpec:
+    return FieldSpec(name=name, type=type_, align=align, width=width)
 
 
 _INVOICE_BACKGROUND = (
@@ -42,10 +42,11 @@ _RECEIPT_BACKGROUND = (
 
 register(DocumentClass(name="invoice", tables=(
     TableSpec(name="line_item", fields=(
-        _f("description", "description", "left"),
-        _f("quantity", "quantity", "right"),
-        _f("unit_price", "unit_price", "right"),
-        _f("amount", "amount", "right"),
+        # width=1.0 pins uniform columns: invoice is the byte-identical golden guard.
+        _f("description", "description", "left", 1.0),
+        _f("quantity", "quantity", "right", 1.0),
+        _f("unit_price", "unit_price", "right", 1.0),
+        _f("amount", "amount", "right", 1.0),
     )),
 ), background_terms=_INVOICE_BACKGROUND))
 
@@ -67,6 +68,7 @@ register(DocumentClass(
         ), rows=(2, 5), instances=(1, 2)),
     ),
     background_terms=_EOB_BACKGROUND,
+    layout=LayoutSpec(globals_per_row=2),
 ))
 
 register(DocumentClass(name="receipt", tables=(

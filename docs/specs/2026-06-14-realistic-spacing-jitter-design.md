@@ -46,17 +46,35 @@ to iterate a class's spacing/jitter profile in the viewer until its output looks
 that class definition as a repeatable recipe: the deterministic knobs hold the look constant while
 jitter plus feasible-shape sampling supply controlled per-document variance.
 
-## Non-uniform column widths (hybrid)
+## Non-uniform column widths (content floor + weighted slack)
 
-`FieldSpec` gains an optional `width: float | None` weight. The field **type** registry carries a
-default weight (e.g. `date` ~2, `code` ~1, `description` ~4, `amount` ~1.5) so a class looks
-reasonable with zero authoring; a per-field `width` overrides the type default when a specific class
-needs tuning.
+Equal `cell_w = usable / C` is content-blind: a narrow column (or a long header) overflows into its
+neighbor. Hand-tuned per-field weights only paper over this. The realistic model sizes each column to
+its **content** first, then uses weights to share whatever space is left over.
 
-`layout` replaces equal `cell_w = usable / C` with **weight-normalized** widths whose sum equals the
-usable width by construction. A column's pixel width is `usable * weight_i / sum(weights)`. Because
-columns are sized to content, right-aligned amounts now sit at the true right edge of a correctly
-sized column rather than far from their values.
+`FieldSpec` gains an optional `width: float | None` weight, and the field **type** registry carries a
+default weight (e.g. `date` ~2, `code` ~1, `description` ~4, `amount` ~1.5). Column widths are then
+computed as:
+
+1. **Content floor.** For each column, measure the widest of its header label (when headers are on)
+   and this document's sampled values, plus padding. That is the column's minimum width — text in
+   that column cannot overflow its cell.
+2. **Weighted slack.** Give every column its content floor, then distribute the remaining usable
+   width across columns in proportion to their weights (so `description` still reads roomy). The
+   widths sum to exactly the usable width by construction.
+3. **Degenerate case.** If the content floors already exceed the usable width, scale all columns down
+   proportionally (a rare last resort).
+
+Because values are random per document, the layout pre-samples a table instance's value grid (in the
+existing row-major order, so the RNG stream is unchanged) before sizing columns. Measuring text
+requires the render font, so a small `metrics` helper estimates text width from that font and
+`layout` calls it — keeping placement logic itself Pillow-light.
+
+**Legacy/explicit path.** When *every* field in a table carries an explicit `width`, the table uses
+pure weight-normalized division and skips the content floor. This is the byte-identical golden guard:
+the invoice class pins all fields to `width = 1.0`, yielding equal columns exactly as before. Classes
+that leave `width` unset (e.g. `eob`) get content-aware sizing for free, with type-default weights
+governing only how slack is shared.
 
 ## Vertical spacing knobs (`LayoutSpec`)
 
@@ -87,7 +105,9 @@ so a dataset can isolate one nuisance variable for modeling ablations.
   budget so the section's total height never grows. Its magnitude is bounded by the available gap
   budget; with zero gaps there is no vertical room and this axis is effectively a no-op.
 - `col_w` - per-column width variance, **zero-sum across the row**: when one column widens, a
-  neighbor narrows by the same amount, so the row still spans exactly the usable width.
+  neighbor narrows by the same amount, so the row still spans exactly the usable width. The magnitude
+  is a fraction of the **local column width** (not the full page), so `0.2` means roughly ±20% of a
+  column; keep it modest so a jittered column does not shrink below its content.
 - `offset` - per-token x/y wobble, **bounded inside the cell's interior padding** so the box never
   crosses its cell edge.
 - `baseline` - small vertical text-baseline wobble, also bounded inside the cell.

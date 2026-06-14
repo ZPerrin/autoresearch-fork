@@ -7,6 +7,7 @@ class FieldSpec:
     name: str
     type: str            # key into fields.SAMPLERS (e.g. "amount", "date")
     align: str = "left"  # "left" | "right"
+    width: float | None = None  # column weight; None => fields.TYPE_WIDTH default
 
 
 @dataclass(frozen=True)
@@ -19,11 +20,15 @@ class TableSpec:
 
 @dataclass(frozen=True)
 class LayoutSpec:
-    page: tuple[int, int] = (1000, 1414)  # page pixel size (W, H)
-    margin: tuple[int, int] = (60, 80)    # (x, y) page margins in px
-    row_h: int = 74                       # row height in px
-    pad: int = 12                         # in-cell text padding in px
-    table_gap: int = 40                   # vertical gap after each table instance in px
+    page: tuple[int, int] = (1000, 1414)
+    margin: tuple[int, int] = (60, 80)
+    row_h: int = 74
+    pad: int = 12
+    table_gap: int = 40                   # back-compat base gap; instance_gap/section_gap fall back to this
+    row_gap: int = 0                      # extra gap between consecutive data rows within a table
+    instance_gap: int | None = None       # gap between stacked instances (None => table_gap)
+    section_gap: int | None = None        # gap between sections globals->tables->background (None => table_gap)
+    globals_per_row: int = 1              # label:value pairs packed across one global row
 
 
 @dataclass(frozen=True)
@@ -48,6 +53,18 @@ class RenderSpec:
 
 
 @dataclass(frozen=True)
+class JitterSpec:
+    """Per-axis random perturbation magnitudes (fractions, 0 = off). Each axis is
+    independent so a dataset can isolate one nuisance variable for modeling ablations.
+    All bounded/zero-sum: jitter never grows a section's total extent or pushes a token
+    out of its cell (see docs/specs/2026-06-14-realistic-spacing-jitter-design.md)."""
+    row_h: float = 0.0    # per-row height variance, borrowed zero-sum from row_gap budget
+    col_w: float = 0.0    # per-column width variance, zero-sum across the row
+    offset: float = 0.0   # per-token x/y wobble, bounded inside the cell pad
+    baseline: float = 0.0 # per-token vertical baseline wobble, bounded inside the cell pad
+
+
+@dataclass(frozen=True)
 class DocumentClass:
     name: str
     tables: tuple[TableSpec, ...]
@@ -56,6 +73,7 @@ class DocumentClass:
     layout: LayoutSpec = LayoutSpec()
     structure: StructureSpec = StructureSpec()
     render: RenderSpec = RenderSpec()
+    jitter: JitterSpec = JitterSpec()
 
 
 def fork(dc: DocumentClass, name: str | None = None, **overrides) -> DocumentClass:

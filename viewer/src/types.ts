@@ -82,6 +82,13 @@ export interface TableSpec {
   instances: [number, number]
 }
 
+export interface JitterSpec {
+  row_h: number
+  col_w: number
+  offset: number
+  baseline: number
+}
+
 export interface ResolvedDocumentSpec {
   name: string
   tables: TableSpec[]
@@ -93,7 +100,12 @@ export interface ResolvedDocumentSpec {
     row_h: number
     pad: number
     table_gap: number
+    row_gap?: number
+    instance_gap?: number | null
+    section_gap?: number | null
+    globals_per_row?: number
   }
+  jitter?: JitterSpec
   structure: Record<string, LabelValue>
   render: Record<string, LabelValue>
 }
