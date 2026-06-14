@@ -64,11 +64,14 @@ Data is multimodal from the start (LayoutLMv3 stack): **spatial** (token boxes),
 - **Header row** (second structural-realism feature): `StructureSpec.header` emits a top row of
   field-name tokens (label `{"field": c, "header": True}`); renderer grouping keyed on the cell
   rect (schema-agnostic); off is byte-identical. See `2026-06-13-header-row-design.md`.
+- **Background / non-table tokens** (third structural-realism feature): `StructureSpec.background`
+  scatters N tokens with `label = null` in the footer band — the negative class; off is
+  byte-identical. See `2026-06-13-background-tokens-design.md`.
 
 ## Roadmap (milestones — each gets its own plan when started)
 
 1. **Synthetic data toolkit — ACTIVE** (this doc, below): backbone + **multi-token cells** +
-   **header row** shipped. Remaining **structural realism** in order — background/non-table tokens →
+   **header row** + **background tokens** shipped. Remaining **structural realism** in order —
    multiple tables + globals → jitter/irregular → spanning cells — then document-class breadth.
    Visual realism architecturally provisioned but deferred.
 2. **The loop closes**: M0 spatial model trains on a dataset → emits run artifacts → predictions

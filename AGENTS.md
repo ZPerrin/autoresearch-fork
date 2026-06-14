@@ -60,13 +60,14 @@ Viewer:
 Built: env (MPS + CUDA), contract v2, multimodal dataset builder, split-pane viewer; synth-toolkit
 backbone (compositional spec API specs/fields/classes/layout/render/build + build/list/inspect CLI);
 multi-token cells (`StructureSpec.multi_token` → per-word tokens sharing record/field + `seq`);
-header row (`StructureSpec.header` → top field-name row, label `{field, header}`).
+header row (`StructureSpec.header` → top field-name row, label `{field, header}`); background tokens
+(`StructureSpec.background` → N non-table tokens with `label = null` in the footer band).
 
-**Active milestone — the synthetic data toolkit:** backbone + multi-token cells + header row done.
-Next step: **background / non-table tokens** (`label = null`). Remaining structural realism —
-background tokens → multiple tables + global fields → jitter/irregular → spanning cells — then
-**document-class breadth** (EOB prioritized; it mirrors the real problem). **Visual realism is
-deferred** but provisioned via the `RenderSpec` renderer seam.
+**Active milestone — the synthetic data toolkit:** backbone + multi-token cells + header row +
+background tokens done. Next step: **multiple tables + global fields** (the EOB shape; adds a
+`region` to the label). Remaining structural realism — multiple tables + globals → jitter/irregular
+→ spanning cells — then **document-class breadth** (EOB prioritized; it mirrors the real problem).
+**Visual realism is deferred** but provisioned via the `RenderSpec` renderer seam.
 
 Deferred next: the **model loop** (M0 spatial → run artifacts → predictions overlaid), see
 `docs/specs/2026-06-13-v0-loop-closes-design.md`. Then the **modality ladder** M0→M3 (spatial → +text

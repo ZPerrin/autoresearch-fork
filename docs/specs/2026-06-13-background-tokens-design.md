@@ -1,6 +1,6 @@
 # Background / non-table tokens — design
 
-- Status: **design** (full-agentic build; third structural-realism feature)
+- Status: **shipped** (merged to `master`; third structural-realism feature). Plan: `docs/plans/2026-06-13-background-tokens.md`.
 - Date: 2026-06-13
 - Parent: `docs/specs/2026-06-13-design-and-roadmap.md` (§ structural realism). Follows
   `2026-06-13-header-row-design.md`.
