@@ -34,7 +34,8 @@ def render(placed: list[PlacedToken], dc: DocumentClass) -> tuple[Image.Image, l
         groups.setdefault(key, []).append(i)
 
     for idxs in groups.values():
-        idxs.sort(key=lambda i: placed[i].label.get("seq", 0))
+        if len(idxs) > 1:
+            idxs.sort(key=lambda i: placed[i].label["seq"])
         cx0, cy0, cx1, cy1 = placed[idxs[0]].cell
         row_h = cy1 - cy0
         align = placed[idxs[0]].align
@@ -52,14 +53,16 @@ def render(placed: list[PlacedToken], dc: DocumentClass) -> tuple[Image.Image, l
 
         # Multi-word: lay the words out as a contiguous phrase within the cell.
         words = [placed[i].text for i in idxs]
-        phrase_w = draw.textlength(" ".join(words), font=font)
+        widths = [draw.textlength(w, font=font) for w in words]
+        space_w = draw.textlength(" ", font=font)
+        phrase_w = sum(widths) + space_w * (len(words) - 1)
         x = (cx1 - pad - phrase_w) if align == "right" else (cx0 + pad)
-        for i, word in zip(idxs, words):
+        for k, (i, word, w) in enumerate(zip(idxs, words, widths)):
             tb = draw.textbbox((0, 0), word, font=font)
             th = tb[3] - tb[1]
             ty = cy0 + (row_h - th) / 2 - tb[1]
             draw.text((x, ty), word, fill="black", font=font)
             boxes[i] = draw.textbbox((x, ty), word, font=font)
-            x += draw.textlength(word + " ", font=font)
+            x += w + (space_w if k < len(words) - 1 else 0)
 
     return img, boxes

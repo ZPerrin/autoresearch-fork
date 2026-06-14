@@ -10,7 +10,7 @@ from .fields import sample
 class PlacedToken:
     text: str
     cell: tuple[float, float, float, float]   # cell rect in page pixels (x0, y0, x1, y1)
-    label: dict | None                        # {"record": r, "field": c}; null = background (future)
+    label: dict | None                        # {"record": r, "field": c} (+ "seq": k when multi_token); null = background (future)
     align: str = "left"
     font_size: int = 22
 

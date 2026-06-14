@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import random
 from collections import defaultdict
 from dataclasses import replace
@@ -25,7 +27,7 @@ def test_multiword_cells_split_with_contiguous_seq():
     groups = _groups(placed)
     # at least one cell (a multi-word description) split into >1 token
     assert any(len(v) > 1 for v in groups.values())
-    # every cell's tokens carry contiguous seq 0..n-1
+    # every cell's tokens carry contiguous seq 0..n-1 (single-word cells get seq 0)
     for toks in groups.values():
         seqs = sorted(p.label["seq"] for p in toks)
         assert seqs == list(range(len(toks)))
