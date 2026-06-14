@@ -4,6 +4,7 @@ from tablelab.fields import field_weight
 from tablelab.specs import FieldSpec, fork
 from tablelab import classes as classlib
 from tablelab.layout import layout, validate_layout_capacity, LayoutCapacityError
+from tablelab.render import render
 
 
 def test_field_weight_uses_explicit_override():
@@ -59,3 +60,14 @@ def test_globals_per_row_packs_pairs_and_stays_in_page():
     starts = sorted({round(t.cell[0], 3) for t in gl if t.label.get("header")})
     assert len(starts) == 2
     assert all(t.cell[2] <= W - mx + 1e-6 for t in gl)
+
+
+def test_content_aware_columns_prevent_overflow():
+    dc = classlib.get("eob")  # content-aware, jitter off by default
+    placed = layout(dc, random.Random(0))
+    _img, boxes = render(placed, dc)
+    for p, b in zip(placed, boxes):
+        if not (p.label and "field" in p.label):
+            continue  # only table columns are content-sized; globals are separate
+        cx0, _cy0, cx1, _cy1 = p.cell
+        assert b[0] >= cx0 - 1 and b[2] <= cx1 + 1, (p.text, p.cell, b)

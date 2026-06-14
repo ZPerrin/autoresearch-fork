@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from .fields import sample, background_token, field_weight
 from .jitter import jitter_column_edges, jitter_row_height, jitter_offset
+from .metrics import text_width
 from .specs import DocumentClass, TableSpec
 
 
@@ -37,6 +38,44 @@ def _column_edges(fields, usable: float, mx: float) -> list[float]:
     for w in weights:
         acc += w
         edges.append(mx + usable * (acc / total))
+    return edges
+
+
+def _content_column_widths(fields, usable: float, pad: int, header: bool,
+                           grid: list[list[str]], font_size: int) -> list[float]:
+    """Content floor + weighted slack. Each column is at least wide enough for the
+    widest of its header label and sampled values (plus padding); leftover usable
+    width is shared across columns in proportion to their weights."""
+    mins = []
+    for c, f in enumerate(fields):
+        texts = [row[c] for row in grid]
+        if header:
+            texts.append(_header_text(f.name))
+        longest = max((text_width(t, font_size) for t in texts), default=0.0)
+        mins.append(longest + 2 * pad)
+    total_min = sum(mins)
+    if total_min >= usable:
+        scale = usable / total_min if total_min > 0 else 1.0
+        return [m * scale for m in mins]
+    slack = usable - total_min
+    weights = [field_weight(f) for f in fields]
+    wtotal = sum(weights) or 1.0
+    return [mins[c] + slack * weights[c] / wtotal for c in range(len(fields))]
+
+
+def _resolve_column_edges(fields, usable: float, mx: float, pad: int, header: bool,
+                          grid: list[list[str]], font_size: int) -> list[float]:
+    """Pixel edges (len(fields)+1). Tables whose fields all carry an explicit width
+    use pure weighted division (byte-identical legacy path, e.g. invoice); otherwise
+    columns are content-aware sized."""
+    if all(f.width is not None for f in fields):
+        return _column_edges(fields, usable, mx)
+    widths = _content_column_widths(fields, usable, pad, header, grid, font_size)
+    edges = [mx]
+    acc = 0.0
+    for w in widths:
+        acc += w
+        edges.append(mx + acc)
     return edges
 
 
@@ -340,9 +379,12 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
         if not table_shape:
             continue
         C = len(table.fields)
-        edges = _column_edges(table.fields, W - 2 * mx, mx)
         for rows in table_shape:
             reg = {"region": region} if multi_region else {}
+            grid = [[sample(table.fields[c].type, rng) for c in range(C)]
+                    for _ in range(rows)]
+            edges = _resolve_column_edges(table.fields, W - 2 * mx, mx, L.pad,
+                                          header, grid, dc.render.font_size)
             if header:
                 for c in range(C):
                     f = table.fields[c]
@@ -361,7 +403,7 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
                     gap_after = _row_gap(dc) + delta
                 for c in range(C):
                     f = table.fields[c]
-                    value = sample(f.type, rng)
+                    value = grid[r][c]
                     x0, x1 = row_edges[c], row_edges[c + 1]
                     cell = (x0, y, x1, y + cell_h)
                     _emit(placed, value, cell,
