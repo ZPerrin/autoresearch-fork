@@ -77,3 +77,23 @@ def _id(rng: random.Random) -> str:
 
 SAMPLERS["name"] = _name
 SAMPLERS["id"] = _id
+
+# Default column width weights by field type. A column's pixel width is
+# usable_width * weight / sum(weights). Explicit FieldSpec.width overrides this.
+TYPE_WIDTH = {
+    "description": 4.0,
+    "date": 2.0,
+    "name": 3.0,
+    "id": 2.0,
+    "code": 1.0,
+    "quantity": 1.0,
+    "unit_price": 1.5,
+    "amount": 1.5,
+}
+
+
+def field_weight(field) -> float:
+    """Resolve a field's column weight: explicit override, else type default, else 1.0."""
+    if field.width is not None:
+        return field.width
+    return TYPE_WIDTH.get(field.type, 1.0)
