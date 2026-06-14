@@ -356,6 +356,8 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
               src={image}
               alt={`Sample ${sample.id}`}
               className="doc-image"
+              draggable={false}
+              onDragStart={event => event.preventDefault()}
               onError={() => setImgError(true)}
             />
           ) : (
