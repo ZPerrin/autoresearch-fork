@@ -97,7 +97,7 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
             by = rng.uniform(y_lo, y_hi)
             cell = (bx, by, bx + 80, by + L.row_h)
             placed.append(PlacedToken(
-                text=background_token(rng), cell=cell, label=None,
+                text=background_token(dc.background_terms, rng), cell=cell, label=None,
                 align="left", font_size=dc.render.font_size))
     rng.shuffle(placed)
     return placed

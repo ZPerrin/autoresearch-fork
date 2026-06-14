@@ -4,6 +4,7 @@ import random
 from dataclasses import replace
 
 from tablelab import classes as classlib
+from tablelab.fields import background_token
 from tablelab.specs import fork
 from tablelab.layout import layout
 from tablelab.render import render
@@ -48,3 +49,24 @@ def test_background_composes_with_header():
     placed = layout(dc, random.Random(7))
     assert sum(1 for p in placed if p.label is None) == 3
     assert any(p.label and p.label.get("header") for p in placed)
+
+
+def test_background_token_uses_document_class_terms():
+    eob_terms = classlib.get("eob").background_terms
+    rng = random.Random(7)
+    values = {background_token(eob_terms, rng) for _ in range(200)}
+    words = {value for value in values if not value.isdigit()}
+
+    assert words <= set(eob_terms)
+    assert words.isdisjoint({"Invoice", "Receipt"})
+
+
+def test_builtin_background_vocabularies_are_distinct():
+    invoice = classlib.get("invoice").background_terms
+    eob = classlib.get("eob").background_terms
+    receipt = classlib.get("receipt").background_terms
+
+    assert len({invoice, eob, receipt}) == 3
+    assert {"Invoice", "Account", "Remit To"} <= set(invoice)
+    assert {"Explanation of Benefits", "Patient Responsibility", "This Is Not a Bill"} <= set(eob)
+    assert {"Receipt", "Thank You", "Store Copy"} <= set(receipt)

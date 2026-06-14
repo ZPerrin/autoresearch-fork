@@ -52,6 +52,7 @@ class DocumentClass:
     name: str
     tables: tuple[TableSpec, ...]
     globals: tuple[FieldSpec, ...] = ()
+    background_terms: tuple[str, ...] = ()
     layout: LayoutSpec = LayoutSpec()
     structure: StructureSpec = StructureSpec()
     render: RenderSpec = RenderSpec()

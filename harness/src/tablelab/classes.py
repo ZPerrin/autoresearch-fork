@@ -23,6 +23,23 @@ def _f(name: str, type_: str, align: str) -> FieldSpec:
     return FieldSpec(name=name, type=type_, align=align)
 
 
+INVOICE_BACKGROUND = (
+    "Invoice", "Account", "Customer", "Subtotal", "Total", "Balance",
+    "Payment Terms", "Remit To", "Page", "Reference",
+)
+
+EOB_BACKGROUND = (
+    "Explanation of Benefits", "Patient Responsibility", "Plan Paid",
+    "Claim Reference", "Benefit Notice", "This Is Not a Bill",
+    "Member Services", "Page", "Reference",
+)
+
+RECEIPT_BACKGROUND = (
+    "Receipt", "Paid", "Subtotal", "Total", "Payment", "Thank You",
+    "Store Copy", "Page", "Reference",
+)
+
+
 register(DocumentClass(name="invoice", tables=(
     TableSpec(name="line_item", fields=(
         _f("description", "description", "left"),
@@ -30,7 +47,7 @@ register(DocumentClass(name="invoice", tables=(
         _f("unit_price", "unit_price", "right"),
         _f("amount", "amount", "right"),
     )),
-)))
+), background_terms=INVOICE_BACKGROUND))
 
 register(DocumentClass(
     name="eob",
@@ -49,6 +66,7 @@ register(DocumentClass(
             _f("amount_owed", "amount", "right"),
         ), rows=(2, 5), instances=(1, 2)),
     ),
+    background_terms=EOB_BACKGROUND,
 ))
 
 register(DocumentClass(name="receipt", tables=(
@@ -56,4 +74,4 @@ register(DocumentClass(name="receipt", tables=(
         _f("description", "description", "left"),
         _f("amount", "amount", "right"),
     )),
-)))
+), background_terms=RECEIPT_BACKGROUND))
