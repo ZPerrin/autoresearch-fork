@@ -334,7 +334,6 @@
   object-fit: contain;
   -webkit-user-drag: none;
   user-select: none;
-  pointer-events: none;
 }
 
 .doc-image-placeholder {
@@ -353,12 +352,12 @@
   pointer-events: none;
 }
 
-.doc-overlay g {
+.doc-overlay rect {
   pointer-events: all;
   cursor: pointer;
 }
 
-.doc-viewport.is-panning .doc-overlay g {
+.doc-viewport.is-panning .doc-overlay rect {
   cursor: grabbing;
 }
 
