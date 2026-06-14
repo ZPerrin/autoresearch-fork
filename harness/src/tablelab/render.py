@@ -46,20 +46,24 @@ def render(placed: list[PlacedToken], dc: DocumentClass) -> tuple[Image.Image, l
             tw, th = tb[2] - tb[0], tb[3] - tb[1]
             ty = cy0 + (row_h - th) / 2 - tb[1]
             tx = (cx1 - pad - tw) if align == "right" else (cx0 + pad)
+            tx += p.dx
+            ty += p.dy
             draw.text((tx, ty), p.text, fill="black", font=font)
             boxes[idxs[0]] = draw.textbbox((tx, ty), p.text, font=font)
             continue
 
         # Multi-word: lay the words out as a contiguous phrase within the cell.
+        leader = placed[idxs[0]]
         words = [placed[i].text for i in idxs]
         widths = [draw.textlength(w, font=font) for w in words]
         space_w = draw.textlength(" ", font=font)
         phrase_w = sum(widths) + space_w * (len(words) - 1)
         x = (cx1 - pad - phrase_w) if align == "right" else (cx0 + pad)
+        x += leader.dx
         for k, (i, word, w) in enumerate(zip(idxs, words, widths)):
             tb = draw.textbbox((0, 0), word, font=font)
             th = tb[3] - tb[1]
-            ty = cy0 + (row_h - th) / 2 - tb[1]
+            ty = cy0 + (row_h - th) / 2 - tb[1] + leader.dy
             draw.text((x, ty), word, fill="black", font=font)
             boxes[i] = draw.textbbox((x, ty), word, font=font)
             x += w + (space_w if k < len(words) - 1 else 0)

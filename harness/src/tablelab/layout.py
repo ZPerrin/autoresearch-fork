@@ -3,6 +3,7 @@ import random
 from dataclasses import dataclass
 
 from .fields import sample, background_token, field_weight
+from .jitter import jitter_column_edges, jitter_row_height, jitter_offset
 from .specs import DocumentClass, TableSpec
 
 
@@ -46,6 +47,8 @@ class PlacedToken:
     label: dict | None                        # data {"record": r, "field": c} | header {"field": c, "header": True}; + "region": g when multi-instance, + "seq": k when multi_token; null = background
     align: str = "left"
     font_size: int = 22
+    dx: float = 0.0
+    dy: float = 0.0
 
 
 def _header_text(name: str) -> str:
@@ -309,6 +312,7 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
     mx, my = L.margin
     multi = dc.structure.multi_token
     header = dc.structure.header
+    J = dc.jitter
     shape = _choose_shape(dc, rng)
     multi_region = len(dc.tables) > 1 or sum(t.instances[1] for t in dc.tables) > 1
     placed: list[PlacedToken] = []
@@ -348,16 +352,23 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
                           {**reg, "field": c, "header": True}, f.align, dc.render.font_size, multi)
                 y += L.row_h
             for r in range(rows):
+                row_edges = (jitter_column_edges(edges, J.col_w, W - 2 * mx, rng)
+                             if J.col_w > 0 else edges)
+                cell_h = L.row_h
+                gap_after = _row_gap(dc)
+                if J.row_h > 0 and _row_gap(dc) > 0:
+                    cell_h, delta = jitter_row_height(L.row_h, J.row_h, _row_gap(dc), rng)
+                    gap_after = _row_gap(dc) + delta
                 for c in range(C):
                     f = table.fields[c]
                     value = sample(f.type, rng)
-                    x0, x1 = edges[c], edges[c + 1]
-                    cell = (x0, y, x1, y + L.row_h)
+                    x0, x1 = row_edges[c], row_edges[c + 1]
+                    cell = (x0, y, x1, y + cell_h)
                     _emit(placed, value, cell,
                           {**reg, "record": r, "field": c}, f.align, dc.render.font_size, multi)
-                y += L.row_h
+                y += cell_h
                 if r < rows - 1:
-                    y += _row_gap(dc)
+                    y += gap_after
             y += _instance_gap(dc)
             region += 1
     n_bg = dc.structure.background
@@ -372,5 +383,8 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
             placed.append(PlacedToken(
                 text=background_token(dc.background_terms, rng), cell=cell, label=None,
                 align="left", font_size=dc.render.font_size))
+    if J.offset > 0 or J.baseline > 0:
+        for p in placed:
+            p.dx, p.dy = jitter_offset(J.offset, J.baseline, L.pad, rng)
     rng.shuffle(placed)
     return placed
