@@ -6,6 +6,13 @@ const COLOR_CORRECT  = { fill: 'rgba(29,158,117,0.18)',  stroke: '#1D9E75' }
 const COLOR_WRONG    = { fill: 'rgba(226,75,74,0.18)',   stroke: '#E24B4A' }
 const COLOR_GT       = { fill: 'rgba(55,138,221,0.10)',  stroke: '#378ADD' }
 const COLOR_SELECTED = { fill: 'rgba(255,180,0,0.28)',   stroke: '#F59E0B' }
+const MIN_ZOOM = 0.25
+const MAX_ZOOM = 4
+const ZOOM_STEP = 1.2
+
+function clampZoom(zoom: number): number {
+  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom))
+}
 
 function tokenColors(tok: Token, task: string | undefined, selected: boolean) {
   if (selected) return COLOR_SELECTED
@@ -30,14 +37,48 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
   const [fitScale, setFitScale] = useState(1)
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
+  const zoomRef = useRef(1)
+  const panRef = useRef({ x: 0, y: 0 })
 
   const sample = samples[Math.min(sampleIdx, samples.length - 1)]
   const width = sample?.width ?? 0
   const height = sample?.height ?? 0
 
   const resetView = useCallback(() => {
+    zoomRef.current = 1
+    panRef.current = { x: 0, y: 0 }
     setZoom(1)
     setPan({ x: 0, y: 0 })
+  }, [])
+
+  const setZoomAround = useCallback((
+    requestedZoom: number,
+    clientPoint?: { x: number; y: number },
+  ) => {
+    const viewport = viewportRef.current
+    if (viewport == null) return
+
+    const currentZoom = zoomRef.current
+    const nextZoom = clampZoom(requestedZoom)
+    if (nextZoom === currentZoom) return
+
+    const rect = viewport.getBoundingClientRect()
+    const viewportCenter = {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    }
+    const point = clientPoint ?? viewportCenter
+    const currentPan = panRef.current
+    const ratio = nextZoom / currentZoom
+    const nextPan = {
+      x: currentPan.x + (point.x - viewportCenter.x - currentPan.x) * (1 - ratio),
+      y: currentPan.y + (point.y - viewportCenter.y - currentPan.y) * (1 - ratio),
+    }
+
+    zoomRef.current = nextZoom
+    panRef.current = nextPan
+    setZoom(nextZoom)
+    setPan(nextPan)
   }, [])
 
   useLayoutEffect(() => {
@@ -65,6 +106,22 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
     return () => cancelAnimationFrame(frame)
   }, [sample?.id, sample?.image, resetView])
 
+  useEffect(() => {
+    const viewport = viewportRef.current
+    if (viewport == null) return
+
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault()
+      setZoomAround(
+        zoomRef.current * Math.exp(-event.deltaY * 0.0015),
+        { x: event.clientX, y: event.clientY },
+      )
+    }
+
+    viewport.addEventListener('wheel', handleWheel, { passive: false })
+    return () => viewport.removeEventListener('wheel', handleWheel)
+  }, [setZoomAround])
+
   if (sample == null) {
     return <p className="empty-note">No samples to display.</p>
   }
@@ -82,24 +139,45 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
 
   return (
     <div className="doc-viewer">
-      {/* Navigation */}
-      <div className="sample-nav">
-        <button
-          onClick={() => { setSampleIdx(i => Math.max(0, i - 1)); onSelectToken(null) }}
-          disabled={sampleIdx === 0}
-        >
-          ← Prev
-        </button>
-        <span className="sample-label">
-          Sample {sampleIdx + 1} / {samples.length}
-          &nbsp;(id&nbsp;{sample.id})
-        </span>
-        <button
-          onClick={() => { setSampleIdx(i => Math.min(samples.length - 1, i + 1)); onSelectToken(null) }}
-          disabled={sampleIdx === samples.length - 1}
-        >
-          Next →
-        </button>
+      <div className="viewer-toolbar">
+        <div className="sample-nav">
+          <button
+            onClick={() => { setSampleIdx(i => Math.max(0, i - 1)); onSelectToken(null) }}
+            disabled={sampleIdx === 0}
+          >
+            ← Prev
+          </button>
+          <span className="sample-label">
+            Sample {sampleIdx + 1} / {samples.length}
+            &nbsp;(id&nbsp;{sample.id})
+          </span>
+          <button
+            onClick={() => { setSampleIdx(i => Math.min(samples.length - 1, i + 1)); onSelectToken(null) }}
+            disabled={sampleIdx === samples.length - 1}
+          >
+            Next →
+          </button>
+        </div>
+        <div className="zoom-controls" aria-label="Document zoom controls">
+          <button
+            onClick={() => setZoomAround(zoomRef.current / ZOOM_STEP)}
+            disabled={zoom <= MIN_ZOOM}
+            aria-label="Zoom out"
+          >
+            -
+          </button>
+          <button className="zoom-percentage" onClick={resetView} title="Reset to fit">
+            {Math.round(zoom * 100)}%
+          </button>
+          <button
+            onClick={() => setZoomAround(zoomRef.current * ZOOM_STEP)}
+            disabled={zoom >= MAX_ZOOM}
+            aria-label="Zoom in"
+          >
+            +
+          </button>
+          <button className="fit-button" onClick={resetView}>Fit</button>
+        </div>
       </div>
 
       {/* Document viewport: image + SVG share one fitted surface */}
