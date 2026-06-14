@@ -16,7 +16,11 @@ def _build(args):
         L = replace(L, rows=(args.rows[0], args.rows[1]))
     if args.page:
         L = replace(L, page=(args.page[0], args.page[1]))
-    S = replace(dc.structure, multi_token=True) if args.multi_token else dc.structure
+    S = dc.structure
+    if args.multi_token:
+        S = replace(S, multi_token=True)
+    if args.header:
+        S = replace(S, header=True)
     if L is not dc.layout or S is not dc.structure:
         dc = fork(dc, layout=L, structure=S)
     out = Path(args.out)
@@ -70,6 +74,8 @@ def main(argv=None):
                    help="override page size")
     b.add_argument("--multi-token", action="store_true",
                    help="split multi-word cells into per-word tokens (shared record/field + seq)")
+    b.add_argument("--header", action="store_true",
+                   help="emit a top header row of field-name tokens")
     b.set_defaults(fn=_build)
 
     ls = sub.add_parser("list", help="list local datasets")
