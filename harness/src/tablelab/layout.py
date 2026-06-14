@@ -14,6 +14,18 @@ Shape = tuple[tuple[int, ...], ...]
 _BACKGROUND_COLUMNS = 2
 
 
+def _row_gap(dc) -> int:
+    return dc.layout.row_gap
+
+def _instance_gap(dc) -> int:
+    L = dc.layout
+    return L.instance_gap if L.instance_gap is not None else L.table_gap
+
+def _section_gap(dc) -> int:
+    L = dc.layout
+    return L.section_gap if L.section_gap is not None else L.table_gap
+
+
 def _column_edges(fields, usable: float, mx: float) -> list[float]:
     """Left/right pixel edges for each column from normalized field weights.
     Returns len(fields)+1 edges; columns sum to exactly `usable` by construction."""
@@ -120,20 +132,17 @@ def _validate_layout(dc: DocumentClass) -> None:
 
 def _fixed_height(dc: DocumentClass) -> int:
     L = dc.layout
-    globals_height = len(dc.globals) * L.row_h
+    gpr = max(L.globals_per_row, 1)
+    n_global_rows = (len(dc.globals) + gpr - 1) // gpr
+    globals_height = n_global_rows * L.row_h
     if dc.globals:
-        globals_height += L.table_gap
+        globals_height += _section_gap(dc)
     return globals_height + _background_rows(dc.structure.background) * L.row_h
 
 
 def _shape_height(dc: DocumentClass, shape: Shape) -> int:
-    L = dc.layout
-    header_rows = int(dc.structure.header)
-    return sum(
-        (header_rows + rows) * L.row_h + L.table_gap
-        for table_shape in shape
-        for rows in table_shape
-    )
+    return sum(_instance_height(dc, rows)
+               for table_shape in shape for rows in table_shape)
 
 
 def _available_height(dc: DocumentClass) -> int:
@@ -154,7 +163,10 @@ def _is_safe_legacy(dc: DocumentClass) -> bool:
 
 
 def _instance_height(dc: DocumentClass, rows: int) -> int:
-    return (int(dc.structure.header) + rows) * dc.layout.row_h + dc.layout.table_gap
+    L = dc.layout
+    header = int(dc.structure.header)
+    return (header * L.row_h + rows * L.row_h
+            + max(rows - 1, 0) * _row_gap(dc) + _instance_gap(dc))
 
 
 def _minimum_shape_height(dc: DocumentClass) -> int:
@@ -311,7 +323,7 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
             _emit(placed, sample(f.type, rng), value_cell,
                   {"global": f.name}, "left", dc.render.font_size, multi)
             y += L.row_h
-        y += L.table_gap
+        y += _section_gap(dc)
     region = 0
     for table, table_shape in zip(dc.tables, shape):
         if not table_shape:
@@ -337,7 +349,9 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
                     _emit(placed, value, cell,
                           {**reg, "record": r, "field": c}, f.align, dc.render.font_size, multi)
                 y += L.row_h
-            y += L.table_gap
+                if r < rows - 1:
+                    y += _row_gap(dc)
+            y += _instance_gap(dc)
             region += 1
     n_bg = dc.structure.background
     if n_bg:
