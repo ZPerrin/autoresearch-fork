@@ -66,13 +66,13 @@ tables + global fields (`DocumentClass.tables`/`globals`; `TableSpec.instances` 
 with a `region` label; the `eob` class is now the full shape — member/provider globals + a
 multi-instance `claim_line` table).
 
-**Active milestone — synthetic reviewability:** the toolkit backbone through multiple
-tables/globals is done. Before jitter, make composed documents page-valid and class-coherent
-(capacity-aware rows/instances, class-aware reserved background content), and refine the viewer
-(complete-page fit, zoom/pan, controls help, schema-aware metadata). See
-`docs/specs/2026-06-14-synthetic-reviewability-design.md`. Remaining structural realism afterward:
-jitter/irregular → spanning cells → **document-class breadth**. **Visual realism is deferred** but
-provisioned via the `RenderSpec` renderer seam.
+**Active milestone — jitter/irregular structure:** synthetic reviewability is shipped: composed
+documents are page-valid and class-coherent (capacity-aware rows/instances, class-aware reserved
+background content), and the viewer has complete-page fit, zoom/pan, controls help, and
+schema-aware metadata. See `docs/specs/2026-06-14-synthetic-reviewability-design.md`. Next
+structural realism: jitter/irregular row heights and column widths → spanning cells →
+**document-class breadth**. **Visual realism is deferred** but provisioned via the `RenderSpec`
+renderer seam.
 
 Deferred next: the **model loop** (M0 spatial → run artifacts → predictions overlaid), see
 `docs/specs/2026-06-13-v0-loop-closes-design.md`. Then the **modality ladder** M0→M3 (spatial → +text

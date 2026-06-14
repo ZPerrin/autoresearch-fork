@@ -1,6 +1,6 @@
 # Synthetic reviewability - design
 
-- Status: **implementation active** - generator validity/background/compatibility shipped; viewer pending
+- Status: **shipped** - generator validity/background/compatibility and viewer review surface
 - Date: 2026-06-14
 - Parent: `docs/specs/2026-06-13-design-and-roadmap.md`
 - Follows: `docs/specs/2026-06-13-multi-table-globals-design.md`
@@ -86,7 +86,7 @@ recorded in newly built manifests.
 
 ## Viewer review surface
 
-Status: **active/pending**.
+Status: **shipped**.
 
 ### Complete-page rendering
 
@@ -178,9 +178,9 @@ Viewer verification covers:
 - generalized labels and resolved document structure are visible in metadata; and
 - no record/field text is rendered over document tokens.
 
-Browser verification uses `eob-full` plus a freshly generated valid EOB dataset after the generator
-changes. The old dataset remains useful as a regression fixture for viewing out-of-bounds legacy
-data, but it is not regenerated in place.
+Browser verification used a freshly generated valid EOB dataset (`eob-reviewable`) after the
+generator changes. The old `eob-full` dataset remains useful as a regression fixture for viewing
+out-of-bounds legacy data, but it is not regenerated in place.
 
 ## Out of scope
 
