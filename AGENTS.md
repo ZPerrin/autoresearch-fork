@@ -72,9 +72,9 @@ member/provider globals (2-up) + a multi-instance ten-column `claim_line` (bille
 copay/coinsurance/plan-paid/owed, sparse) on a wide `1500x1414` page.
 
 **Active milestone — realistic spacing/jitter is shipped** (see
-`docs/specs/2026-06-14-realistic-spacing-jitter-design.md`). Next structural realism: spanning /
-merged cells + grouped headers → **document-class breadth**. **Font auto-scaling** is a deferred,
-toggleable feature (shrink font to fit a wide table on a narrow page instead of overflowing).
+`docs/specs/2026-06-14-realistic-spacing-jitter-design.md`), including a `RenderSpec.autoscale_font`
+toggle (CLI `--autoscale-font`) that shrinks an overflowing table's font to fit a narrow page. Next
+structural realism: spanning / merged cells + grouped headers → **document-class breadth**.
 **Visual realism is deferred** but provisioned via the `RenderSpec` renderer seam.
 
 Deferred next: the **model loop** (M0 spatial → run artifacts → predictions overlaid), see

@@ -41,6 +41,30 @@ def _column_edges(fields, usable: float, mx: float) -> list[float]:
     return edges
 
 
+def _fit_font(fields, usable: float, pad: int, header: bool, grid: list[list[str]],
+              base_font: int, min_font: int = 6, safety: float = 0.95) -> int:
+    """Largest font (<= base) at which the columns' content fits the usable width.
+    Sums each column's widest content (header + populated cells); leaves the fixed
+    padding out of the scale and keeps a safety margin so the re-measured widths fit
+    without tripping the degenerate column-scale. Returns base_font when it already fits."""
+    text_total = 0.0
+    for c, f in enumerate(fields):
+        texts = [row[c] for row in grid if row[c]]
+        if header:
+            texts.append(_header_text(f.name))
+        if texts:
+            text_total += max(text_width(t, base_font) for t in texts)
+    avail = usable - len(fields) * 2 * pad
+    if text_total <= 0:
+        return base_font
+    if avail <= 0:
+        return min_font
+    if text_total <= avail:
+        return base_font  # already fits at base font; autoscale is a no-op
+    k = safety * avail / text_total  # overflow: shrink with a margin so it fits
+    return max(min_font, round(base_font * k))
+
+
 def _content_column_widths(fields, usable: float, pad: int, header: bool,
                            grid: list[list[str]], font_size: int) -> list[float]:
     """Content floor + weighted slack. Each column is at least wide enough for the
@@ -388,19 +412,24 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
         if not table_shape:
             continue
         C = len(table.fields)
+        explicit_widths = all(f.width is not None for f in table.fields)
         for rows in table_shape:
             reg = {"region": region} if multi_region else {}
             grid = [[_sample_cell(table.fields[c], rng) for c in range(C)]
                     for _ in range(rows)]
+            cell_font = dc.render.font_size
+            if dc.render.autoscale_font and not explicit_widths:
+                cell_font = _fit_font(table.fields, W - 2 * mx, L.pad, header,
+                                      grid, dc.render.font_size)
             edges = _resolve_column_edges(table.fields, W - 2 * mx, mx, L.pad,
-                                          header, grid, dc.render.font_size)
+                                          header, grid, cell_font)
             if header:
                 for c in range(C):
                     f = table.fields[c]
                     x0, x1 = edges[c], edges[c + 1]
                     cell = (x0, y, x1, y + L.row_h)
                     _emit(placed, _header_text(f.name), cell,
-                          {**reg, "field": c, "header": True}, f.align, dc.render.font_size, multi)
+                          {**reg, "field": c, "header": True}, f.align, cell_font, multi)
                 y += L.row_h
             for r in range(rows):
                 row_edges = (jitter_column_edges(edges, J.col_w, rng)
@@ -418,7 +447,7 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
                     x0, x1 = row_edges[c], row_edges[c + 1]
                     cell = (x0, y, x1, y + cell_h)
                     _emit(placed, value, cell,
-                          {**reg, "record": r, "field": c}, f.align, dc.render.font_size, multi)
+                          {**reg, "record": r, "field": c}, f.align, cell_font, multi)
                 y += cell_h
                 if r < rows - 1:
                     y += gap_after

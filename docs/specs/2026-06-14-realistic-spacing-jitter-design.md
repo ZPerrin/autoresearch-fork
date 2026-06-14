@@ -172,9 +172,11 @@ explanation-of-benefits forms:
   class now carries a wide page (`1500 x 1414`) because its ten claim-line columns (service date,
   code, description, billed, allowed, deductible, copay, coinsurance, plan paid, amount owed) need
   the room. On a narrow page the content floors exceed the usable width and content-aware sizing
-  scales the columns (not the font) below their content, so text overflows. **Font auto-scaling** is
-  therefore deferred as a separate, toggleable feature: when enabled it shrinks the font to fit
-  instead of overflowing, letting a wide table sit on a narrow page on demand.
+  scales the columns (not the font) below their content, so text overflows. **Font auto-scaling**
+  handles that case as a separate toggle (`RenderSpec.autoscale_font`, CLI `--autoscale-font`, default
+  off): when enabled, a table whose content would overflow is measured and rendered at a smaller font
+  so every column fits, while globals and non-overflowing tables keep the base font. It is a no-op
+  when the content already fits, so default output is unchanged.
 
 ## Out of scope
 
@@ -185,8 +187,7 @@ explanation-of-benefits forms:
 
 ## Roadmap after this milestone
 
-1. Font auto-scaling (toggleable): shrink the font to fit when columns exceed the usable width.
-2. Spanning / merged cells and grouped headers.
-3. Document-class breadth.
-4. M0 spatial model loop, then the modality ladder (M0 -> M3), using per-axis jitter as an
+1. Spanning / merged cells and grouped headers.
+2. Document-class breadth.
+3. M0 spatial model loop, then the modality ladder (M0 -> M3), using per-axis jitter as an
    ablation instrument.

@@ -40,9 +40,12 @@ def _build(args):
     jitter = dc.jitter
     if args.jitter:
         jitter = JitterSpec(*args.jitter)
-    if (L is not dc.layout or tables is not dc.tables
-            or S is not dc.structure or jitter is not dc.jitter):
-        dc = fork(dc, layout=L, tables=tables, structure=S, jitter=jitter)
+    R = dc.render
+    if args.autoscale_font:
+        R = replace(R, autoscale_font=True)
+    if (L is not dc.layout or tables is not dc.tables or S is not dc.structure
+            or jitter is not dc.jitter or R is not dc.render):
+        dc = fork(dc, layout=L, tables=tables, structure=S, jitter=jitter, render=R)
     out = Path(args.out)
     build_dataset(out.parent, out.name, dc, seed=args.seed, n=args.n)
     print(f"built {args.n} {args.cls} samples -> {out}")
@@ -111,6 +114,8 @@ def main(argv=None):
                    help="label:value pairs packed across one global row")
     b.add_argument("--jitter", type=float, nargs=4, metavar=("ROW_H", "COL_W", "OFFSET", "BASELINE"),
                    help="per-axis jitter magnitudes (0 = off)")
+    b.add_argument("--autoscale-font", action="store_true",
+                   help="shrink a table's font to fit when its columns overflow the page width")
     b.set_defaults(fn=_build)
 
     ls = sub.add_parser("list", help="list local datasets")

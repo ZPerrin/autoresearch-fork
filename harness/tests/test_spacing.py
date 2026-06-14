@@ -103,3 +103,41 @@ def test_fill_below_one_leaves_cells_empty():
                 and "record" in p.label]
     assert a_tokens == []      # fill=0.0 column is always empty
     assert len(b_tokens) == 3  # fill=1.0 column is always populated
+
+
+def _field_overflow_count(dc, seeds):
+    n = 0
+    for s in seeds:
+        placed = layout(dc, random.Random(s))
+        _img, boxes = render(placed, dc)
+        for p, b in zip(placed, boxes):
+            if p.label and "field" in p.label:
+                cx0, _cy0, cx1, _cy1 = p.cell
+                if b[0] < cx0 - 1 or b[2] > cx1 + 1:
+                    n += 1
+    return n
+
+
+def test_autoscale_font_fits_a_narrow_page():
+    # eob's ten columns overflow a 1000px page at base font; autoscale shrinks the
+    # font to fit, while the wide-page default is unaffected (font unchanged).
+    base = classlib.get("eob")
+    narrow = replace(base.layout, page=(1000, 1414))
+    hdr = replace(base.structure, header=True)
+    off = fork(base, layout=narrow, structure=hdr)
+    on = fork(base, layout=narrow, structure=hdr,
+              render=replace(base.render, autoscale_font=True))
+    seeds = range(5)
+    assert _field_overflow_count(off, seeds) > 0   # overflows without autoscale
+    assert _field_overflow_count(on, seeds) == 0   # autoscale makes every column fit
+
+
+def test_autoscale_noop_when_content_already_fits():
+    # On the wide template page the content fits, so autoscale keeps the base font
+    # and produces the same placement as without it.
+    base = classlib.get("eob")
+    hdr = replace(base.structure, header=True)
+    off = layout(fork(base, structure=hdr), random.Random(1))
+    on = layout(fork(base, structure=hdr, render=replace(base.render, autoscale_font=True)),
+                random.Random(1))
+    assert [p.font_size for p in on] == [p.font_size for p in off]
