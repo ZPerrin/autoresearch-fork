@@ -9,6 +9,22 @@ class FieldSpec:
     align: str = "left"  # "left" | "right"
     width: float | None = None  # column weight; None => fields.TYPE_WIDTH default
     fill: float = 1.0    # probability a data cell is populated; < 1.0 leaves some cells empty (no token)
+    group: str | None = None  # contiguous fields sharing a group name form one header banner cell
+
+
+@dataclass(frozen=True)
+class SpanCell:
+    span: int = 1              # columns this cell covers
+    text: str | None = None    # literal label (e.g. "TOTALS")
+    type: str | None = None    # value sampler key (e.g. "amount", "category"); xor with text
+    align: str = "left"
+
+
+@dataclass(frozen=True)
+class SpanRowSpec:
+    """A row whose cells each cover a contiguous column range. Spans must sum to the
+    table's field count. Used as a section row (before records) or totals row (after)."""
+    cells: tuple[SpanCell, ...]
 
 
 @dataclass(frozen=True)
@@ -17,6 +33,8 @@ class TableSpec:
     fields: tuple[FieldSpec, ...]
     rows: tuple[int, int] = (2, 6)        # record-count range, inclusive (passed to randint)
     instances: tuple[int, int] = (1, 1)   # number of instances of this table per document
+    section: SpanRowSpec | None = None    # spanning row emitted once before each instance's records
+    totals: SpanRowSpec | None = None     # spanning row emitted once after each instance's records
 
 
 @dataclass(frozen=True)
@@ -35,13 +53,18 @@ class LayoutSpec:
 @dataclass(frozen=True)
 class StructureSpec:
     """Named home for structural-realism knobs (header row, background tokens,
-    multi-token cells, multiple tables, jitter, spanning cells). Each follow-on
-    spec adds fields here. See docs/specs/2026-06-13-synth-toolkit-backbone-design.md.
+    multi-token cells, multiple tables, jitter). Each follow-on spec adds fields here.
+    See docs/specs/2026-06-13-synth-toolkit-backbone-design.md.
 
     multi_token: split multi-word cell values into per-word tokens that share one
         record/field and carry a within-cell order index (seq).
     header: emit a top header row of field-name tokens (label {"field": c, "header": True}).
-    background: scatter N non-table tokens (label = None) in the footer band below the table."""
+        With FieldSpec.group set, a grouped-header banner band is emitted above the leaf
+        header row (see docs/specs/2026-06-14-spanning-cells-grouped-headers-design.md).
+    background: scatter N non-table tokens (label = None) in the footer band below the table.
+
+    Spanning data rows (section/totals) live on TableSpec; grouped-header membership lives
+    on FieldSpec.group."""
     multi_token: bool = False
     header: bool = False
     background: int = 0

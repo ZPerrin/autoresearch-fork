@@ -67,15 +67,21 @@ with a `region` label); realistic spacing + jitter (content-aware column widths 
 weighted slack; vertical gap knobs `row_gap`/`instance_gap`/`section_gap`; multi-pair globals
 `globals_per_row`; per-axis bounded/zero-sum `JitterSpec` row_h/col_w/offset/baseline; CLI knobs;
 viewer spacing/jitter readout); sparse cells (`FieldSpec.fill` → some data cells empty, no token);
-per-class template page size (`LayoutSpec.page`). The `eob` class is now a representative shape —
-member/provider globals (2-up) + a multi-instance ten-column `claim_line` (billed/allowed/deductible/
-copay/coinsurance/plan-paid/owed, sparse) on a wide `1500x1414` page.
+per-class template page size (`LayoutSpec.page`); spanning cells + grouped headers
+(`FieldSpec.group` → contiguous field runs become a header banner band, label
+`{group, header, field, span}`; `TableSpec.section`/`totals` = `SpanRowSpec` of colspan `SpanCell`s →
+a section heading before / a TOTALS row after each instance, labels `{section}` / `{subtotal}` with
+`span`). The `eob` class is now a representative shape — member/provider globals (2-up) + a
+multi-instance ten-column `claim_line` (billed/allowed/deductible/copay/coinsurance/plan-paid/owed,
+sparse) on a wide `1500x1414` page, with Charges / Patient Responsibility / Plan & Balance header
+banners, a sampled service-category section row, and a TOTALS row.
 
-**Active milestone — realistic spacing/jitter is shipped** (see
-`docs/specs/2026-06-14-realistic-spacing-jitter-design.md`), including a `RenderSpec.autoscale_font`
-toggle (CLI `--autoscale-font`) that shrinks an overflowing table's font to fit a narrow page. Next
-structural realism: spanning / merged cells + grouped headers → **document-class breadth**.
-**Visual realism is deferred** but provisioned via the `RenderSpec` renderer seam.
+**Structural realism is complete** (the ordered list items 1–6 are all shipped): spanning cells +
+grouped headers landed last (see `docs/specs/2026-06-14-spanning-cells-grouped-headers-design.md`),
+following realistic spacing/jitter (incl. the `RenderSpec.autoscale_font` / `--autoscale-font`
+toggle). **Active milestone is now document-class breadth** (more classes: invoice/receipt variants,
+purchase order, bank statement, key-value form). **Visual realism stays deferred** but provisioned via
+the `RenderSpec` renderer seam.
 
 Deferred next: the **model loop** (M0 spatial → run artifacts → predictions overlaid), see
 `docs/specs/2026-06-13-v0-loop-closes-design.md`. Then the **modality ladder** M0→M3 (spatial → +text

@@ -122,13 +122,15 @@ A declarative spec composed from small, testable pieces; the resolved spec is re
 dataset `manifest` (so a dataset is reproducible and forkable):
 
 - **`FieldSpec`** — name, semantic type (value sampler), alignment, optional column `width` weight,
-  and `fill` (sparsity: probability a cell is populated). Extensible type registry (`description`,
-  `quantity`, `unit_price`, `amount`, `date`, `code`, `name`, `id`, …) with per-type default widths.
+  `fill` (sparsity: probability a cell is populated), and `group` (contiguous same-group fields form a
+  header banner). Extensible type registry (`description`, `quantity`, `unit_price`, `amount`, `date`,
+  `code`, `name`, `id`, `category`, …) with per-type default widths.
 - **`LayoutSpec`** — page size + margins, row height, vertical gap knobs
   (`row_gap`/`instance_gap`/`section_gap`), multi-pair globals (`globals_per_row`). Column widths are
   content-aware (content floor + weighted slack), not declared here.
-- **`StructureSpec`** — header row; background / non-table tokens; multi-token cells; (spanning
-  cells = next).
+- **`StructureSpec`** — header row; background / non-table tokens; multi-token cells. Grouped-header
+  banners ride on `FieldSpec.group`; spanning data rows (`section`/`totals` = `SpanRowSpec` of colspan
+  `SpanCell`s) ride on `TableSpec`.
 - **`JitterSpec`** — per-axis bounded/zero-sum perturbation (`row_h`/`col_w`/`offset`/`baseline`),
   all 0 by default; the modality-/robustness-ablation instrument.
 - **`RenderSpec`** — font size; `autoscale_font` toggle (shrink an overflowing table to fit); the
@@ -147,12 +149,14 @@ All become `StructureSpec`/`LayoutSpec` knobs; all are wanted:
 4. **multiple tables + global / singleton fields** — the EOB shape; adds a table/region index.
 5. **jitter / irregular** row heights & column widths. ✅ shipped (plus content-aware widths,
    gap knobs, multi-pair globals, sparse cells, class-template page size, font-autoscale toggle).
-6. **spanning / merged cells** + grouped multi-level headers. ← next.
+6. **spanning / merged cells** + grouped headers. ✅ shipped (`FieldSpec.group` header banner band;
+   `TableSpec.section`/`totals` colspan span-rows; see `2026-06-14-spanning-cells-grouped-headers-design.md`).
 
 The **synthetic reviewability** milestone consolidated items 1-4 into page-valid, class-coherent
 output and a viewer capable of inspecting the full structure; the **realistic spacing + jitter**
-milestone delivered item 5 (see `2026-06-14-realistic-spacing-jitter-design.md`). Item 6 (spanning
-cells / grouped headers) is the remaining structural-realism knob before document-class breadth.
+milestone delivered item 5 (see `2026-06-14-realistic-spacing-jitter-design.md`); spanning cells +
+grouped headers delivered item 6. **All ordered structural-realism items are shipped — next is
+document-class breadth.**
 
 ### Document-class breadth
 

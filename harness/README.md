@@ -27,6 +27,7 @@ uv run python -m tablelab.cli inspect eob-demo
 
 `build` flags:
 - structure: `--rows MIN MAX`, `--instances MIN MAX` (stacked instances, `region`-tagged), `--multi-token` (per-word tokens), `--header` (field-name header row), `--background N` (class-aware non-table tokens in reserved slots).
+- spanning cells / grouped headers are **class-defined** (no CLI flag): `FieldSpec.group` (contiguous fields → a header banner band) and `TableSpec.section`/`totals` (`SpanRowSpec` of colspan `SpanCell`s → a section heading / TOTALS row per instance). The `eob` class showcases all three.
 - spacing: `--page W H`, `--row-gap PX`, `--instance-gap PX`, `--section-gap PX`, `--globals-per-row N` (pack label:value pairs across a global row).
 - jitter: `--jitter ROW_H COL_W OFFSET BASELINE` (per-axis magnitudes, 0 = off; bounded/zero-sum).
 - rendering: `--autoscale-font` (shrink an overflowing table's font to fit the page).
@@ -40,13 +41,15 @@ refuse existing dataset IDs.
 The `eob` class is a representative explanation-of-benefits form: member/provider **global fields**
 (2-up) + a repeated ten-column **claim_line** table (service date, code, description, billed,
 allowed, deductible, copay, coinsurance, plan paid, owed — financial columns sparse) on a wide
-`1500x1414` page. `invoice` (golden-pinned, uniform columns) and `receipt` are single tables.
+`1500x1414` page, with **Charges / Patient Responsibility / Plan & Balance header banners**, a sampled
+**service-category section row**, and a **TOTALS row** per instance. `invoice` (golden-pinned, uniform
+columns) and `receipt` are single tables.
 
 ## Modules (`src/tablelab/`)
 
 - `device.py` — `get_device()` (cuda → mps → cpu).
 - `artifacts.py` — the schema-v2 contract: datasets + runs (`read`/`write`/`validate`, manifests).
-- `specs.py` — compositional spec types: `FieldSpec`/`LayoutSpec`/`StructureSpec`/`JitterSpec`/`RenderSpec`/`DocumentClass` + `fork()`.
+- `specs.py` — compositional spec types: `FieldSpec`/`LayoutSpec`/`StructureSpec`/`JitterSpec`/`RenderSpec`/`SpanCell`/`SpanRowSpec`/`DocumentClass` + `fork()`.
 - `fields.py` — value-sampler registry keyed by semantic type + per-type default column weights.
 - `classes.py` — `DocumentClass` registry + built-in `invoice`/`eob`/`receipt`.
 - `layout.py` — `PlacedToken` IR + `layout()`: capacity planner, content-aware columns, gaps, jitter.

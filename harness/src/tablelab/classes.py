@@ -1,5 +1,6 @@
 from __future__ import annotations
-from .specs import FieldSpec, TableSpec, DocumentClass, LayoutSpec
+from .specs import (FieldSpec, TableSpec, DocumentClass, LayoutSpec,
+                    StructureSpec, SpanCell, SpanRowSpec)
 
 REGISTRY: dict[str, DocumentClass] = {}
 
@@ -20,8 +21,9 @@ def classes() -> list[str]:
 
 
 def _f(name: str, type_: str, align: str, width: float | None = None,
-       fill: float = 1.0) -> FieldSpec:
-    return FieldSpec(name=name, type=type_, align=align, width=width, fill=fill)
+       fill: float = 1.0, group: str | None = None) -> FieldSpec:
+    return FieldSpec(name=name, type=type_, align=align, width=width, fill=fill,
+                     group=group)
 
 
 _INVOICE_BACKGROUND = (
@@ -64,16 +66,25 @@ register(DocumentClass(
             _f("service_date", "date", "left"),
             _f("code", "code", "left"),
             _f("description", "description", "left"),
-            _f("amount_billed", "amount", "right"),
-            _f("allowed", "amount", "right"),
-            _f("deductible", "amount", "right", fill=0.3),
-            _f("copay", "amount", "right", fill=0.4),
-            _f("coinsurance", "amount", "right", fill=0.3),
-            _f("plan_paid", "amount", "right"),
-            _f("amount_owed", "amount", "right"),
-        ), rows=(2, 5), instances=(1, 2)),
+            _f("amount_billed", "amount", "right", group="Charges"),
+            _f("allowed", "amount", "right", group="Charges"),
+            _f("deductible", "amount", "right", fill=0.3, group="Patient Responsibility"),
+            _f("copay", "amount", "right", fill=0.4, group="Patient Responsibility"),
+            _f("coinsurance", "amount", "right", fill=0.3, group="Patient Responsibility"),
+            _f("plan_paid", "amount", "right", group="Plan & Balance"),
+            _f("amount_owed", "amount", "right", group="Plan & Balance"),
+        ), rows=(2, 5), instances=(1, 2),
+            # Section heading introduces each claim block; TOTALS row closes it.
+            section=SpanRowSpec((SpanCell(span=10, type="category"),)),
+            totals=SpanRowSpec((
+                SpanCell(span=3, text="TOTALS"),
+                *(SpanCell(span=1, type="amount", align="right") for _ in range(7)),
+            )),
+        ),
     ),
     background_terms=_EOB_BACKGROUND,
+    # Grouped-header banners require the leaf header row.
+    structure=StructureSpec(header=True),
     # Wide page is the class-level template size: ten claim-line columns need the room.
     layout=LayoutSpec(page=(1500, 1414), globals_per_row=2),
 ))

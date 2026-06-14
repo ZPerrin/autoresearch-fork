@@ -119,6 +119,22 @@ def _header_text(name: str) -> str:
     return name.replace("_", " ").title()
 
 
+def _group_runs(fields) -> list[tuple[str, int, int]]:
+    """Maximal runs of equal non-None FieldSpec.group → (name, c0, c1) inclusive ranges.
+    Ungrouped (group=None) columns are skipped (they get no banner cell)."""
+    runs: list[tuple[str, int, int]] = []
+    i, n = 0, len(fields)
+    while i < n:
+        g = fields[i].group
+        j = i
+        while j + 1 < n and fields[j + 1].group == g:
+            j += 1
+        if g is not None:
+            runs.append((g, i, j))
+        i = j + 1
+    return runs
+
+
 def _emit(placed: list[PlacedToken], text: str, cell: tuple[float, float, float, float],
           base_label: dict, align: str, font_size: int, multi: bool) -> None:
     """Append one token for `text`, or one per word (sharing cell + label, with seq) when multi."""
@@ -129,6 +145,31 @@ def _emit(placed: list[PlacedToken], text: str, cell: tuple[float, float, float,
     else:
         placed.append(PlacedToken(text=text, cell=cell,
             label=base_label, align=align, font_size=font_size))
+
+
+def _emit_span_row(placed: list[PlacedToken], cells, edges, y: float, row_h: float,
+                   base_label: dict, font: int, multi: bool, rng: random.Random,
+                   header_on_text: bool = False) -> None:
+    """Emit one spanning row: each cell covers a contiguous column range starting at the
+    running column index. text cells are literal, type cells are sampled (RNG drawn left to
+    right), empty cells emit nothing. Each token gets field=c0 and span=[c0, c1]; a literal
+    label additionally gets header=True when ``header_on_text`` (the totals label cell)."""
+    c = 0
+    for cell in cells:
+        c0, c1 = c, c + cell.span - 1
+        rect = (edges[c0], y, edges[c1 + 1], y + row_h)
+        if cell.text is not None:
+            value, is_text = cell.text, True
+        elif cell.type is not None:
+            value, is_text = sample(cell.type, rng), False
+        else:
+            value, is_text = "", False
+        if value:
+            label = {**base_label, "field": c0, "span": [c0, c1]}
+            if is_text and header_on_text:
+                label["header"] = True
+            _emit(placed, value, rect, label, cell.align, font, multi)
+        c = c1 + 1
 
 
 def _sample_cell(field, rng: random.Random) -> str:
@@ -142,6 +183,35 @@ def _sample_cell(field, rng: random.Random) -> str:
 
 def _background_rows(count: int) -> int:
     return (count + _BACKGROUND_COLUMNS - 1) // _BACKGROUND_COLUMNS
+
+
+def _validate_span_rows(dc: DocumentClass, table: TableSpec) -> None:
+    """Grouped-header banners need a leaf header row; each span row's cells must tile the
+    columns exactly and each cell is text-xor-type (or empty)."""
+    C = len(table.fields)
+    if any(f.group for f in table.fields) and not dc.structure.header:
+        raise LayoutCapacityError(
+            f"table {table.name!r} sets field group(s) but structure.header is off; "
+            "grouped-header banners require a leaf header row"
+        )
+    for slot, srow in (("section", table.section), ("totals", table.totals)):
+        if srow is None:
+            continue
+        total = 0
+        for cell in srow.cells:
+            if cell.span < 1:
+                raise LayoutCapacityError(
+                    f"table {table.name!r} {slot} cell span {cell.span} < 1"
+                )
+            if cell.text is not None and cell.type is not None:
+                raise LayoutCapacityError(
+                    f"table {table.name!r} {slot} cell sets both text and type"
+                )
+            total += cell.span
+        if total != C:
+            raise LayoutCapacityError(
+                f"table {table.name!r} {slot} spans sum to {total}, expected {C}"
+            )
 
 
 def _validate_layout(dc: DocumentClass) -> None:
@@ -181,6 +251,7 @@ def _validate_layout(dc: DocumentClass) -> None:
             f"invalid background count: {dc.structure.background}"
         )
     for table in dc.tables:
+        _validate_span_rows(dc, table)
         for name, bounds in (("instances", table.instances), ("rows", table.rows)):
             lo, hi = bounds
             if lo < 0 or hi < lo:
@@ -216,8 +287,8 @@ def _fixed_height(dc: DocumentClass) -> int:
 
 
 def _shape_height(dc: DocumentClass, shape: Shape) -> int:
-    return sum(_instance_height(dc, rows)
-               for table_shape in shape for rows in table_shape)
+    return sum(_instance_height(dc, rows, table)
+               for table, table_shape in zip(dc.tables, shape) for rows in table_shape)
 
 
 def _available_height(dc: DocumentClass) -> int:
@@ -237,16 +308,22 @@ def _is_safe_legacy(dc: DocumentClass) -> bool:
     return _fixed_height(dc) + _shape_height(dc, maximum) <= _available_height(dc)
 
 
-def _instance_height(dc: DocumentClass, rows: int) -> int:
+def _instance_height(dc: DocumentClass, rows: int, table: TableSpec | None = None) -> int:
     L = dc.layout
     header = int(dc.structure.header)
-    return (header * L.row_h + rows * L.row_h
+    banner = section = totals = 0
+    if table is not None:
+        banner = header * int(any(f.group for f in table.fields))
+        section = int(table.section is not None)
+        totals = int(table.totals is not None)
+    fixed_rows = header + banner + section + totals
+    return (fixed_rows * L.row_h + rows * L.row_h
             + max(rows - 1, 0) * _row_gap(dc) + _instance_gap(dc))
 
 
 def _minimum_shape_height(dc: DocumentClass) -> int:
     return sum(
-        table.instances[0] * _instance_height(dc, table.rows[0])
+        table.instances[0] * _instance_height(dc, table.rows[0], table)
         for table in dc.tables
     )
 
@@ -270,7 +347,7 @@ def _iter_table_shapes(
     instances: int,
     budget: int,
 ):
-    minimum_instance = _instance_height(dc, table.rows[0])
+    minimum_instance = _instance_height(dc, table.rows[0], table)
     stack = [((), 0)]
     while stack:
         rows, used = stack.pop()
@@ -281,7 +358,7 @@ def _iter_table_shapes(
             yield rows, used
             continue
         for row_count in range(table.rows[1], table.rows[0] - 1, -1):
-            height = _instance_height(dc, row_count)
+            height = _instance_height(dc, row_count, table)
             if used + height > budget:
                 continue
             stack.append(((*rows, row_count), used + height))
@@ -290,7 +367,7 @@ def _iter_table_shapes(
 def _iter_feasible_shapes(dc: DocumentClass):
     budget = _available_height(dc) - _fixed_height(dc)
     minimum_by_table = [
-        table.instances[0] * _instance_height(dc, table.rows[0])
+        table.instances[0] * _instance_height(dc, table.rows[0], table)
         for table in dc.tables
     ]
     minimum_suffix = [0] * (len(dc.tables) + 1)
@@ -301,7 +378,7 @@ def _iter_feasible_shapes(dc: DocumentClass):
         table = dc.tables[table_index]
         remaining_budget = budget - used - minimum_suffix[table_index + 1]
         for instances in range(table.instances[0], table.instances[1] + 1):
-            minimum = instances * _instance_height(dc, table.rows[0])
+            minimum = instances * _instance_height(dc, table.rows[0], table)
             if minimum > remaining_budget:
                 break
             for table_shape, table_height in _iter_table_shapes(
@@ -423,6 +500,14 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
                                       grid, dc.render.font_size)
             edges = _resolve_column_edges(table.fields, W - 2 * mx, mx, L.pad,
                                           header, grid, cell_font)
+            if header and any(f.group for f in table.fields):
+                for name, c0, c1 in _group_runs(table.fields):
+                    cell = (edges[c0], y, edges[c1 + 1], y + L.row_h)
+                    _emit(placed, name, cell,
+                          {**reg, "field": c0, "header": True,
+                           "group": name, "span": [c0, c1]},
+                          "left", cell_font, multi)
+                y += L.row_h
             if header:
                 for c in range(C):
                     f = table.fields[c]
@@ -430,6 +515,10 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
                     cell = (x0, y, x1, y + L.row_h)
                     _emit(placed, _header_text(f.name), cell,
                           {**reg, "field": c, "header": True}, f.align, cell_font, multi)
+                y += L.row_h
+            if table.section is not None:
+                _emit_span_row(placed, table.section.cells, edges, y, L.row_h,
+                               {**reg, "section": True}, cell_font, multi, rng)
                 y += L.row_h
             for r in range(rows):
                 row_edges = (jitter_column_edges(edges, J.col_w, rng)
@@ -451,6 +540,11 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
                 y += cell_h
                 if r < rows - 1:
                     y += gap_after
+            if table.totals is not None:
+                _emit_span_row(placed, table.totals.cells, edges, y, L.row_h,
+                               {**reg, "subtotal": True}, cell_font, multi, rng,
+                               header_on_text=True)
+                y += L.row_h
             y += _instance_gap(dc)
             region += 1
     n_bg = dc.structure.background
