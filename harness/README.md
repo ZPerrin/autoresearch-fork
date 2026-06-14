@@ -25,7 +25,7 @@ uv run python -m tablelab.cli list
 uv run python -m tablelab.cli inspect eob-demo
 ```
 
-`build` flags: `--seed`, `--rows MIN MAX`, `--page W H`, `--multi-token` (split multi-word cells into per-word tokens). Classes: `invoice`, `eob`, `receipt`.
+`build` flags: `--seed`, `--rows MIN MAX`, `--page W H`, `--multi-token` (split multi-word cells into per-word tokens), `--header` (top row of field-name tokens). Classes: `invoice`, `eob`, `receipt`.
 
 ## Modules (`src/tablelab/`)
 

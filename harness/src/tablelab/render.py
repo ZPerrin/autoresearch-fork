@@ -18,8 +18,8 @@ def _font(size: int):
 def render(placed: list[PlacedToken], dc: DocumentClass) -> tuple[Image.Image, list[Box]]:
     """Draw placed tokens onto a white page; return the image and per-token
     glyph-extent boxes (page pixels), parallel to ``placed``. Tokens sharing a
-    cell (same record/field) are laid out left-to-right as one phrase; their boxes
-    are still returned in the input order so the caller's 1:1 zip holds."""
+    cell rect are laid out left-to-right as one phrase; their boxes are still
+    returned in the input order so the caller's 1:1 zip holds."""
     W, H = dc.layout.page
     pad = dc.layout.pad
     img = Image.new("RGB", (W, H), "white")
@@ -27,11 +27,10 @@ def render(placed: list[PlacedToken], dc: DocumentClass) -> tuple[Image.Image, l
     font = _font(dc.render.font_size)
     boxes: list[Box] = [(0.0, 0.0, 0.0, 0.0)] * len(placed)
 
-    # Group token indices by their cell (record, field); order within a cell by seq.
+    # Group token indices by their cell rect; order within a cell by seq.
     groups: dict[tuple, list[int]] = {}
     for i, p in enumerate(placed):
-        key = (p.label["record"], p.label["field"])
-        groups.setdefault(key, []).append(i)
+        groups.setdefault(p.cell, []).append(i)
 
     for idxs in groups.values():
         if len(idxs) > 1:
