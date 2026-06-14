@@ -31,4 +31,5 @@ datasets/
 # IDE / editor / agent tooling
 .idea/
 .claude/
+.codex/
 *.iml
