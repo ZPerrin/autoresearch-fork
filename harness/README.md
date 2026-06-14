@@ -27,6 +27,8 @@ uv run python -m tablelab.cli inspect eob-demo
 
 `build` flags: `--seed`, `--rows MIN MAX`, `--page W H`, `--instances MIN MAX` (stacked table instances, adds a region label), `--multi-token` (split multi-word cells into per-word tokens), `--header` (top row of field-name tokens), `--background N` (scatter N non-table tokens). Classes: `invoice`, `eob`, `receipt`.
 
+The `eob` class is the full shape: member/provider **global fields** + a repeated **claim_line** table (multiple instances, `region`-tagged). `invoice` and `receipt` are single tables.
+
 ## Modules (`src/tablelab/`)
 
 - `device.py` — `get_device()` (cuda → mps → cpu).

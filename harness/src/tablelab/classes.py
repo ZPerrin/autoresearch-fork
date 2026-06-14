@@ -32,15 +32,24 @@ register(DocumentClass(name="invoice", tables=(
     )),
 )))
 
-register(DocumentClass(name="eob", tables=(
-    TableSpec(name="claim_line", fields=(
-        _f("service_date", "date", "left"),
-        _f("code", "code", "left"),
-        _f("description", "description", "left"),
-        _f("amount_billed", "amount", "right"),
-        _f("amount_owed", "amount", "right"),
-    )),
-)))
+register(DocumentClass(
+    name="eob",
+    globals=(
+        _f("member_name", "name", "left"),
+        _f("member_id", "id", "left"),
+        _f("provider", "name", "left"),
+        _f("claim_number", "id", "left"),
+    ),
+    tables=(
+        TableSpec(name="claim_line", fields=(
+            _f("service_date", "date", "left"),
+            _f("code", "code", "left"),
+            _f("description", "description", "left"),
+            _f("amount_billed", "amount", "right"),
+            _f("amount_owed", "amount", "right"),
+        ), rows=(2, 5), instances=(1, 2)),
+    ),
+))
 
 register(DocumentClass(name="receipt", tables=(
     TableSpec(name="line_item", fields=(
