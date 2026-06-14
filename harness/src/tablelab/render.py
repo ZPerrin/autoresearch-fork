@@ -17,20 +17,49 @@ def _font(size: int):
 
 def render(placed: list[PlacedToken], dc: DocumentClass) -> tuple[Image.Image, list[Box]]:
     """Draw placed tokens onto a white page; return the image and per-token
-    glyph-extent boxes (page pixels), parallel to ``placed``."""
+    glyph-extent boxes (page pixels), parallel to ``placed``. Tokens sharing a
+    cell (same record/field) are laid out left-to-right as one phrase; their boxes
+    are still returned in the input order so the caller's 1:1 zip holds."""
     W, H = dc.layout.page
     pad = dc.layout.pad
     img = Image.new("RGB", (W, H), "white")
     draw = ImageDraw.Draw(img)
     font = _font(dc.render.font_size)
-    boxes: list[Box] = []
-    for p in placed:
-        cx0, cy0, cx1, cy1 = p.cell
-        row_h = cy1 - cy0  # honor this cell's height (supports variable rows later)
-        tb = draw.textbbox((0, 0), p.text, font=font)
-        tw, th = tb[2] - tb[0], tb[3] - tb[1]
-        ty = cy0 + (row_h - th) / 2 - tb[1]
-        tx = (cx1 - pad - tw) if p.align == "right" else (cx0 + pad)
-        draw.text((tx, ty), p.text, fill="black", font=font)
-        boxes.append(draw.textbbox((tx, ty), p.text, font=font))  # actual rendered extent
+    boxes: list[Box] = [(0.0, 0.0, 0.0, 0.0)] * len(placed)
+
+    # Group token indices by their cell (record, field); order within a cell by seq.
+    groups: dict[tuple, list[int]] = {}
+    for i, p in enumerate(placed):
+        key = (p.label["record"], p.label["field"])
+        groups.setdefault(key, []).append(i)
+
+    for idxs in groups.values():
+        idxs.sort(key=lambda i: placed[i].label.get("seq", 0))
+        cx0, cy0, cx1, cy1 = placed[idxs[0]].cell
+        row_h = cy1 - cy0
+        align = placed[idxs[0]].align
+
+        if len(idxs) == 1:
+            # Legacy single-token path — keeps output byte-identical when multi_token is off.
+            p = placed[idxs[0]]
+            tb = draw.textbbox((0, 0), p.text, font=font)
+            tw, th = tb[2] - tb[0], tb[3] - tb[1]
+            ty = cy0 + (row_h - th) / 2 - tb[1]
+            tx = (cx1 - pad - tw) if align == "right" else (cx0 + pad)
+            draw.text((tx, ty), p.text, fill="black", font=font)
+            boxes[idxs[0]] = draw.textbbox((tx, ty), p.text, font=font)
+            continue
+
+        # Multi-word: lay the words out as a contiguous phrase within the cell.
+        words = [placed[i].text for i in idxs]
+        phrase_w = draw.textlength(" ".join(words), font=font)
+        x = (cx1 - pad - phrase_w) if align == "right" else (cx0 + pad)
+        for i, word in zip(idxs, words):
+            tb = draw.textbbox((0, 0), word, font=font)
+            th = tb[3] - tb[1]
+            ty = cy0 + (row_h - th) / 2 - tb[1]
+            draw.text((x, ty), word, fill="black", font=font)
+            boxes[i] = draw.textbbox((x, ty), word, font=font)
+            x += draw.textlength(word + " ", font=font)
+
     return img, boxes
