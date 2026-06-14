@@ -6,6 +6,7 @@ from dataclasses import replace
 import pytest
 
 from tablelab import classes as classlib
+from tablelab import build as build_module
 from tablelab import layout as layout_module
 from tablelab.build import _validate_boxes, build_dataset
 from tablelab.layout import LayoutCapacityError, layout, validate_layout_capacity
@@ -75,12 +76,48 @@ def test_impossible_build_fails_before_creating_output(tmp_path):
     assert not output.exists()
 
 
+def test_late_render_failure_leaves_no_output_or_staging(tmp_path, monkeypatch):
+    original_render = build_module.render
+    render_count = 0
+
+    def fail_on_second_sample(placed, doc_class):
+        nonlocal render_count
+        image, boxes = original_render(placed, doc_class)
+        render_count += 1
+        if render_count == 2:
+            boxes[0] = (-1, *boxes[0][1:])
+        return image, boxes
+
+    monkeypatch.setattr(build_module, "render", fail_on_second_sample)
+
+    with pytest.raises(ValueError, match="invalid rendered box in sample 1"):
+        build_dataset(tmp_path, "late-failure", classlib.get("invoice"), n=2)
+
+    assert not (tmp_path / "late-failure").exists()
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_existing_dataset_is_not_overwritten(tmp_path):
+    output = tmp_path / "curated"
+    output.mkdir()
+    sentinel = output / "sentinel.txt"
+    sentinel.write_text("keep me")
+
+    with pytest.raises(FileExistsError, match="dataset already exists"):
+        build_dataset(tmp_path, output.name, classlib.get("invoice"), n=1)
+
+    assert sentinel.read_text() == "keep me"
+    assert list(output.iterdir()) == [sentinel]
+
+
 def test_default_invoice_validates():
     validate_layout_capacity(classlib.get("invoice"))
 
 
 def test_validate_boxes_accepts_page_boundaries():
-    _validate_boxes([(0, 0, 1000, 500), (4, 5, 4, 5)], 1000, 500)
+    placed = [layout_module.PlacedToken("first", (0, 0, 1, 1), None),
+              layout_module.PlacedToken("second", (0, 0, 1, 1), None)]
+    _validate_boxes([(0, 0, 1000, 500), (4, 5, 4, 5)], placed, 7, 1000, 500)
 
 
 @pytest.mark.parametrize(
@@ -94,11 +131,18 @@ def test_validate_boxes_accepts_page_boundaries():
     ],
 )
 def test_validate_boxes_rejects_invalid_geometry(boxes, bad_index):
+    placed = [
+        layout_module.PlacedToken(f"token-{index}", (0, 0, 1, 1), None)
+        for index in range(len(boxes))
+    ]
     with pytest.raises(
         ValueError,
-        match=rf"token index {bad_index}: page=\(1000, 500\)",
+        match=(
+            rf"sample 42 at token index {bad_index} with text 'token-{bad_index}': "
+            rf"page=\(1000, 500\), box="
+        ),
     ):
-        _validate_boxes(boxes, 1000, 500)
+        _validate_boxes(boxes, placed, 42, 1000, 500)
 
 
 @pytest.mark.parametrize(
