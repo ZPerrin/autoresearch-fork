@@ -20,13 +20,13 @@ def render(placed: list[PlacedToken], dc: DocumentClass) -> tuple[Image.Image, l
     glyph-extent boxes (page pixels), parallel to ``placed``."""
     W, H = dc.layout.page
     pad = dc.layout.pad
-    row_h = dc.layout.row_h
     img = Image.new("RGB", (W, H), "white")
     draw = ImageDraw.Draw(img)
     font = _font(dc.render.font_size)
     boxes: list[Box] = []
     for p in placed:
         cx0, cy0, cx1, cy1 = p.cell
+        row_h = cy1 - cy0  # honor this cell's height (supports variable rows later)
         tb = draw.textbbox((0, 0), p.text, font=font)
         tw, th = tb[2] - tb[0], tb[3] - tb[1]
         ty = cy0 + (row_h - th) / 2 - tb[1]

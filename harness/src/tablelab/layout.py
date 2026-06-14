@@ -19,7 +19,7 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
     """Place one document's tokens (logical, no Pillow). Preserves the legacy RNG
     sequence: randint(rows) -> sample() per cell row-major -> shuffle."""
     L = dc.layout
-    W, H = L.page
+    W = L.page[0]
     mx, my = L.margin
     C = len(dc.fields)
     cell_w = (W - 2 * mx) / C

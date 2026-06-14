@@ -14,7 +14,7 @@ from .render import render
 GENERATOR_VERSION = 2
 
 
-def build_dataset(datasets_dir, dataset_id: str, doc_class: DocumentClass,
+def build_dataset(datasets_dir: Path | str, dataset_id: str, doc_class: DocumentClass,
                   seed: int = 7, n: int = 12) -> Path:
     """Compose a DocumentClass into a dataset: per sample layout->render->convert,
     write images + contract samples + a reproducible manifest (resolved spec + seed)."""
