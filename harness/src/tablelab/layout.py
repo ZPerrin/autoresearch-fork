@@ -3,7 +3,7 @@ import random
 from dataclasses import dataclass
 
 from .specs import DocumentClass
-from .fields import sample
+from .fields import sample, background_token
 
 
 @dataclass
@@ -63,5 +63,17 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
             cell = (x0, y0, x0 + cell_w, y0 + L.row_h)
             _emit(placed, value, cell,
                   {"record": r, "field": c}, f.align, dc.render.font_size, multi)
+    n_bg = dc.structure.background
+    if n_bg:
+        H = L.page[1]
+        table_bottom = my + (row_offset + rows) * L.row_h
+        y_lo, y_hi = table_bottom, H - my - L.row_h
+        for _ in range(n_bg):
+            bx = rng.uniform(mx, W - mx - 80)
+            by = rng.uniform(y_lo, y_hi)
+            cell = (bx, by, bx + 80, by + L.row_h)
+            placed.append(PlacedToken(
+                text=background_token(rng), cell=cell, label=None,
+                align="left", font_size=dc.render.font_size))
     rng.shuffle(placed)
     return placed
