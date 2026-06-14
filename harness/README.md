@@ -25,23 +25,34 @@ uv run python -m tablelab.cli list
 uv run python -m tablelab.cli inspect eob-demo
 ```
 
-`build` flags: `--seed`, `--rows MIN MAX`, `--page W H`, `--instances MIN MAX` (stacked table instances, adds a region label), `--multi-token` (split multi-word cells into per-word tokens), `--header` (top row of field-name tokens), `--background N` (place N class-aware non-table tokens in reserved slots). Classes: `invoice`, `eob`, `receipt`.
+`build` flags:
+- structure: `--rows MIN MAX`, `--instances MIN MAX` (stacked instances, `region`-tagged), `--multi-token` (per-word tokens), `--header` (field-name header row), `--background N` (class-aware non-table tokens in reserved slots).
+- spacing: `--page W H`, `--row-gap PX`, `--instance-gap PX`, `--section-gap PX`, `--globals-per-row N` (pack label:value pairs across a global row).
+- jitter: `--jitter ROW_H COL_W OFFSET BASELINE` (per-axis magnitudes, 0 = off; bounded/zero-sum).
+- rendering: `--autoscale-font` (shrink an overflowing table's font to fit the page).
+- other: `--seed`. Classes: `invoice`, `eob`, `receipt`.
 
-Row and instance ranges are sampled only among page-feasible combinations; impossible minimums
-fail before output. Builds stage atomically and refuse existing dataset IDs. Background tokens use
-class-aware content in reserved, non-overlapping slots.
+Column widths are content-aware (each column sized to its content, leftover width shared by weight);
+`FieldSpec.fill < 1.0` leaves some cells empty. Row/instance ranges are sampled only among
+page-feasible combinations; impossible minimums fail before output. Builds stage atomically and
+refuse existing dataset IDs.
 
-The `eob` class is the full shape: member/provider **global fields** + a repeated **claim_line** table (multiple instances, `region`-tagged). `invoice` and `receipt` are single tables.
+The `eob` class is a representative explanation-of-benefits form: member/provider **global fields**
+(2-up) + a repeated ten-column **claim_line** table (service date, code, description, billed,
+allowed, deductible, copay, coinsurance, plan paid, owed — financial columns sparse) on a wide
+`1500x1414` page. `invoice` (golden-pinned, uniform columns) and `receipt` are single tables.
 
 ## Modules (`src/tablelab/`)
 
 - `device.py` — `get_device()` (cuda → mps → cpu).
 - `artifacts.py` — the schema-v2 contract: datasets + runs (`read`/`write`/`validate`, manifests).
-- `specs.py` — compositional spec types: `FieldSpec`/`LayoutSpec`/`StructureSpec`/`RenderSpec`/`DocumentClass` + `fork()`.
-- `fields.py` — value-sampler registry keyed by semantic type.
+- `specs.py` — compositional spec types: `FieldSpec`/`LayoutSpec`/`StructureSpec`/`JitterSpec`/`RenderSpec`/`DocumentClass` + `fork()`.
+- `fields.py` — value-sampler registry keyed by semantic type + per-type default column weights.
 - `classes.py` — `DocumentClass` registry + built-in `invoice`/`eob`/`receipt`.
-- `layout.py` — `PlacedToken` IR + `layout()` (Pillow-free placement).
-- `render.py` — `render()`: draw placed tokens → PNG + glyph boxes.
+- `layout.py` — `PlacedToken` IR + `layout()`: capacity planner, content-aware columns, gaps, jitter.
+- `jitter.py` — bounded/zero-sum jitter helpers (column edges, row height, token offset).
+- `metrics.py` — `text_width()`: estimate rendered text width from the render font (for column sizing).
+- `render.py` — `render()`: draw placed tokens (per-token font size) → PNG + glyph boxes.
 - `build.py` — `build_dataset()` orchestrator (compose → layout → render → contract).
 - `cli.py` — `argparse` + `tqdm`: `build` / `list` / `inspect`.
 - _(planned)_ `model.py`, `metric.py`, `train.py`.
