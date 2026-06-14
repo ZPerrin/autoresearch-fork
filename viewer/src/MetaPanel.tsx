@@ -130,6 +130,42 @@ export default function MetaPanel({ source, task, selectedToken }: Props) {
                     </span>
                   ))}
               </div>
+              {(() => {
+                const layout = source.manifest.config.spec.layout
+                const spacingParts: string[] = []
+                if (layout.row_gap != null) spacingParts.push(`row_gap ${layout.row_gap}`)
+                if (layout.instance_gap != null) spacingParts.push(`instance_gap ${layout.instance_gap}`)
+                if (layout.section_gap != null) spacingParts.push(`section_gap ${layout.section_gap}`)
+                if (layout.globals_per_row != null) spacingParts.push(`globals_per_row ${layout.globals_per_row}`)
+                if (spacingParts.length === 0) return null
+                return (
+                  <div className="meta-row">
+                    <span className="meta-key">spacing</span>
+                    <span className="meta-val mono">{spacingParts.join(' · ')}</span>
+                  </div>
+                )
+              })()}
+              {(() => {
+                const jitter = source.manifest.config.spec.jitter
+                const axes = jitter
+                  ? ([
+                      ['row_h', jitter.row_h],
+                      ['col_w', jitter.col_w],
+                      ['offset', jitter.offset],
+                      ['baseline', jitter.baseline],
+                    ] as [string, number][]).filter(([, v]) => v !== 0)
+                  : []
+                return (
+                  <div className="meta-row">
+                    <span className="meta-key">jitter</span>
+                    <span className="meta-val mono">
+                      {axes.length > 0
+                        ? axes.map(([k, v]) => `${k} ${v}`).join(' · ')
+                        : 'off'}
+                    </span>
+                  </div>
+                )
+              })()}
             </>
           ) : (
             <>
