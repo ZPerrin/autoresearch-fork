@@ -61,13 +61,16 @@ Data is multimodal from the start (LayoutLMv3 stack): **spatial** (token boxes),
 - **Multi-token cells** (first structural-realism feature): `StructureSpec.multi_token` splits
   multi-word cell values into per-word tokens sharing `record/field` + a within-cell `seq`; off is
   byte-identical. See `2026-06-13-multi-token-cells-design.md`.
+- **Header row** (second structural-realism feature): `StructureSpec.header` emits a top row of
+  field-name tokens (label `{"field": c, "header": True}`); renderer grouping keyed on the cell
+  rect (schema-agnostic); off is byte-identical. See `2026-06-13-header-row-design.md`.
 
 ## Roadmap (milestones — each gets its own plan when started)
 
-1. **Synthetic data toolkit — ACTIVE** (this doc, below): backbone + **multi-token cells** shipped.
-   Remaining **structural realism** in order — header row → background/non-table tokens → multiple
-   tables + globals → jitter/irregular → spanning cells — then document-class breadth. Visual
-   realism architecturally provisioned but deferred.
+1. **Synthetic data toolkit — ACTIVE** (this doc, below): backbone + **multi-token cells** +
+   **header row** shipped. Remaining **structural realism** in order — background/non-table tokens →
+   multiple tables + globals → jitter/irregular → spanning cells — then document-class breadth.
+   Visual realism architecturally provisioned but deferred.
 2. **The loop closes**: M0 spatial model trains on a dataset → emits run artifacts → predictions
    overlaid in the viewer; validate it learns. (Detail in the prior
    `2026-06-13-v0-loop-closes-design.md`, now the *model-loop* milestone — deferred until the
