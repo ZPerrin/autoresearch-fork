@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { Sample, Token } from './types'
 import { predictionMatchStatus } from './tokenMatch'
+import ViewerHelp from './ViewerHelp'
 
 const COLOR_CORRECT  = { fill: 'rgba(29,158,117,0.18)',  stroke: '#1D9E75' }
 const COLOR_WRONG    = { fill: 'rgba(226,75,74,0.18)',   stroke: '#E24B4A' }
@@ -123,6 +124,16 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
     setPan(constrainedPan)
   }, [constrainPan])
 
+  const previousSample = useCallback(() => {
+    setSampleIdx(index => Math.max(0, index - 1))
+    onSelectToken(null)
+  }, [onSelectToken])
+
+  const nextSample = useCallback(() => {
+    setSampleIdx(index => Math.min(samples.length - 1, index + 1))
+    onSelectToken(null)
+  }, [onSelectToken, samples.length])
+
   useLayoutEffect(() => {
     const viewport = viewportRef.current
     if (viewport == null || width <= 0 || height <= 0) return
@@ -232,6 +243,37 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
     onSelectToken(selected ? null : tok)
   }, [onSelectToken])
 
+  const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement
+    if (['BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName)) return
+
+    switch (event.key) {
+      case '+':
+      case '=':
+        event.preventDefault()
+        setZoomAround(zoomRef.current * ZOOM_STEP)
+        break
+      case '-':
+        event.preventDefault()
+        setZoomAround(zoomRef.current / ZOOM_STEP)
+        break
+      case '0':
+        event.preventDefault()
+        resetView()
+        break
+      case '[':
+      case 'ArrowLeft':
+        event.preventDefault()
+        previousSample()
+        break
+      case ']':
+      case 'ArrowRight':
+        event.preventDefault()
+        nextSample()
+        break
+    }
+  }, [nextSample, previousSample, resetView, setZoomAround])
+
   if (sample == null) {
     return <p className="empty-note">No samples to display.</p>
   }
@@ -248,11 +290,11 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
   const showImage = image && !imgError
 
   return (
-    <div className="doc-viewer">
+    <div className="doc-viewer" tabIndex={0} aria-label="Document viewer" onKeyDown={handleKeyDown}>
       <div className="viewer-toolbar">
         <div className="sample-nav">
           <button
-            onClick={() => { setSampleIdx(i => Math.max(0, i - 1)); onSelectToken(null) }}
+            onClick={previousSample}
             disabled={sampleIdx === 0}
           >
             ← Prev
@@ -262,7 +304,7 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
             &nbsp;(id&nbsp;{sample.id})
           </span>
           <button
-            onClick={() => { setSampleIdx(i => Math.min(samples.length - 1, i + 1)); onSelectToken(null) }}
+            onClick={nextSample}
             disabled={sampleIdx === samples.length - 1}
           >
             Next →
@@ -288,6 +330,7 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
           </button>
           <button className="fit-button" onClick={resetView}>Fit</button>
         </div>
+        <ViewerHelp />
       </div>
 
       {/* Document viewport: image + SVG share one fitted surface */}

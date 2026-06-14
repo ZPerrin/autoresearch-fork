@@ -295,6 +295,11 @@
   height: 100%;
 }
 
+.doc-viewer:focus-visible {
+  outline: 2px solid #80bfff;
+  outline-offset: -2px;
+}
+
 .doc-viewport {
   position: relative;
   flex: 1;
@@ -411,6 +416,44 @@
 
 .zoom-controls .fit-button {
   min-width: 36px;
+}
+
+.viewer-help {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.viewer-help-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 5;
+  min-width: 230px;
+  padding: 9px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+}
+
+.viewer-help-row {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 10px;
+  align-items: baseline;
+  padding: 3px 0;
+  font-size: 0.78rem;
+}
+
+.viewer-help-row kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid #ccc;
+  border-bottom-color: #aaa;
+  border-radius: 4px;
+  background: #f7f7f7;
+  color: #333;
+  font: 0.74rem ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 /* ---- Legend ---- */
