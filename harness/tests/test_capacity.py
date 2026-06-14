@@ -90,10 +90,40 @@ def test_late_render_failure_leaves_no_output_or_staging(tmp_path, monkeypatch):
 
     monkeypatch.setattr(build_module, "render", fail_on_second_sample)
 
-    with pytest.raises(ValueError, match="invalid rendered box in sample 1"):
+    with pytest.raises(
+        ValueError, match="invalid rendered box in dataset 'late-failure' sample 1"
+    ):
         build_dataset(tmp_path, "late-failure", classlib.get("invoice"), n=2)
 
     assert not (tmp_path / "late-failure").exists()
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("box_delta", [-1, 1])
+def test_box_cardinality_failure_cleans_output(tmp_path, monkeypatch, box_delta):
+    original_render = build_module.render
+    counts = None
+
+    def render_with_wrong_cardinality(placed, doc_class):
+        nonlocal counts
+        image, boxes = original_render(placed, doc_class)
+        if box_delta < 0:
+            boxes = boxes[:box_delta]
+        else:
+            boxes = [*boxes, boxes[-1]]
+        counts = (len(placed), len(boxes))
+        return image, boxes
+
+    monkeypatch.setattr(build_module, "render", render_with_wrong_cardinality)
+
+    with pytest.raises(ValueError) as exc_info:
+        build_dataset(tmp_path, "cardinality", classlib.get("invoice"), n=1)
+
+    placed_count, box_count = counts
+    assert str(exc_info.value) == (
+        "dataset 'cardinality' sample 0: rendered token cardinality mismatch: "
+        f"placed={placed_count}, boxes={box_count}"
+    )
     assert list(tmp_path.iterdir()) == []
 
 
@@ -108,6 +138,28 @@ def test_existing_dataset_is_not_overwritten(tmp_path):
 
     assert sentinel.read_text() == "keep me"
     assert list(output.iterdir()) == [sentinel]
+    assert list(tmp_path.iterdir()) == [output]
+
+
+def test_concurrent_build_lock_rejects_build_without_touching_output(tmp_path):
+    lock = tmp_path / ".concurrent.build.lock"
+    lock.write_text("other builder")
+
+    with pytest.raises(FileExistsError, match="dataset build already in progress"):
+        build_dataset(tmp_path, "concurrent", classlib.get("invoice"), n=1)
+
+    assert lock.read_text() == "other builder"
+    assert list(tmp_path.iterdir()) == [lock]
+
+
+@pytest.mark.parametrize(
+    "dataset_id", ["", ".", "..", "nested/name", "nested\\name"]
+)
+def test_invalid_dataset_id_fails_before_creating_output(tmp_path, dataset_id):
+    with pytest.raises(ValueError, match="expected one nonempty path component"):
+        build_dataset(tmp_path, dataset_id, classlib.get("invoice"), n=1)
+
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_default_invoice_validates():
@@ -117,7 +169,9 @@ def test_default_invoice_validates():
 def test_validate_boxes_accepts_page_boundaries():
     placed = [layout_module.PlacedToken("first", (0, 0, 1, 1), None),
               layout_module.PlacedToken("second", (0, 0, 1, 1), None)]
-    _validate_boxes([(0, 0, 1000, 500), (4, 5, 4, 5)], placed, 7, 1000, 500)
+    _validate_boxes(
+        [(0, 0, 1000, 500), (4, 5, 4, 5)], placed, "boundary", 7, 1000, 500
+    )
 
 
 @pytest.mark.parametrize(
@@ -138,11 +192,12 @@ def test_validate_boxes_rejects_invalid_geometry(boxes, bad_index):
     with pytest.raises(
         ValueError,
         match=(
-            rf"sample 42 at token index {bad_index} with text 'token-{bad_index}': "
+            rf"dataset 'geometry' sample 42 at token index {bad_index} "
+            rf"with text 'token-{bad_index}': "
             rf"page=\(1000, 500\), box="
         ),
     ):
-        _validate_boxes(boxes, placed, 42, 1000, 500)
+        _validate_boxes(boxes, placed, "geometry", 42, 1000, 500)
 
 
 @pytest.mark.parametrize(
