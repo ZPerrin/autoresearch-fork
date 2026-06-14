@@ -14,6 +14,7 @@ dependencies = [
     "numpy>=2.2",
     "pillow>=10",
     "torch>=2.9",
+    "tqdm>=4.68.2",
 ]
 
 [dependency-groups]

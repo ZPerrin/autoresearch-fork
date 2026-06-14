@@ -17,13 +17,28 @@ Device-aware torch — MPS on Apple silicon, CUDA on NVIDIA, CPU fallback:
 uv run python -c "from tablelab.device import get_device; print(get_device())"
 ```
 
+## CLI (`tablelab.cli`)
+
+```bash
+uv run python -m tablelab.cli build --class eob --n 100 --out ../datasets/eob-demo
+uv run python -m tablelab.cli list
+uv run python -m tablelab.cli inspect eob-demo
+```
+
+`build` overrides: `--seed`, `--rows MIN MAX`, `--page W H`. Classes: `invoice`, `eob`, `receipt`.
+
 ## Modules (`src/tablelab/`)
 
 - `device.py` — `get_device()` (cuda → mps → cpu).
 - `artifacts.py` — the schema-v2 contract: datasets + runs (`read`/`write`/`validate`, manifests).
-- `generate.py` — synthetic dataset builder: renders grids to PNG with field-appropriate text,
-  captures word boxes + labels, writes a `datasets/<id>/`.
-- _(planned)_ `cli.py` (argparse + tqdm), `model.py`, `metric.py`, `train.py`.
+- `specs.py` — compositional spec types: `FieldSpec`/`LayoutSpec`/`StructureSpec`/`RenderSpec`/`DocumentClass` + `fork()`.
+- `fields.py` — value-sampler registry keyed by semantic type.
+- `classes.py` — `DocumentClass` registry + built-in `invoice`/`eob`/`receipt`.
+- `layout.py` — `PlacedToken` IR + `layout()` (Pillow-free placement).
+- `render.py` — `render()`: draw placed tokens → PNG + glyph boxes.
+- `build.py` — `build_dataset()` orchestrator (compose → layout → render → contract).
+- `cli.py` — `argparse` + `tqdm`: `build` / `list` / `inspect`.
+- _(planned)_ `model.py`, `metric.py`, `train.py`.
 
 Datasets are written to the repo-root `datasets/` (local, gitignored); run artifacts to `runs/`
 (git-tracked). See `../AGENTS.md` and `../docs/specs/` for the design and conventions.

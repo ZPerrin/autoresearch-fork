@@ -58,14 +58,14 @@ Viewer:
 ## Current state & active milestone
 
 Built: env (MPS + CUDA), contract v2, multimodal dataset builder (field-appropriate grids → PNG,
-one token per cell), split-pane viewer.
+one token per cell), split-pane viewer; synth-toolkit backbone (compositional spec API
+specs/fields/classes/layout/render/build + build/list/inspect CLI).
 
-**Active milestone — the synthetic data toolkit:** a CLI (`argparse` + `tqdm`) + a compositional API
-(`FieldSpec` / `LayoutSpec` / `StructureSpec` / `RenderSpec` / `DocumentClass`; a Python registry,
-forkable). Then **structural realism** in order — multi-token cells → header row → background/
-non-table tokens → multiple tables + global fields → jitter/irregular → spanning cells — then
-**document-class breadth** (EOB prioritized; it mirrors the real problem). **Visual realism is
-deferred** but provisioned via the `RenderSpec` renderer seam.
+**Active milestone — the synthetic data toolkit:** backbone is done. Next step: **structural
+realism**, starting with multi-token cells. Full order — multi-token cells → header row →
+background/non-table tokens → multiple tables + global fields → jitter/irregular → spanning cells
+— then **document-class breadth** (EOB prioritized; it mirrors the real problem). **Visual realism
+is deferred** but provisioned via the `RenderSpec` renderer seam.
 
 Deferred next: the **model loop** (M0 spatial → run artifacts → predictions overlaid), see
 `docs/specs/2026-06-13-v0-loop-closes-design.md`. Then the **modality ladder** M0→M3 (spatial → +text
