@@ -51,6 +51,7 @@ class StructureSpec:
 class RenderSpec:
     font_size: int = 22
     renderer: str = "pillow"   # the visual-realism seam; only "pillow" exists today
+    autoscale_font: bool = False  # shrink a table's font so wide column sets fit instead of overflowing
 
 
 @dataclass(frozen=True)

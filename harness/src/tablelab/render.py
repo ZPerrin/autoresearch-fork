@@ -24,7 +24,6 @@ def render(placed: list[PlacedToken], dc: DocumentClass) -> tuple[Image.Image, l
     pad = dc.layout.pad
     img = Image.new("RGB", (W, H), "white")
     draw = ImageDraw.Draw(img)
-    font = _font(dc.render.font_size)
     boxes: list[Box] = [(0.0, 0.0, 0.0, 0.0)] * len(placed)
 
     # Group token indices by their cell rect; order within a cell by seq.
@@ -38,6 +37,7 @@ def render(placed: list[PlacedToken], dc: DocumentClass) -> tuple[Image.Image, l
         cx0, cy0, cx1, cy1 = placed[idxs[0]].cell
         row_h = cy1 - cy0
         align = placed[idxs[0]].align
+        font = _font(placed[idxs[0]].font_size)  # per-token size (autoscale shrinks table cells)
 
         if len(idxs) == 1:
             # Legacy single-token path — keeps output byte-identical when multi_token is off.
