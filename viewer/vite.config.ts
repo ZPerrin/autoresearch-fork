@@ -19,7 +19,7 @@ function safeResolve(root: string, ...parts: string[]): string | null {
 }
 
 function makeStaticMiddleware(urlPrefix: string, fsDir: string): Connect.NextHandleFunction {
-  return (req, res, _next) => {
+  return (req, res) => {
     // rest is the path after the prefix, e.g. "/index.json" or "/grid-invoice-v1/images/0.png"
     const rest = req.url ?? '/'
     const segments = rest.split('/').filter(Boolean)

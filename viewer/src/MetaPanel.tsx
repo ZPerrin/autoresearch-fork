@@ -1,11 +1,25 @@
-import type { ActiveSource, Token } from './types'
+import type { ActiveSource, LabelValue, Token, TokenLabel } from './types'
+import { predictionMatchStatus } from './tokenMatch'
 
 interface Props {
   source: ActiveSource | null
+  task?: string
   selectedToken: Token | null
 }
 
 const KEY_METRICS = ['exact', 'record_acc', 'field_acc', 'baseline_majority_exact', 'baseline_geosort_exact']
+
+function formatRange([minimum, maximum]: [number, number]): string {
+  return minimum === maximum ? String(minimum) : `${minimum}-${maximum}`
+}
+
+function formatValue(value: LabelValue): string {
+  return value === null ? 'null' : String(value)
+}
+
+function entries(label: TokenLabel): [string, LabelValue][] {
+  return Object.entries(label)
+}
 
 function MetricRow({ label, value }: { label: string; value: number | undefined }) {
   return (
@@ -41,7 +55,11 @@ function Sparkline({ curve }: { curve: { step: number; val_exact: number }[] }) 
   )
 }
 
-export default function MetaPanel({ source, selectedToken }: Props) {
+export default function MetaPanel({ source, task, selectedToken }: Props) {
+  const matchStatus = selectedToken == null
+    ? 'not-applicable'
+    : predictionMatchStatus(task, selectedToken.label, selectedToken.pred)
+
   return (
     <div className="meta-panel">
       {/* Source metadata */}
@@ -56,12 +74,6 @@ export default function MetaPanel({ source, selectedToken }: Props) {
             <span className="meta-key">id</span>
             <span className="meta-val mono">{source.manifest.dataset_id}</span>
           </div>
-          {source.manifest.config.schema_name && (
-            <div className="meta-row">
-              <span className="meta-key">schema</span>
-              <span className="meta-val mono">{source.manifest.config.schema_name}</span>
-            </div>
-          )}
           <div className="meta-row">
             <span className="meta-key">task</span>
             <span className="meta-val mono">{source.manifest.task}</span>
@@ -74,11 +86,72 @@ export default function MetaPanel({ source, selectedToken }: Props) {
             <span className="meta-key">modalities</span>
             <span className="meta-val">{source.manifest.modalities.join(', ')}</span>
           </div>
-          {source.manifest.config.fields && (
-            <div className="meta-row">
-              <span className="meta-key">fields</span>
-              <span className="meta-val mono">{source.manifest.config.fields.join(', ')}</span>
-            </div>
+          {source.manifest.config.spec ? (
+            <>
+              <div className="meta-row">
+                <span className="meta-key">class</span>
+                <span className="meta-val mono">
+                  {source.manifest.config.class ?? source.manifest.config.spec.name}
+                </span>
+              </div>
+              <div className="meta-row">
+                <span className="meta-key">page</span>
+                <span className="meta-val mono">
+                  {source.manifest.config.spec.layout.page.join(' x ')}
+                </span>
+              </div>
+              <div className="meta-subsection-title">Globals</div>
+              <div className="meta-val mono spec-field-list">
+                {source.manifest.config.spec.globals.length > 0
+                  ? source.manifest.config.spec.globals.map(field => field.name).join(', ')
+                  : 'none'}
+              </div>
+              <div className="meta-subsection-title">Tables</div>
+              <div className="structure-list">
+                {source.manifest.config.spec.tables.map(table => (
+                  <div className="structure-card" key={table.name}>
+                    <div className="structure-card-title mono">{table.name}</div>
+                    <div className="structure-card-range">
+                      rows {formatRange(table.rows)} · instances {formatRange(table.instances)}
+                    </div>
+                    <div className="structure-card-fields mono">
+                      {table.fields.map(field => field.name).join(', ')}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="meta-subsection-title">Structure</div>
+              <div className="structure-flags">
+                {entries(source.manifest.config.spec.structure)
+                  .filter(([, value]) => value === true || (typeof value === 'number' && value > 0))
+                  .map(([key, value]) => (
+                    <span className="structure-flag mono" key={key}>
+                      {value === true ? key : `${key}=${formatValue(value)}`}
+                    </span>
+                  ))}
+              </div>
+            </>
+          ) : (
+            <>
+              {source.manifest.config.schema_name && (
+                <div className="meta-row">
+                  <span className="meta-key">schema</span>
+                  <span className="meta-val mono">{source.manifest.config.schema_name}</span>
+                </div>
+              )}
+              {source.manifest.config.page && (
+                <div className="meta-row">
+                  <span className="meta-key">page</span>
+                  <span className="meta-val mono">{source.manifest.config.page.join(' x ')}</span>
+                </div>
+              )}
+              {source.manifest.config.fields && (
+                <div className="meta-row">
+                  <span className="meta-key">fields</span>
+                  <span className="meta-val mono">{source.manifest.config.fields.join(', ')}</span>
+                </div>
+              )}
+            </>
           )}
         </section>
       )}
@@ -136,19 +209,31 @@ export default function MetaPanel({ source, selectedToken }: Props) {
             <div className="meta-row">
               <span className="meta-key">label</span>
               <span className="meta-val mono">
-                {selectedToken.label != null
-                  ? `record=${selectedToken.label.record} · field=${selectedToken.label.field}`
-                  : 'null'}
+                {selectedToken.label != null ? 'ground truth' : 'background / non-answer'}
               </span>
             </div>
+            {selectedToken.label != null && (
+              entries(selectedToken.label).map(([key, value]) => (
+                <div className="meta-row" key={key}>
+                  <span className="meta-key">{key}</span>
+                  <span className="meta-val mono">{formatValue(value)}</span>
+                </div>
+              ))
+            )}
             {selectedToken.pred != null && (
               <>
                 <div className="meta-row">
                   <span className="meta-key">pred</span>
-                  <span className="meta-val mono">
-                    record={selectedToken.pred.record} · field={selectedToken.pred.field}
-                  </span>
+                  <span className="meta-val mono">prediction</span>
                 </div>
+                {entries(selectedToken.pred)
+                  .filter(([key]) => key !== 'confidence')
+                  .map(([key, value]) => (
+                    <div className="meta-row" key={key}>
+                      <span className="meta-key">{key}</span>
+                      <span className="meta-val mono">{formatValue(value)}</span>
+                    </div>
+                  ))}
                 {selectedToken.pred.confidence != null && (
                   <div className="meta-row">
                     <span className="meta-key">confidence</span>
@@ -158,13 +243,11 @@ export default function MetaPanel({ source, selectedToken }: Props) {
                 <div className="meta-row">
                   <span className="meta-key">match</span>
                   <span className={`meta-val ${
-                    selectedToken.pred.record === selectedToken.label?.record &&
-                    selectedToken.pred.field  === selectedToken.label?.field
-                      ? 'correct-tag' : 'wrong-tag'
+                    matchStatus === 'correct'
+                      ? 'correct-tag'
+                      : matchStatus === 'mismatch' ? 'wrong-tag' : ''
                   }`}>
-                    {selectedToken.pred.record === selectedToken.label?.record &&
-                     selectedToken.pred.field  === selectedToken.label?.field
-                      ? 'correct' : 'mismatch'}
+                    {matchStatus === 'not-applicable' ? 'not evaluated' : matchStatus}
                   </span>
                 </div>
               </>

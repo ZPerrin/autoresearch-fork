@@ -2,14 +2,18 @@
 
 // ---- Shared ----
 
+export type LabelValue = string | number | boolean | null
+export type TokenLabel = Record<string, LabelValue>
+export type TokenPrediction = TokenLabel & { confidence?: number }
+
 export interface Token {
   x0: number
   y0: number
   x1: number
   y1: number
   text: string | null
-  label: { record?: number; field?: number; [key: string]: unknown } | null
-  pred:  { record?: number; field?: number; confidence?: number; [key: string]: unknown } | null
+  label: TokenLabel | null
+  pred: TokenPrediction | null
 }
 
 export interface Sample {
@@ -65,6 +69,35 @@ export interface RunDetail {
 
 // ---- Datasets ----
 
+export interface FieldSpec {
+  name: string
+  type: string
+  align: string
+}
+
+export interface TableSpec {
+  name: string
+  fields: FieldSpec[]
+  rows: [number, number]
+  instances: [number, number]
+}
+
+export interface ResolvedDocumentSpec {
+  name: string
+  tables: TableSpec[]
+  globals: FieldSpec[]
+  background_terms: string[]
+  layout: {
+    page: [number, number]
+    margin: [number, number]
+    row_h: number
+    pad: number
+    table_gap: number
+  }
+  structure: Record<string, LabelValue>
+  render: Record<string, LabelValue>
+}
+
 export interface DatasetManifest {
   schema_version: number
   dataset_id: string
@@ -73,6 +106,10 @@ export interface DatasetManifest {
   modalities: string[]
   count: number
   config: {
+    class?: string
+    spec?: ResolvedDocumentSpec
+    seed?: number
+    // Legacy manifest fields, used only when resolved spec is absent.
     schema_name?: string
     fields?: string[]
     page?: [number, number]
