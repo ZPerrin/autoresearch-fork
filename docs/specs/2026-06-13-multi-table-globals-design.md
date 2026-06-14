@@ -71,7 +71,8 @@ multi-instance class variant). Tests: region present and contiguous, instances s
 `DocumentClass.globals`; layout places globals at the top as key-value pairs — a label token
 (field-name, header-style) and a value token labeled `{"global": name}`. Then author the real **EOB
 `DocumentClass`**: globals (member name/id, provider, claim number) + a `claim_line` table
-(`service_date`, `code`, `description`, `amount_billed`, `amount_owed`) with `instances=(1,3)`.
+(`service_date`, `code`, `description`, `amount_billed`, `amount_owed`) with `rows=(2,5)`,
+`instances=(1,2)` (chosen to stay on the default page; many-instance overflow is deferred).
 Tests: globals present at top with correct labels; EOB class builds with globals + multiple claim
 instances.
 
