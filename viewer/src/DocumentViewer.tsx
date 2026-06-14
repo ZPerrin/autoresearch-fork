@@ -104,21 +104,6 @@ export default function DocumentViewer({ samples, selectedToken, onSelectToken }
                     strokeWidth={sel ? 2.5 : 1.5}
                     rx={3}
                   />
-                  {/* Ground-truth label text */}
-                  {tok.pred == null && tok.label != null && (
-                    <text
-                      x={x + w / 2}
-                      y={y + h / 2}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      fontSize={Math.max(8, Math.min(h * 0.55, 14))}
-                      fill={sel ? '#B45309' : '#378ADD'}
-                      fontFamily="monospace"
-                      pointerEvents="none"
-                    >
-                      {`${tok.label.record}·${tok.label.field}`}
-                    </text>
-                  )}
                 </g>
               )
             })}

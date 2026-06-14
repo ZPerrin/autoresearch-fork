@@ -35,7 +35,6 @@ export default function App() {
 
   // Load both indices on mount
   useEffect(() => {
-    setIndexLoading(true)
     Promise.all([
       fetch('/datasets/index.json').then(r => {
         if (!r.ok) throw new Error(`datasets/index.json HTTP ${r.status}`)
@@ -61,7 +60,6 @@ export default function App() {
         setIndexError(String(err))
         setIndexLoading(false)
       })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function loadDataset(id: string) {
