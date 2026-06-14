@@ -7,6 +7,7 @@ import pytest
 
 from tablelab import classes as classlib
 from tablelab import layout as layout_module
+from tablelab.build import _validate_boxes, build_dataset
 from tablelab.layout import LayoutCapacityError, layout, validate_layout_capacity
 from tablelab.specs import fork
 
@@ -65,8 +66,39 @@ def test_too_short_page_fails_capacity_validation():
         validate_layout_capacity(_full_eob(page=(1000, 500)))
 
 
+def test_impossible_build_fails_before_creating_output(tmp_path):
+    output = tmp_path / "impossible-eob"
+
+    with pytest.raises(LayoutCapacityError, match="no page-feasible document shape"):
+        build_dataset(tmp_path, output.name, _full_eob(page=(1000, 500)), n=1)
+
+    assert not output.exists()
+
+
 def test_default_invoice_validates():
     validate_layout_capacity(classlib.get("invoice"))
+
+
+def test_validate_boxes_accepts_page_boundaries():
+    _validate_boxes([(0, 0, 1000, 500), (4, 5, 4, 5)], 1000, 500)
+
+
+@pytest.mark.parametrize(
+    ("boxes", "bad_index"),
+    [
+        ([(0, 0, 1, 1), (-1, 0, 1, 1)], 1),
+        ([(2, 0, 1, 1)], 0),
+        ([(0, 2, 1, 1)], 0),
+        ([(0, 0, 1001, 1)], 0),
+        ([(0, 0, 1, 501)], 0),
+    ],
+)
+def test_validate_boxes_rejects_invalid_geometry(boxes, bad_index):
+    with pytest.raises(
+        ValueError,
+        match=rf"token index {bad_index}: page=\(1000, 500\)",
+    ):
+        _validate_boxes(boxes, 1000, 500)
 
 
 @pytest.mark.parametrize(

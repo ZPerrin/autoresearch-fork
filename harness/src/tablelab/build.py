@@ -8,16 +8,27 @@ from tqdm import tqdm
 
 from .specs import DocumentClass
 from .artifacts import Sample, Token, DatasetManifest, write_dataset
-from .layout import layout
+from .layout import layout, validate_layout_capacity
 from .render import render
 
 GENERATOR_VERSION = 2
+
+
+def _validate_boxes(boxes, width: int, height: int) -> None:
+    for index, box in enumerate(boxes):
+        x0, y0, x1, y1 = box
+        if not (0 <= x0 <= x1 <= width and 0 <= y0 <= y1 <= height):
+            raise ValueError(
+                f"invalid rendered box at token index {index}: "
+                f"page=({width}, {height}), box={box}"
+            )
 
 
 def build_dataset(datasets_dir: Path | str, dataset_id: str, doc_class: DocumentClass,
                   seed: int = 7, n: int = 12) -> Path:
     """Compose a DocumentClass into a dataset: per sample layout->render->convert,
     write images + contract samples + a reproducible manifest (resolved spec + seed)."""
+    validate_layout_capacity(doc_class)
     rng = random.Random(seed)
     W, H = doc_class.layout.page
     ds_dir = Path(datasets_dir) / dataset_id
@@ -26,6 +37,7 @@ def build_dataset(datasets_dir: Path | str, dataset_id: str, doc_class: Document
     for i in tqdm(range(n), desc=dataset_id):
         placed = layout(doc_class, rng)
         img, boxes = render(placed, doc_class)
+        _validate_boxes(boxes, W, H)
         img.save(ds_dir / "images" / f"{i}.png")
         tokens = [Token(x0=round(b[0] / W, 4), y0=round(b[1] / H, 4),
                         x1=round(b[2] / W, 4), y1=round(b[3] / H, 4),
