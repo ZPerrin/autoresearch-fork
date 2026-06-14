@@ -17,6 +17,8 @@ def _build(args):
     tables = dc.tables
     if args.rows:
         tables = tuple(replace(t, rows=(args.rows[0], args.rows[1])) for t in tables)
+    if args.instances:
+        tables = tuple(replace(t, instances=(args.instances[0], args.instances[1])) for t in tables)
     S = dc.structure
     if args.multi_token:
         S = replace(S, multi_token=True)
@@ -75,6 +77,8 @@ def main(argv=None):
     b.add_argument("--seed", type=int, default=7)
     b.add_argument("--rows", type=int, nargs=2, metavar=("MIN", "MAX"),
                    help="override record-count range")
+    b.add_argument("--instances", type=int, nargs=2, metavar=("MIN", "MAX"),
+                   help="number of instances per table (adds a region label)")
     b.add_argument("--page", type=int, nargs=2, metavar=("W", "H"),
                    help="override page size")
     b.add_argument("--multi-token", action="store_true",
