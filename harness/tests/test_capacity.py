@@ -157,3 +157,53 @@ def test_background_requires_current_fixed_cell_width():
 
     with pytest.raises(LayoutCapacityError, match="background placement requires at least 80px"):
         validate_layout_capacity(narrow)
+
+
+def test_large_valid_instance_depth_uses_iterative_traversal():
+    dc = classlib.get("invoice")
+    table = replace(dc.tables[0], rows=(0, 0), instances=(1200, 1200))
+    deep = fork(
+        dc,
+        tables=(table,),
+        layout=replace(dc.layout, page=(1000, 1361), table_gap=1),
+    )
+
+    validate_layout_capacity(deep)
+    shape = layout_module._choose_shape(deep, random.Random(7))
+    assert len(shape[0]) == 1200
+    assert set(shape[0]) == {0}
+
+
+def test_many_zero_instance_tables_use_iterative_traversal():
+    dc = classlib.get("invoice")
+    tables = tuple(
+        replace(dc.tables[0], name=f"table_{index}", rows=(0, 0), instances=(0, 0))
+        for index in range(1200)
+    )
+    deep = fork(dc, tables=tables)
+
+    validate_layout_capacity(deep)
+    shape = layout_module._choose_shape(deep, random.Random(7))
+    assert len(shape) == 1200
+    assert all(table_shape == () for table_shape in shape)
+
+
+def test_iterative_traversal_preserves_depth_first_yield_order():
+    dc = classlib.get("invoice")
+    tables = tuple(
+        replace(dc.tables[0], name=f"table_{index}", rows=(0, 1), instances=(0, 1))
+        for index in range(2)
+    )
+    ordered = fork(dc, tables=tables)
+
+    assert list(layout_module._iter_feasible_shapes(ordered)) == [
+        ((), ()),
+        ((), (0,)),
+        ((), (1,)),
+        ((0,), ()),
+        ((0,), (0,)),
+        ((0,), (1,)),
+        ((1,), ()),
+        ((1,), (0,)),
+        ((1,), (1,)),
+    ]

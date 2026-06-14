@@ -180,21 +180,20 @@ def _iter_table_shapes(
     budget: int,
 ):
     minimum_instance = _instance_height(dc, table.rows[0])
-
-    def visit(rows: tuple[int, ...], used: int):
+    stack = [((), 0)]
+    while stack:
+        rows, used = stack.pop()
         remaining = instances - len(rows)
         if used + remaining * minimum_instance > budget:
-            return
+            continue
         if not remaining:
             yield rows, used
-            return
-        for row_count in range(table.rows[0], table.rows[1] + 1):
+            continue
+        for row_count in range(table.rows[1], table.rows[0] - 1, -1):
             height = _instance_height(dc, row_count)
             if used + height > budget:
-                break
-            yield from visit((*rows, row_count), used + height)
-
-    yield from visit((), 0)
+                continue
+            stack.append(((*rows, row_count), used + height))
 
 
 def _iter_feasible_shapes(dc: DocumentClass):
@@ -207,13 +206,7 @@ def _iter_feasible_shapes(dc: DocumentClass):
     for index in range(len(dc.tables) - 1, -1, -1):
         minimum_suffix[index] = minimum_by_table[index] + minimum_suffix[index + 1]
 
-    def visit(table_index: int, shape: Shape, used: int):
-        if used + minimum_suffix[table_index] > budget:
-            return
-        if table_index == len(dc.tables):
-            yield shape
-            return
-
+    def table_options(table_index: int, used: int):
         table = dc.tables[table_index]
         remaining_budget = budget - used - minimum_suffix[table_index + 1]
         for instances in range(table.instances[0], table.instances[1] + 1):
@@ -223,13 +216,32 @@ def _iter_feasible_shapes(dc: DocumentClass):
             for table_shape, table_height in _iter_table_shapes(
                 dc, table, instances, remaining_budget
             ):
-                yield from visit(
-                    table_index + 1,
-                    (*shape, table_shape),
-                    used + table_height,
-                )
+                yield table_shape, table_height
 
-    yield from visit(0, (), 0)
+    stack = [(0, (), 0, None)]
+    while stack:
+        table_index, shape, used, options = stack[-1]
+        if used + minimum_suffix[table_index] > budget:
+            stack.pop()
+            continue
+        if table_index == len(dc.tables):
+            stack.pop()
+            yield shape
+            continue
+        if options is None:
+            options = iter(table_options(table_index, used))
+            stack[-1] = (table_index, shape, used, options)
+        try:
+            table_shape, table_height = next(options)
+        except StopIteration:
+            stack.pop()
+            continue
+        stack.append((
+            table_index + 1,
+            (*shape, table_shape),
+            used + table_height,
+            None,
+        ))
 
 
 def _ensure_minimum_fits(dc: DocumentClass) -> None:
