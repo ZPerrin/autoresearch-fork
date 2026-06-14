@@ -33,42 +33,48 @@ def _emit(placed: list[PlacedToken], text: str, cell: tuple[float, float, float,
 
 
 def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
-    """Place one document's tokens (logical, no Pillow). Preserves the legacy RNG
-    sequence: randint(rows) -> sample() per data cell row-major -> shuffle. A header
-    row (structure.header) is emitted above the data rows; multi-word values split
-    into per-word tokens (structure.multi_token) sharing the cell's label + a seq."""
+    """Place one document's tokens (logical, no Pillow). Iterates dc.tables with a
+    vertical cursor; for one table at instances=(1,1) this draws the same RNG in the
+    same order and emits the same labels as the prior single-table builder. A header
+    row (structure.header) is emitted atop each table instance; multi-word values split
+    into per-word tokens (structure.multi_token); background tokens (structure.background)
+    are scattered below everything."""
     L = dc.layout
-    W = L.page[0]
+    W, H = L.page
     mx, my = L.margin
-    C = len(dc.fields)
-    cell_w = (W - 2 * mx) / C
     multi = dc.structure.multi_token
     header = dc.structure.header
-    row_offset = 1 if header else 0
-    rows = rng.randint(L.rows[0], L.rows[1])
     placed: list[PlacedToken] = []
-    if header:
-        for c in range(C):
-            f = dc.fields[c]
-            x0 = mx + c * cell_w
-            cell = (x0, my, x0 + cell_w, my + L.row_h)
-            _emit(placed, _header_text(f.name), cell,
-                  {"field": c, "header": True}, f.align, dc.render.font_size, multi)
-    for r in range(rows):
-        for c in range(C):
-            f = dc.fields[c]
-            value = sample(f.type, rng)
-            x0 = mx + c * cell_w
-            y0 = my + (r + row_offset) * L.row_h
-            cell = (x0, y0, x0 + cell_w, y0 + L.row_h)
-            _emit(placed, value, cell,
-                  {"record": r, "field": c}, f.align, dc.render.font_size, multi)
+    y = float(my)
+    for table in dc.tables:
+        C = len(table.fields)
+        cell_w = (W - 2 * mx) / C
+        lo, hi = table.instances
+        instances = lo if lo == hi else rng.randint(lo, hi)
+        for _inst in range(instances):
+            rows = rng.randint(table.rows[0], table.rows[1])
+            if header:
+                for c in range(C):
+                    f = table.fields[c]
+                    x0 = mx + c * cell_w
+                    cell = (x0, y, x0 + cell_w, y + L.row_h)
+                    _emit(placed, _header_text(f.name), cell,
+                          {"field": c, "header": True}, f.align, dc.render.font_size, multi)
+                y += L.row_h
+            for r in range(rows):
+                for c in range(C):
+                    f = table.fields[c]
+                    value = sample(f.type, rng)
+                    x0 = mx + c * cell_w
+                    cell = (x0, y, x0 + cell_w, y + L.row_h)
+                    _emit(placed, value, cell,
+                          {"record": r, "field": c}, f.align, dc.render.font_size, multi)
+                y += L.row_h
+            y += L.table_gap
     n_bg = dc.structure.background
     if n_bg:
-        H = L.page[1]
-        table_bottom = my + (row_offset + rows) * L.row_h
-        y_lo, y_hi = table_bottom, H - my - L.row_h
-        if y_hi <= y_lo:  # table fills the page; fall back to the full interior
+        y_lo, y_hi = y, H - my - L.row_h
+        if y_hi <= y_lo:  # tables fill the page; fall back to the full interior
             y_lo, y_hi = float(my), float(H - my - L.row_h)
         for _ in range(n_bg):
             bx = rng.uniform(mx, W - mx - 80)
