@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import os
 import random
 from dataclasses import replace
 
@@ -141,25 +143,87 @@ def test_existing_dataset_is_not_overwritten(tmp_path):
     assert list(tmp_path.iterdir()) == [output]
 
 
-def test_concurrent_build_lock_rejects_build_without_touching_output(tmp_path):
+def test_live_build_lock_rejects_build_and_preserves_staging(tmp_path):
     lock = tmp_path / ".concurrent.build.lock"
-    lock.write_text("other builder")
+    staging = tmp_path / ".concurrent.staging-live"
+    staging.mkdir()
+    sentinel = staging / "sentinel.txt"
+    sentinel.write_text("keep me")
+    lock.write_text(json.dumps({"pid": os.getpid(), "staging": str(staging)}))
 
     with pytest.raises(FileExistsError, match="dataset build already in progress"):
         build_dataset(tmp_path, "concurrent", classlib.get("invoice"), n=1)
 
-    assert lock.read_text() == "other builder"
-    assert list(tmp_path.iterdir()) == [lock]
+    assert lock.exists()
+    assert sentinel.read_text() == "keep me"
+
+
+def test_stale_build_lock_recovers_recorded_staging(tmp_path, monkeypatch):
+    lock = tmp_path / ".recover.build.lock"
+    staging = tmp_path / ".recover.staging-crashed"
+    staging.mkdir()
+    (staging / "partial.txt").write_text("partial")
+    stale_pid = 2_147_483_647
+    lock.write_text(json.dumps({"pid": stale_pid, "staging": str(staging)}))
+    monkeypatch.setattr(build_module, "_pid_is_alive", lambda pid: False)
+
+    output = build_dataset(tmp_path, "recover", classlib.get("invoice"), n=0)
+
+    assert output.exists()
+    assert not staging.exists()
+    assert not lock.exists()
+
+
+def test_malformed_build_lock_is_recovered(tmp_path):
+    lock = tmp_path / ".malformed.build.lock"
+    lock.write_text("not valid metadata")
+
+    output = build_dataset(tmp_path, "malformed", classlib.get("invoice"), n=0)
+
+    assert output.exists()
+    assert not lock.exists()
+
+
+def test_stale_recovery_never_deletes_final_dataset(tmp_path, monkeypatch):
+    output = tmp_path / "protected"
+    output.mkdir()
+    sentinel = output / "sentinel.txt"
+    sentinel.write_text("keep me")
+    lock = tmp_path / ".protected.build.lock"
+    lock.write_text(json.dumps({"pid": 2_147_483_647, "staging": str(output)}))
+    monkeypatch.setattr(build_module, "_pid_is_alive", lambda pid: False)
+
+    with pytest.raises(FileExistsError, match="dataset already exists"):
+        build_dataset(tmp_path, "protected", classlib.get("invoice"), n=0)
+
+    assert sentinel.read_text() == "keep me"
+    assert not lock.exists()
 
 
 @pytest.mark.parametrize(
-    "dataset_id", ["", ".", "..", "nested/name", "nested\\name"]
+    "dataset_id",
+    [
+        "", "foo.", "foo ", "foo space", ".foo.build.lock", "CON",
+        "con.txt", "nested/name", "nested\\name", "a" * 101,
+    ],
 )
 def test_invalid_dataset_id_fails_before_creating_output(tmp_path, dataset_id):
-    with pytest.raises(ValueError, match="expected one nonempty path component"):
+    with pytest.raises(ValueError, match="invalid dataset_id"):
         build_dataset(tmp_path, dataset_id, classlib.get("invoice"), n=1)
 
     assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("dataset_id", ["eob-full", "abc_1.2"])
+def test_portable_dataset_ids_are_accepted(tmp_path, dataset_id):
+    output = build_dataset(tmp_path, dataset_id, classlib.get("invoice"), n=0)
+
+    assert output == tmp_path / dataset_id
+    assert output.exists()
+
+
+def test_current_pid_is_alive():
+    assert build_module._pid_is_alive(os.getpid())
 
 
 def test_default_invoice_validates():
