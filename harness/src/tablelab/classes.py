@@ -1,5 +1,5 @@
 from __future__ import annotations
-from .specs import FieldSpec, DocumentClass
+from .specs import FieldSpec, TableSpec, DocumentClass
 
 REGISTRY: dict[str, DocumentClass] = {}
 
@@ -23,22 +23,28 @@ def _f(name: str, type_: str, align: str) -> FieldSpec:
     return FieldSpec(name=name, type=type_, align=align)
 
 
-register(DocumentClass(name="invoice", fields=(
-    _f("description", "description", "left"),
-    _f("quantity", "quantity", "right"),
-    _f("unit_price", "unit_price", "right"),
-    _f("amount", "amount", "right"),
+register(DocumentClass(name="invoice", tables=(
+    TableSpec(name="line_item", fields=(
+        _f("description", "description", "left"),
+        _f("quantity", "quantity", "right"),
+        _f("unit_price", "unit_price", "right"),
+        _f("amount", "amount", "right"),
+    )),
 )))
 
-register(DocumentClass(name="eob", fields=(
-    _f("service_date", "date", "left"),
-    _f("code", "code", "left"),
-    _f("description", "description", "left"),
-    _f("amount_billed", "amount", "right"),
-    _f("amount_owed", "amount", "right"),
+register(DocumentClass(name="eob", tables=(
+    TableSpec(name="claim_line", fields=(
+        _f("service_date", "date", "left"),
+        _f("code", "code", "left"),
+        _f("description", "description", "left"),
+        _f("amount_billed", "amount", "right"),
+        _f("amount_owed", "amount", "right"),
+    )),
 )))
 
-register(DocumentClass(name="receipt", fields=(
-    _f("description", "description", "left"),
-    _f("amount", "amount", "right"),
+register(DocumentClass(name="receipt", tables=(
+    TableSpec(name="line_item", fields=(
+        _f("description", "description", "left"),
+        _f("amount", "amount", "right"),
+    )),
 )))
