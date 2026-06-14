@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { Sample, Token } from './types'
 import { predictionMatchStatus } from './tokenMatch'
 
@@ -26,13 +26,50 @@ interface Props {
 export default function DocumentViewer({ samples, task, selectedToken, onSelectToken }: Props) {
   const [sampleIdx, setSampleIdx] = useState(0)
   const [imgError, setImgError] = useState(false)
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const [fitScale, setFitScale] = useState(1)
+  const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
 
-  if (samples.length === 0) {
+  const sample = samples[Math.min(sampleIdx, samples.length - 1)]
+  const width = sample?.width ?? 0
+  const height = sample?.height ?? 0
+
+  const resetView = useCallback(() => {
+    setZoom(1)
+    setPan({ x: 0, y: 0 })
+  }, [])
+
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current
+    if (viewport == null || width <= 0 || height <= 0) return
+
+    const updateFitScale = () => {
+      const availableWidth = viewport.clientWidth
+      const availableHeight = viewport.clientHeight
+      if (availableWidth <= 0 || availableHeight <= 0) return
+      setFitScale(Math.min(availableWidth / width, availableHeight / height))
+    }
+
+    updateFitScale()
+    const observer = new ResizeObserver(updateFitScale)
+    observer.observe(viewport)
+    return () => observer.disconnect()
+  }, [width, height])
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      setImgError(false)
+      resetView()
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [sample?.id, sample?.image, resetView])
+
+  if (sample == null) {
     return <p className="empty-note">No samples to display.</p>
   }
 
-  const sample = samples[Math.min(sampleIdx, samples.length - 1)]
-  const { width, height, tokens, image } = sample
+  const { tokens, image } = sample
 
   const statuses = tokens.map(token => predictionMatchStatus(task, token.label, token.pred))
   const hasGT = tokens.some(token => token.pred == null)
@@ -65,11 +102,15 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
         </button>
       </div>
 
-      {/* Document canvas: image + SVG overlay */}
-      <div className="doc-canvas-wrapper">
+      {/* Document viewport: image + SVG share one fitted surface */}
+      <div className="doc-viewport" ref={viewportRef} onDoubleClick={resetView}>
         <div
-          className="doc-canvas"
-          style={{ aspectRatio: `${width} / ${height}` }}
+          className="doc-surface"
+          style={{
+            width,
+            height,
+            transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px) scale(${fitScale * zoom})`,
+          }}
         >
           {showImage ? (
             <img
