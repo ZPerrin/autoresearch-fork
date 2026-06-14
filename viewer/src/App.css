@@ -305,6 +305,11 @@
   background: #eef0f2;
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
   touch-action: none;
+  cursor: grab;
+}
+
+.doc-viewport.is-panning {
+  cursor: grabbing;
 }
 
 .doc-surface {
@@ -341,6 +346,11 @@
 
 .doc-overlay g {
   pointer-events: all;
+  cursor: pointer;
+}
+
+.doc-viewport.is-panning .doc-overlay g {
+  cursor: grabbing;
 }
 
 /* ---- Viewer toolbar ---- */

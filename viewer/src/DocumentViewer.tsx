@@ -9,9 +9,15 @@ const COLOR_SELECTED = { fill: 'rgba(255,180,0,0.28)',   stroke: '#F59E0B' }
 const MIN_ZOOM = 0.25
 const MAX_ZOOM = 4
 const ZOOM_STEP = 1.2
+const PAN_DRAG_THRESHOLD = 4
+const PAN_VISIBLE_MARGIN = 48
 
 function clampZoom(zoom: number): number {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom))
+}
+
+function distanceSquared(x: number, y: number): number {
+  return x * x + y * y
 }
 
 function tokenColors(tok: Token, task: string | undefined, selected: boolean) {
@@ -37,8 +43,17 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
   const [fitScale, setFitScale] = useState(1)
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [isPanning, setIsPanning] = useState(false)
   const zoomRef = useRef(1)
   const panRef = useRef({ x: 0, y: 0 })
+  const dragRef = useRef<{
+    pointerId: number
+    startX: number
+    startY: number
+    startPan: { x: number; y: number }
+    dragging: boolean
+  } | null>(null)
+  const suppressClickRef = useRef(false)
 
   const sample = samples[Math.min(sampleIdx, samples.length - 1)]
   const width = sample?.width ?? 0
@@ -49,6 +64,32 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
     panRef.current = { x: 0, y: 0 }
     setZoom(1)
     setPan({ x: 0, y: 0 })
+  }, [])
+
+  const constrainPan = useCallback((requestedPan: { x: number; y: number }, requestedZoom = zoomRef.current) => {
+    const viewport = viewportRef.current
+    if (viewport == null || width <= 0 || height <= 0) return requestedPan
+
+    const scaledWidth = width * fitScale * requestedZoom
+    const scaledHeight = height * fitScale * requestedZoom
+    const viewportWidth = viewport.clientWidth
+    const viewportHeight = viewport.clientHeight
+
+    const constrainAxis = (panValue: number, viewportSize: number, scaledSize: number) => {
+      if (viewportSize <= 0 || scaledSize <= 0 || scaledSize <= viewportSize) return 0
+      const maxPan = Math.max(0, (viewportSize + scaledSize) / 2 - PAN_VISIBLE_MARGIN)
+      return Math.min(maxPan, Math.max(-maxPan, panValue))
+    }
+
+    return {
+      x: constrainAxis(requestedPan.x, viewportWidth, scaledWidth),
+      y: constrainAxis(requestedPan.y, viewportHeight, scaledHeight),
+    }
+  }, [fitScale, height, width])
+
+  const applyPan = useCallback((nextPan: { x: number; y: number }) => {
+    panRef.current = nextPan
+    setPan(nextPan)
   }, [])
 
   const setZoomAround = useCallback((
@@ -74,12 +115,13 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
       x: currentPan.x + (point.x - viewportCenter.x - currentPan.x) * (1 - ratio),
       y: currentPan.y + (point.y - viewportCenter.y - currentPan.y) * (1 - ratio),
     }
+    const constrainedPan = constrainPan(nextPan, nextZoom)
 
     zoomRef.current = nextZoom
-    panRef.current = nextPan
+    panRef.current = constrainedPan
     setZoom(nextZoom)
-    setPan(nextPan)
-  }, [])
+    setPan(constrainedPan)
+  }, [constrainPan])
 
   useLayoutEffect(() => {
     const viewport = viewportRef.current
@@ -97,6 +139,12 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
     observer.observe(viewport)
     return () => observer.disconnect()
   }, [width, height])
+
+  useLayoutEffect(() => {
+    const constrainedPan = constrainPan(panRef.current)
+    if (constrainedPan.x === panRef.current.x && constrainedPan.y === panRef.current.y) return
+    applyPan(constrainedPan)
+  }, [applyPan, constrainPan, fitScale])
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -121,6 +169,68 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
     viewport.addEventListener('wheel', handleWheel, { passive: false })
     return () => viewport.removeEventListener('wheel', handleWheel)
   }, [setZoomAround])
+
+  const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || !event.isPrimary) return
+
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startPan: panRef.current,
+      dragging: false,
+    }
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }, [])
+
+  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current
+    if (drag == null || drag.pointerId !== event.pointerId) return
+
+    const dx = event.clientX - drag.startX
+    const dy = event.clientY - drag.startY
+    if (!drag.dragging) {
+      if (distanceSquared(dx, dy) < PAN_DRAG_THRESHOLD * PAN_DRAG_THRESHOLD) return
+      drag.dragging = true
+      suppressClickRef.current = true
+      setIsPanning(true)
+    }
+
+    applyPan({
+      x: drag.startPan.x + dx,
+      y: drag.startPan.y + dy,
+    })
+  }, [applyPan])
+
+  const finishPointerDrag = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current
+    if (drag == null || drag.pointerId !== event.pointerId) return
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    dragRef.current = null
+    setIsPanning(false)
+
+    if (drag.dragging) {
+      applyPan(constrainPan(panRef.current))
+      window.setTimeout(() => {
+        suppressClickRef.current = false
+      }, 0)
+    }
+  }, [applyPan, constrainPan])
+
+  const handlePointerCancel = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    finishPointerDrag(event)
+  }, [finishPointerDrag])
+
+  const handleTokenClick = useCallback((tok: Token, selected: boolean) => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false
+      return
+    }
+    onSelectToken(selected ? null : tok)
+  }, [onSelectToken])
 
   if (sample == null) {
     return <p className="empty-note">No samples to display.</p>
@@ -181,7 +291,15 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
       </div>
 
       {/* Document viewport: image + SVG share one fitted surface */}
-      <div className="doc-viewport" ref={viewportRef} onDoubleClick={resetView}>
+      <div
+        className={`doc-viewport${isPanning ? ' is-panning' : ''}`}
+        ref={viewportRef}
+        onDoubleClick={resetView}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={finishPointerDrag}
+        onPointerCancel={handlePointerCancel}
+      >
         <div
           className="doc-surface"
           style={{
@@ -216,7 +334,7 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
               const h = (tok.y1 - tok.y0) * height
 
               return (
-                <g key={i} style={{ cursor: 'pointer' }} onClick={() => onSelectToken(sel ? null : tok)}>
+                <g key={i} onClick={() => handleTokenClick(tok, sel)}>
                   <rect
                     x={x} y={y} width={w} height={h}
                     fill={fill}
