@@ -1,6 +1,7 @@
 # Realistic spacing + jitter - design
 
-- Status: **proposed**
+- Status: **shipped** - content-aware widths, gap knobs, multi-pair globals, per-axis jitter,
+  sparse cells, class-template page size, and a font-autoscale toggle; viewer surfaces the config
 - Date: 2026-06-14
 - Parent: `docs/specs/2026-06-13-design-and-roadmap.md`
 - Follows: `docs/specs/2026-06-14-synthetic-reviewability-design.md`

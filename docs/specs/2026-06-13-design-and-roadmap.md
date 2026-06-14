@@ -75,14 +75,24 @@ Data is multimodal from the start (LayoutLMv3 stack): **spatial** (token boxes),
 - **Synthetic reviewability**: shipped page-valid composition, class-aware reserved background
   placement, complete-page viewer rendering, zoom/pan, controls help, and schema-aware metadata.
   See `2026-06-14-synthetic-reviewability-design.md`.
+- **Realistic spacing + jitter** (fifth structural-realism feature): content-aware column widths
+  (content floor + weighted slack), vertical gap knobs (`row_gap`/`instance_gap`/`section_gap`),
+  multi-pair globals (`globals_per_row`), per-axis bounded/zero-sum `JitterSpec`
+  (`row_h`/`col_w`/`offset`/`baseline`), sparse cells (`FieldSpec.fill`), per-class template page
+  size, and a `RenderSpec.autoscale_font` toggle (shrink an overflowing table to fit). The `eob`
+  class is now a representative ten-column claim form on a wide page. CLI exposes all knobs; the
+  viewer surfaces resolved spacing/jitter. Default output stays byte-identical (golden test). See
+  `2026-06-14-realistic-spacing-jitter-design.md`.
 
 ## Roadmap (milestones — each gets its own plan when started)
 
 1. **Synthetic data toolkit — ACTIVE** (this doc, below): backbone + **multi-token cells** +
    **header row** + **background tokens** + **multiple tables / globals** + **synthetic
-   reviewability** shipped. Next **structural realism**: jitter/irregular row heights and column
-   widths → spanning cells → document-class breadth.
-   Visual realism architecturally provisioned but deferred.
+   reviewability** + **realistic spacing / jitter** shipped — the toolkit is at a usable MVP for
+   generating EOB-like synthetic data. Next **structural realism**: spanning / merged cells +
+   grouped (multi-level) headers → document-class breadth.
+   Visual realism architecturally provisioned but deferred (font-autoscale is the one rendering
+   knob shipped so far).
 2. **The loop closes**: M0 spatial model trains on a dataset → emits run artifacts → predictions
    overlaid in the viewer; validate it learns. (Detail in the prior
    `2026-06-13-v0-loop-closes-design.md`, now the *model-loop* milestone — deferred until the
@@ -111,14 +121,19 @@ options before any model touches them.
 A declarative spec composed from small, testable pieces; the resolved spec is recorded in the
 dataset `manifest` (so a dataset is reproducible and forkable):
 
-- **`FieldSpec`** — name, semantic type (value sampler), alignment. Extensible type registry
-  (`description`, `quantity`, `unit_price`, `amount`, `date`, `code`, …).
-- **`LayoutSpec`** — records range, row/column sizing, jitter / irregularity.
-- **`StructureSpec`** — header row; background / non-table tokens; multiple tables + global
-  fields; spanning cells; multi-token cells.
-- **`RenderSpec`** — page size; **visual-realism extension point** (fonts, ruling, noise, skew) —
-  interface defined now, implementations deferred.
-- **`DocumentClass`** — ordered fields + layout + structure + render; named, registered,
+- **`FieldSpec`** — name, semantic type (value sampler), alignment, optional column `width` weight,
+  and `fill` (sparsity: probability a cell is populated). Extensible type registry (`description`,
+  `quantity`, `unit_price`, `amount`, `date`, `code`, `name`, `id`, …) with per-type default widths.
+- **`LayoutSpec`** — page size + margins, row height, vertical gap knobs
+  (`row_gap`/`instance_gap`/`section_gap`), multi-pair globals (`globals_per_row`). Column widths are
+  content-aware (content floor + weighted slack), not declared here.
+- **`StructureSpec`** — header row; background / non-table tokens; multi-token cells; (spanning
+  cells = next).
+- **`JitterSpec`** — per-axis bounded/zero-sum perturbation (`row_h`/`col_w`/`offset`/`baseline`),
+  all 0 by default; the modality-/robustness-ablation instrument.
+- **`RenderSpec`** — font size; `autoscale_font` toggle (shrink an overflowing table to fit); the
+  **visual-realism extension point** (fonts, ruling, noise, skew) — interface defined, deferred.
+- **`DocumentClass`** — ordered fields + layout + structure + render + jitter; named, registered,
   **forkable** (copy + override). Datasets = compose a class + difficulty overrides.
 
 ### Structural realism to implement (ordered)
@@ -130,12 +145,14 @@ All become `StructureSpec`/`LayoutSpec` knobs; all are wanted:
 2. **header row** — field-name headers.
 3. **background / non-table tokens** — `label = null` ("is this part of the answer?").
 4. **multiple tables + global / singleton fields** — the EOB shape; adds a table/region index.
-5. **jitter / irregular** row heights & column widths.
-6. **spanning / merged cells.**
+5. **jitter / irregular** row heights & column widths. ✅ shipped (plus content-aware widths,
+   gap knobs, multi-pair globals, sparse cells, class-template page size, font-autoscale toggle).
+6. **spanning / merged cells** + grouped multi-level headers. ← next.
 
 The **synthetic reviewability** milestone consolidated items 1-4 into page-valid, class-coherent
-output and a viewer capable of inspecting the full structure. This was reliability and review
-tooling rather than a new difficulty knob; see `2026-06-14-synthetic-reviewability-design.md`.
+output and a viewer capable of inspecting the full structure; the **realistic spacing + jitter**
+milestone delivered item 5 (see `2026-06-14-realistic-spacing-jitter-design.md`). Item 6 (spanning
+cells / grouped headers) is the remaining structural-realism knob before document-class breadth.
 
 ### Document-class breadth
 
