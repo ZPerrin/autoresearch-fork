@@ -24,7 +24,7 @@ def test_header_row_emits_field_name_tokens_above_data():
     placed = layout(dc, random.Random(7))
     headers = [p for p in placed if p.label.get("header")]
     data = [p for p in placed if not p.label.get("header")]
-    C = len(dc.fields)
+    C = len(dc.tables[0].fields)
     my, row_h = dc.layout.margin[1], dc.layout.row_h
     # one header token per field, carrying the titleized field name
     assert sorted(p.label["field"] for p in headers) == list(range(C))
