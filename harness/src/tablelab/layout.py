@@ -119,6 +119,22 @@ def _header_text(name: str) -> str:
     return name.replace("_", " ").title()
 
 
+def _group_runs(fields) -> list[tuple[str, int, int]]:
+    """Maximal runs of equal non-None FieldSpec.group → (name, c0, c1) inclusive ranges.
+    Ungrouped (group=None) columns are skipped (they get no banner cell)."""
+    runs: list[tuple[str, int, int]] = []
+    i, n = 0, len(fields)
+    while i < n:
+        g = fields[i].group
+        j = i
+        while j + 1 < n and fields[j + 1].group == g:
+            j += 1
+        if g is not None:
+            runs.append((g, i, j))
+        i = j + 1
+    return runs
+
+
 def _emit(placed: list[PlacedToken], text: str, cell: tuple[float, float, float, float],
           base_label: dict, align: str, font_size: int, multi: bool) -> None:
     """Append one token for `text`, or one per word (sharing cell + label, with seq) when multi."""
@@ -459,6 +475,14 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
                                       grid, dc.render.font_size)
             edges = _resolve_column_edges(table.fields, W - 2 * mx, mx, L.pad,
                                           header, grid, cell_font)
+            if header and any(f.group for f in table.fields):
+                for name, c0, c1 in _group_runs(table.fields):
+                    cell = (edges[c0], y, edges[c1 + 1], y + L.row_h)
+                    _emit(placed, name, cell,
+                          {**reg, "field": c0, "header": True,
+                           "group": name, "span": [c0, c1]},
+                          "left", cell_font, multi)
+                y += L.row_h
             if header:
                 for c in range(C):
                     f = table.fields[c]
