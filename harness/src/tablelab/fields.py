@@ -59,3 +59,23 @@ def background_token(rng: random.Random) -> str:
     if rng.random() < 0.3:
         return str(rng.randint(1000, 99999))
     return rng.choice(_BACKGROUND)
+
+
+# Value samplers for global / singleton fields (names, ids).
+_NAMES = [
+    "John Smith", "Maria Garcia", "Wei Chen", "Aisha Khan", "Robert Jones",
+    "Linda Nguyen", "David Patel", "Sarah Johnson",
+    "Acme Medical Group", "Lakeside Clinic", "Mercy Hospital", "Summit Health",
+]
+
+
+def _name(rng: random.Random) -> str:
+    return rng.choice(_NAMES)
+
+
+def _id(rng: random.Random) -> str:
+    return f"{rng.choice('ABCDEFGHJKMNP')}{rng.randint(100000, 999999)}"
+
+
+SAMPLERS["name"] = _name
+SAMPLERS["id"] = _id
