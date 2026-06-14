@@ -25,8 +25,10 @@ class StructureSpec:
     spec adds fields here. See docs/specs/2026-06-13-synth-toolkit-backbone-design.md.
 
     multi_token: split multi-word cell values into per-word tokens that share one
-    record/field and carry a within-cell order index (seq)."""
+        record/field and carry a within-cell order index (seq).
+    header: emit a top header row of field-name tokens (label {"field": c, "header": True})."""
     multi_token: bool = False
+    header: bool = False
 
 
 @dataclass(frozen=True)
