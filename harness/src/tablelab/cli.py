@@ -16,8 +16,9 @@ def _build(args):
         L = replace(L, rows=(args.rows[0], args.rows[1]))
     if args.page:
         L = replace(L, page=(args.page[0], args.page[1]))
-    if (L is not dc.layout):
-        dc = fork(dc, layout=L)
+    S = replace(dc.structure, multi_token=True) if args.multi_token else dc.structure
+    if L is not dc.layout or S is not dc.structure:
+        dc = fork(dc, layout=L, structure=S)
     out = Path(args.out)
     build_dataset(out.parent, out.name, dc, seed=args.seed, n=args.n)
     print(f"built {args.n} {args.cls} samples -> {out}")
@@ -67,6 +68,8 @@ def main(argv=None):
                    help="override record-count range")
     b.add_argument("--page", type=int, nargs=2, metavar=("W", "H"),
                    help="override page size")
+    b.add_argument("--multi-token", action="store_true",
+                   help="split multi-word cells into per-word tokens (shared record/field + seq)")
     b.set_defaults(fn=_build)
 
     ls = sub.add_parser("list", help="list local datasets")

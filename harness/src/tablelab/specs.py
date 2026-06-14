@@ -21,9 +21,12 @@ class LayoutSpec:
 @dataclass(frozen=True)
 class StructureSpec:
     """Named home for structural-realism knobs (header row, background tokens,
-    multi-token cells, multiple tables, jitter, spanning cells). Minimal today;
-    each follow-on spec adds fields here. See the enhancement trajectory in
-    docs/specs/2026-06-13-synth-toolkit-backbone-design.md."""
+    multi-token cells, multiple tables, jitter, spanning cells). Each follow-on
+    spec adds fields here. See docs/specs/2026-06-13-synth-toolkit-backbone-design.md.
+
+    multi_token: split multi-word cell values into per-word tokens that share one
+    record/field and carry a within-cell order index (seq)."""
+    multi_token: bool = False
 
 
 @dataclass(frozen=True)
