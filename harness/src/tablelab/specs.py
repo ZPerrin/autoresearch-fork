@@ -26,9 +26,11 @@ class StructureSpec:
 
     multi_token: split multi-word cell values into per-word tokens that share one
         record/field and carry a within-cell order index (seq).
-    header: emit a top header row of field-name tokens (label {"field": c, "header": True})."""
+    header: emit a top header row of field-name tokens (label {"field": c, "header": True}).
+    background: scatter N non-table tokens (label = None) in the footer band below the table."""
     multi_token: bool = False
     header: bool = False
+    background: int = 0
 
 
 @dataclass(frozen=True)

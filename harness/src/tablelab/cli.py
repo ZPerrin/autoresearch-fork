@@ -21,6 +21,8 @@ def _build(args):
         S = replace(S, multi_token=True)
     if args.header:
         S = replace(S, header=True)
+    if args.background:
+        S = replace(S, background=args.background)
     if L is not dc.layout or S is not dc.structure:
         dc = fork(dc, layout=L, structure=S)
     out = Path(args.out)
@@ -76,6 +78,8 @@ def main(argv=None):
                    help="split multi-word cells into per-word tokens (shared record/field + seq)")
     b.add_argument("--header", action="store_true",
                    help="emit a top header row of field-name tokens")
+    b.add_argument("--background", type=int, default=0, metavar="N",
+                   help="scatter N non-table tokens (label null) below the table")
     b.set_defaults(fn=_build)
 
     ls = sub.add_parser("list", help="list local datasets")
