@@ -75,8 +75,20 @@ def _id(rng: random.Random) -> str:
     return f"{rng.choice('ABCDEFGHJKMNP')}{rng.randint(100000, 999999)}"
 
 
+# Service-category labels for spanning section-header rows (e.g. EOB claim blocks).
+_CATEGORIES = (
+    "Office Visits", "Lab Services", "Radiology", "Pharmacy",
+    "Preventive Care", "Emergency Services", "Physical Therapy", "Diagnostic Tests",
+)
+
+
+def _category(rng: random.Random) -> str:
+    return rng.choice(_CATEGORIES)
+
+
 SAMPLERS["name"] = _name
 SAMPLERS["id"] = _id
+SAMPLERS["category"] = _category
 
 # Default column width weights by field type. A column's pixel width is
 # usable_width * weight / sum(weights). Explicit FieldSpec.width overrides this.
