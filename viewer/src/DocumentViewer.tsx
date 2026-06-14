@@ -6,17 +6,22 @@ const COLOR_WRONG    = { fill: 'rgba(226,75,74,0.18)',   stroke: '#E24B4A' }
 const COLOR_GT       = { fill: 'rgba(55,138,221,0.10)',  stroke: '#378ADD' }
 const COLOR_SELECTED = { fill: 'rgba(255,180,0,0.28)',   stroke: '#F59E0B' }
 
-function isCorrect(tok: Token): boolean {
+function isCorrect(tok: Token, task: string | undefined): boolean {
   const l = tok.label
   const p = tok.pred
-  if (p == null || l == null) return false
-  return p.record === l.record && p.field === l.field
+  if (task !== 'grid_record_field' || p == null || l == null) return false
+  return typeof p.record === 'number' &&
+    typeof p.field === 'number' &&
+    typeof l.record === 'number' &&
+    typeof l.field === 'number' &&
+    p.record === l.record &&
+    p.field === l.field
 }
 
-function tokenColors(tok: Token, selected: boolean) {
+function tokenColors(tok: Token, task: string | undefined, selected: boolean) {
   if (selected) return COLOR_SELECTED
   if (tok.pred == null) return COLOR_GT
-  return isCorrect(tok) ? COLOR_CORRECT : COLOR_WRONG
+  return isCorrect(tok, task) ? COLOR_CORRECT : COLOR_WRONG
 }
 
 interface Props {
@@ -26,7 +31,7 @@ interface Props {
   onSelectToken: (tok: Token | null) => void
 }
 
-export default function DocumentViewer({ samples, selectedToken, onSelectToken }: Props) {
+export default function DocumentViewer({ samples, task, selectedToken, onSelectToken }: Props) {
   const [sampleIdx, setSampleIdx] = useState(0)
   const [imgError, setImgError] = useState(false)
 
@@ -89,7 +94,7 @@ export default function DocumentViewer({ samples, selectedToken, onSelectToken }
           >
             {tokens.map((tok, i) => {
               const sel = tok === selectedToken
-              const { fill, stroke } = tokenColors(tok, sel)
+              const { fill, stroke } = tokenColors(tok, task, sel)
               const x = tok.x0 * width
               const y = tok.y0 * height
               const w = (tok.x1 - tok.x0) * width
