@@ -27,7 +27,9 @@ def test_background_adds_n_null_label_tokens_below_table():
     assert len(bg) == 5
     # background sits at or below the bottom of the lowest table row
     table_bottom = max(p.cell[3] for p in data)
-    assert all(p.cell[1] >= table_bottom - 1 for p in bg)
+    assert all(p.cell[1] >= table_bottom for p in bg)
+    # each background token has a unique cell rect (render groups by cell; null labels must stay singletons)
+    assert len({p.cell for p in bg}) == len(bg)
     # table tokens are unaffected and still labeled
     assert all(p.label is not None and "field" in p.label for p in data)
 
@@ -36,7 +38,7 @@ def test_background_renders_and_round_trips_null_label():
     dc = _invoice(background=4)
     placed = layout(dc, random.Random(7))
     img, boxes = render(placed, dc)
-    assert all(b[2] > b[0] for b in boxes)  # every box set, including background
+    assert all(b[2] > b[0] and b[3] > b[1] for b in boxes)  # every box set, including background
     # the null label is preserved through the placed tokens (what build.py serializes)
     assert sum(1 for p in placed if p.label is None) == 4
 

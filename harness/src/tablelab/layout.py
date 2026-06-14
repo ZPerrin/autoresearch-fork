@@ -68,6 +68,8 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
         H = L.page[1]
         table_bottom = my + (row_offset + rows) * L.row_h
         y_lo, y_hi = table_bottom, H - my - L.row_h
+        if y_hi <= y_lo:  # table fills the page; fall back to the full interior
+            y_lo, y_hi = float(my), float(H - my - L.row_h)
         for _ in range(n_bg):
             bx = rng.uniform(mx, W - mx - 80)
             by = rng.uniform(y_lo, y_hi)
