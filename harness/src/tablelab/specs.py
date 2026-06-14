@@ -8,6 +8,7 @@ class FieldSpec:
     type: str            # key into fields.SAMPLERS (e.g. "amount", "date")
     align: str = "left"  # "left" | "right"
     width: float | None = None  # column weight; None => fields.TYPE_WIDTH default
+    fill: float = 1.0    # probability a data cell is populated; < 1.0 leaves some cells empty (no token)
 
 
 @dataclass(frozen=True)

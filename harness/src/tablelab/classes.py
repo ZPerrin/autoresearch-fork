@@ -19,8 +19,9 @@ def classes() -> list[str]:
     return sorted(REGISTRY)
 
 
-def _f(name: str, type_: str, align: str, width: float | None = None) -> FieldSpec:
-    return FieldSpec(name=name, type=type_, align=align, width=width)
+def _f(name: str, type_: str, align: str, width: float | None = None,
+       fill: float = 1.0) -> FieldSpec:
+    return FieldSpec(name=name, type=type_, align=align, width=width, fill=fill)
 
 
 _INVOICE_BACKGROUND = (
@@ -64,11 +65,17 @@ register(DocumentClass(
             _f("code", "code", "left"),
             _f("description", "description", "left"),
             _f("amount_billed", "amount", "right"),
+            _f("allowed", "amount", "right"),
+            _f("deductible", "amount", "right", fill=0.3),
+            _f("copay", "amount", "right", fill=0.4),
+            _f("coinsurance", "amount", "right", fill=0.3),
+            _f("plan_paid", "amount", "right"),
             _f("amount_owed", "amount", "right"),
         ), rows=(2, 5), instances=(1, 2)),
     ),
     background_terms=_EOB_BACKGROUND,
-    layout=LayoutSpec(globals_per_row=2),
+    # Wide page is the class-level template size: ten claim-line columns need the room.
+    layout=LayoutSpec(page=(1500, 1414), globals_per_row=2),
 ))
 
 register(DocumentClass(name="receipt", tables=(
