@@ -67,12 +67,17 @@ Data is multimodal from the start (LayoutLMv3 stack): **spatial** (token boxes),
 - **Background / non-table tokens** (third structural-realism feature): `StructureSpec.background`
   scatters N tokens with `label = null` in the footer band — the negative class; off is
   byte-identical. See `2026-06-13-background-tokens-design.md`.
+- **Multiple tables + global fields** (fourth structural-realism feature — the EOB shape):
+  `DocumentClass.tables`/`globals`; `TableSpec.instances` stacks instances with a `region` label;
+  globals are label:value rows at the top (`label = {"global": name}`); the `eob` class is now the
+  full shape. Single-table/instance, no-globals classes stay byte-identical. See
+  `2026-06-13-multi-table-globals-design.md`.
 
 ## Roadmap (milestones — each gets its own plan when started)
 
 1. **Synthetic data toolkit — ACTIVE** (this doc, below): backbone + **multi-token cells** +
-   **header row** + **background tokens** shipped. Remaining **structural realism** in order —
-   multiple tables + globals → jitter/irregular → spanning cells — then document-class breadth.
+   **header row** + **background tokens** + **multiple tables / globals** shipped. Remaining
+   **structural realism** in order — jitter/irregular → spanning cells — then document-class breadth.
    Visual realism architecturally provisioned but deferred.
 2. **The loop closes**: M0 spatial model trains on a dataset → emits run artifacts → predictions
    overlaid in the viewer; validate it learns. (Detail in the prior

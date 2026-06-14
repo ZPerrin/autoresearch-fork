@@ -1,6 +1,6 @@
 # Multiple tables + global fields — design
 
-- Status: **design** (full-agentic build; fourth structural-realism feature — the EOB shape)
+- Status: **shipped** (merged to `master` as sub-steps 4a/4b/4c; fourth structural-realism feature — the EOB shape). Plans: `docs/plans/2026-06-13-multi-table-4a-generalize.md`, `…-4b-instances-region.md`, `…-4c-globals-eob.md`.
 - Date: 2026-06-13
 - Parent: `docs/specs/2026-06-13-design-and-roadmap.md` (§ structural realism). Follows
   `2026-06-13-background-tokens-design.md`.
