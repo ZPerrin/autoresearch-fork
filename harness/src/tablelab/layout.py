@@ -10,7 +10,7 @@ from .fields import sample
 class PlacedToken:
     text: str
     cell: tuple[float, float, float, float]   # cell rect in page pixels (x0, y0, x1, y1)
-    label: dict | None                        # {"record": r, "field": c} (+ "seq": k when multi_token); null = background (future)
+    label: dict | None                        # data {"record": r, "field": c} | header {"field": c, "header": True} (+ "seq": k when multi_token); null = background (future)
     align: str = "left"
     font_size: int = 22
 
@@ -20,8 +20,8 @@ def _header_text(name: str) -> str:
     return name.replace("_", " ").title()
 
 
-def _emit(placed: list[PlacedToken], text: str, cell, base_label: dict,
-          align: str, font_size: int, multi: bool) -> None:
+def _emit(placed: list[PlacedToken], text: str, cell: tuple[float, float, float, float],
+          base_label: dict, align: str, font_size: int, multi: bool) -> None:
     """Append one token for `text`, or one per word (sharing cell + label, with seq) when multi."""
     if multi:
         for k, word in enumerate(text.split()):
