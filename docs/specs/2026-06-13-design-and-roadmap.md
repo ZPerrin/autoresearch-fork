@@ -72,12 +72,17 @@ Data is multimodal from the start (LayoutLMv3 stack): **spatial** (token boxes),
   globals are label:value rows at the top (`label = {"global": name}`); the `eob` class is now the
   full shape. Single-table/instance, no-globals classes stay byte-identical. See
   `2026-06-13-multi-table-globals-design.md`.
+- **Synthetic reviewability selected next**: the design validates page fit and class-aware
+  background placement, then upgrades the viewer with complete-page fit, zoom/pan, controls help,
+  and schema-aware metadata. See `2026-06-14-synthetic-reviewability-design.md`.
 
 ## Roadmap (milestones — each gets its own plan when started)
 
 1. **Synthetic data toolkit — ACTIVE** (this doc, below): backbone + **multi-token cells** +
-   **header row** + **background tokens** + **multiple tables / globals** shipped. Remaining
-   **structural realism** in order — jitter/irregular → spanning cells — then document-class breadth.
+   **header row** + **background tokens** + **multiple tables / globals** shipped. Next:
+   **synthetic reviewability** — page-valid composition, class-aware/reserved background content,
+   complete-page viewer rendering, zoom/pan, controls help, and schema-aware metadata. Remaining
+   **structural realism** afterward: jitter/irregular → spanning cells → document-class breadth.
    Visual realism architecturally provisioned but deferred.
 2. **The loop closes**: M0 spatial model trains on a dataset → emits run artifacts → predictions
    overlaid in the viewer; validate it learns. (Detail in the prior
@@ -128,6 +133,11 @@ All become `StructureSpec`/`LayoutSpec` knobs; all are wanted:
 4. **multiple tables + global / singleton fields** — the EOB shape; adds a table/region index.
 5. **jitter / irregular** row heights & column widths.
 6. **spanning / merged cells.**
+
+Before item 5, the **synthetic reviewability** milestone consolidates items 1-4 into page-valid,
+class-coherent output and a viewer capable of inspecting the full structure. This is reliability and
+review tooling rather than a new difficulty knob; see
+`2026-06-14-synthetic-reviewability-design.md`.
 
 ### Document-class breadth
 
