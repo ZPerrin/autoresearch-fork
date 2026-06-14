@@ -129,6 +129,17 @@ export default function MetaPanel({ source, task, selectedToken }: Props) {
                       {value === true ? key : `${key}=${formatValue(value)}`}
                     </span>
                   ))}
+                {(() => {
+                  const tables = source.manifest.config.spec.tables
+                  const features: string[] = []
+                  if (tables.some(t => t.fields.some(f => f.group != null)))
+                    features.push('grouped headers')
+                  if (tables.some(t => t.section != null)) features.push('section rows')
+                  if (tables.some(t => t.totals != null)) features.push('totals rows')
+                  return features.map(name => (
+                    <span className="structure-flag mono" key={name}>{name}</span>
+                  ))
+                })()}
               </div>
               {(() => {
                 const layout = source.manifest.config.spec.layout

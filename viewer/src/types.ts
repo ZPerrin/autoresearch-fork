@@ -73,6 +73,18 @@ export interface FieldSpec {
   name: string
   type: string
   align: string
+  group?: string | null
+}
+
+export interface SpanCell {
+  span: number
+  text?: string | null
+  type?: string | null
+  align: string
+}
+
+export interface SpanRowSpec {
+  cells: SpanCell[]
 }
 
 export interface TableSpec {
@@ -80,6 +92,8 @@ export interface TableSpec {
   fields: FieldSpec[]
   rows: [number, number]
   instances: [number, number]
+  section?: SpanRowSpec | null
+  totals?: SpanRowSpec | null
 }
 
 export interface JitterSpec {
