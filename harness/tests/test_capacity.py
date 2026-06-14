@@ -35,6 +35,15 @@ def test_full_eob_cells_stay_within_page_across_seeds():
             assert 0 <= y0 <= y1 <= height
 
 
+def test_full_eob_background_slots_stay_within_page_across_1000_seeds():
+    dc = _full_eob()
+    height = dc.layout.page[1]
+
+    for seed in range(1000):
+        placed = layout(dc, random.Random(seed))
+        assert max(token.cell[3] for token in placed) <= height
+
+
 def test_full_eob_samples_feasible_region_counts():
     dc = _full_eob()
     observed = set()
@@ -147,16 +156,17 @@ def test_large_zero_height_instance_range_fails_clearly():
         validate_layout_capacity(degenerate)
 
 
-def test_background_requires_current_fixed_cell_width():
+def test_background_supports_narrow_positive_interior():
     dc = classlib.get("invoice")
     narrow = fork(
         dc,
-        layout=replace(dc.layout, page=(199, 1414), margin=(60, 80)),
+        layout=replace(dc.layout, page=(121, 1414), margin=(60, 80)),
         structure=replace(dc.structure, background=1),
     )
 
-    with pytest.raises(LayoutCapacityError, match="background placement requires at least 80px"):
-        validate_layout_capacity(narrow)
+    validate_layout_capacity(narrow)
+    placed = layout(narrow, random.Random(7))
+    assert all(0 <= token.cell[0] <= token.cell[2] <= 121 for token in placed)
 
 
 def test_large_valid_instance_depth_uses_iterative_traversal():

@@ -12,7 +12,6 @@ class LayoutCapacityError(ValueError):
 
 Shape = tuple[tuple[int, ...], ...]
 _BACKGROUND_COLUMNS = 2
-_BACKGROUND_CELL_WIDTH = 80
 
 
 @dataclass
@@ -80,14 +79,6 @@ def _validate_layout(dc: DocumentClass) -> None:
     if dc.structure.background < 0:
         raise LayoutCapacityError(
             f"invalid background count: {dc.structure.background}"
-        )
-    # Task 2 still scatters fixed-width background cells. Task 3's slot grid may
-    # relax this constraint when it replaces the current placement strategy.
-    if dc.structure.background > 0 and usable_width < _BACKGROUND_CELL_WIDTH:
-        raise LayoutCapacityError(
-            "background placement requires at least "
-            f"{_BACKGROUND_CELL_WIDTH}px usable width: page={L.page}, "
-            f"margin={L.margin}, usable_width={usable_width}px"
         )
     for table in dc.tables:
         for name, bounds in (("instances", table.instances), ("rows", table.rows)):
@@ -289,7 +280,7 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
     without globals, headers, or background remains byte-identical when its maximum
     row count fits the page."""
     L = dc.layout
-    W, H = L.page
+    W, _ = L.page
     mx, my = L.margin
     multi = dc.structure.multi_token
     header = dc.structure.header
@@ -337,13 +328,13 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
             region += 1
     n_bg = dc.structure.background
     if n_bg:
-        y_lo, y_hi = y, H - my - L.row_h
-        if y_hi <= y_lo:  # content fills the page; fall back to the full interior
-            y_lo, y_hi = float(my), float(H - my - L.row_h)
-        for _ in range(n_bg):
-            bx = rng.uniform(mx, W - mx - _BACKGROUND_CELL_WIDTH)
-            by = rng.uniform(y_lo, y_hi)
-            cell = (bx, by, bx + _BACKGROUND_CELL_WIDTH, by + L.row_h)
+        columns = min(_BACKGROUND_COLUMNS, n_bg)
+        slot_w = (W - 2 * mx) / columns
+        for i in range(n_bg):
+            row, col = divmod(i, columns)
+            x0 = mx + col * slot_w
+            cell = (x0, y + row * L.row_h,
+                    x0 + slot_w, y + (row + 1) * L.row_h)
             placed.append(PlacedToken(
                 text=background_token(dc.background_terms, rng), cell=cell, label=None,
                 align="left", font_size=dc.render.font_size))

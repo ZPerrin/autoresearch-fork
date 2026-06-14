@@ -15,6 +15,10 @@ def _invoice(**structure):
     return fork(dc, structure=replace(dc.structure, **structure))
 
 
+def _overlaps(a, b):
+    return max(a[0], b[0]) < min(a[2], b[2]) and max(a[1], b[1]) < min(a[3], b[3])
+
+
 def test_background_off_is_default():
     placed = layout(classlib.get("invoice"), random.Random(7))
     assert all(p.label is not None for p in placed)
@@ -49,6 +53,24 @@ def test_background_composes_with_header():
     placed = layout(dc, random.Random(7))
     assert sum(1 for p in placed if p.label is None) == 3
     assert any(p.label and p.label.get("header") for p in placed)
+
+
+def test_reserved_background_slots_do_not_overlap_content_or_each_other():
+    dc = _invoice(background=8, header=True)
+    placed = layout(dc, random.Random(7))
+    background = [p for p in placed if p.label is None]
+    structured = [p for p in placed if p.label is not None]
+
+    assert not any(
+        _overlaps(bg.cell, token.cell)
+        for bg in background
+        for token in structured
+    )
+    assert not any(
+        _overlaps(background[i].cell, background[j].cell)
+        for i in range(len(background))
+        for j in range(i + 1, len(background))
+    )
 
 
 def test_background_token_uses_document_class_terms():
