@@ -105,6 +105,7 @@ def test_empty_field_table_with_possible_instance_fails_clearly():
         ({"page": (1000, 100), "margin": (60, 50)}, "invalid available page height"),
         ({"row_h": 0}, "invalid row height"),
         ({"row_h": -1}, "invalid row height"),
+        ({"table_gap": -1}, "invalid table gap"),
     ],
 )
 def test_invalid_layout_dimensions_fail_clearly(layout_overrides, message):
@@ -131,3 +132,28 @@ def test_enormous_impossible_range_fails_before_shape_enumeration(monkeypatch):
     monkeypatch.setattr(layout_module, "_iter_feasible_shapes", fail_if_enumerated)
     with pytest.raises(LayoutCapacityError, match="no page-feasible document shape"):
         validate_layout_capacity(impossible)
+
+
+def test_large_zero_height_instance_range_fails_clearly():
+    dc = classlib.get("invoice")
+    table = replace(dc.tables[0], rows=(0, 0), instances=(1, 1_000_000))
+    degenerate = fork(
+        dc,
+        tables=(table,),
+        layout=replace(dc.layout, table_gap=0),
+    )
+
+    with pytest.raises(LayoutCapacityError, match="zero-height instances"):
+        validate_layout_capacity(degenerate)
+
+
+def test_background_requires_current_fixed_cell_width():
+    dc = classlib.get("invoice")
+    narrow = fork(
+        dc,
+        layout=replace(dc.layout, page=(199, 1414), margin=(60, 80)),
+        structure=replace(dc.structure, background=1),
+    )
+
+    with pytest.raises(LayoutCapacityError, match="background placement requires at least 80px"):
+        validate_layout_capacity(narrow)

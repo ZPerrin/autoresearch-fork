@@ -12,6 +12,7 @@ class LayoutCapacityError(ValueError):
 
 Shape = tuple[tuple[int, ...], ...]
 _BACKGROUND_COLUMNS = 2
+_BACKGROUND_CELL_WIDTH = 80
 
 
 @dataclass
@@ -60,6 +61,10 @@ def _validate_layout(dc: DocumentClass) -> None:
         raise LayoutCapacityError(
             f"invalid row height: row_h={L.row_h}; row_h must be positive"
         )
+    if L.table_gap < 0:
+        raise LayoutCapacityError(
+            f"invalid table gap: table_gap={L.table_gap}; table_gap must be nonnegative"
+        )
     usable_width = width - 2 * mx
     if usable_width <= 0:
         raise LayoutCapacityError(
@@ -76,6 +81,14 @@ def _validate_layout(dc: DocumentClass) -> None:
         raise LayoutCapacityError(
             f"invalid background count: {dc.structure.background}"
         )
+    # Task 2 still scatters fixed-width background cells. Task 3's slot grid may
+    # relax this constraint when it replaces the current placement strategy.
+    if dc.structure.background > 0 and usable_width < _BACKGROUND_CELL_WIDTH:
+        raise LayoutCapacityError(
+            "background placement requires at least "
+            f"{_BACKGROUND_CELL_WIDTH}px usable width: page={L.page}, "
+            f"margin={L.margin}, usable_width={usable_width}px"
+        )
     for table in dc.tables:
         for name, bounds in (("instances", table.instances), ("rows", table.rows)):
             lo, hi = bounds
@@ -87,6 +100,17 @@ def _validate_layout(dc: DocumentClass) -> None:
             raise LayoutCapacityError(
                 f"table {table.name!r} allows up to {table.instances[1]} instances "
                 "but has no fields"
+            )
+        if (
+            table.instances[1] > 0
+            and not dc.structure.header
+            and table.rows[0] == 0
+            and L.table_gap == 0
+        ):
+            raise LayoutCapacityError(
+                f"table {table.name!r} can emit zero-height instances: "
+                f"instances={table.instances}, rows={table.rows}, "
+                f"header={dc.structure.header}, table_gap={L.table_gap}"
             )
 
 
@@ -305,9 +329,9 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
         if y_hi <= y_lo:  # content fills the page; fall back to the full interior
             y_lo, y_hi = float(my), float(H - my - L.row_h)
         for _ in range(n_bg):
-            bx = rng.uniform(mx, W - mx - 80)
+            bx = rng.uniform(mx, W - mx - _BACKGROUND_CELL_WIDTH)
             by = rng.uniform(y_lo, y_hi)
-            cell = (bx, by, bx + 80, by + L.row_h)
+            cell = (bx, by, bx + _BACKGROUND_CELL_WIDTH, by + L.row_h)
             placed.append(PlacedToken(
                 text=background_token(dc.background_terms, rng), cell=cell, label=None,
                 align="left", font_size=dc.render.font_size))
