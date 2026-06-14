@@ -352,7 +352,7 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
                           {**reg, "field": c, "header": True}, f.align, dc.render.font_size, multi)
                 y += L.row_h
             for r in range(rows):
-                row_edges = (jitter_column_edges(edges, J.col_w, W - 2 * mx, rng)
+                row_edges = (jitter_column_edges(edges, J.col_w, rng)
                              if J.col_w > 0 else edges)
                 cell_h = L.row_h
                 gap_after = _row_gap(dc)

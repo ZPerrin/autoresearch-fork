@@ -2,13 +2,15 @@ from __future__ import annotations
 import random
 
 
-def jitter_column_edges(edges: list[float], mag: float, usable: float,
+def jitter_column_edges(edges: list[float], mag: float,
                         rng: random.Random, min_w: float = 8.0) -> list[float]:
     """Perturb interior column edges; first/last stay fixed so the row still spans
-    exactly `usable` (zero-sum). Each edge stays >= min_w from its neighbors."""
+    exactly the same total width (zero-sum). Each edge moves by up to `mag` of the
+    smaller adjacent column, and stays >= min_w from its neighbors."""
     out = list(edges)
-    span = mag * usable
     for i in range(1, len(edges) - 1):
+        local = min(edges[i] - edges[i - 1], edges[i + 1] - edges[i])
+        span = mag * local
         lo = out[i - 1] + min_w
         hi = edges[i + 1] - min_w
         if hi <= lo:
