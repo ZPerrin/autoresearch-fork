@@ -12,9 +12,8 @@ worktrees/
 results/
 queue/
 
-# Agent prompt files (generated per-session by launchers)
-CLAUDE.md
-AGENTS.md
+# Personal, per-machine project memory (CLAUDE.md and AGENTS.md ARE tracked)
+CLAUDE.local.md
 
 # Experimental code/artifacts
 dev/

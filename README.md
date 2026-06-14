@@ -35,27 +35,10 @@ Specs live in `docs/specs/`; each milestone gets its own.
 
 ## How to work in this repo
 
-For agents and humans alike. Read this section and the active spec before starting.
-
-- **Git is an append-only lab notebook.** Failures and crashes are kept and labeled, never
-  `git reset` away — they're the lessons.
-- **Branches.** `master` holds the harness plus the *current-best* model; only deliberate
-  promotions land there. Each line of inquiry lives on an `exp/<line>` branch, where **every run
-  is a commit** — the model mutation, its emitted run artifacts, and an appended `runs/index.json`
-  row.
-- **Runs are records, not searches.** "Keep" / "discard" / "crash" is a `status` field in the
-  artifact, not a git operation.
-- **Run ids are globally unique** (`{date}-{device}-{shorthash}`), so artifacts from different
-  branches and machines never collide and can be unioned for a cross-branch timeline.
-- **Two data layers.** `runs/` is the git-tracked, binary-free ledger (metrics, config, prediction
-  samples), and references a dataset by `dataset_id`. `datasets/` holds the curated synthetic data
-  (images + samples) — **local and gitignored**, built to be reused, culled, and forked into
-  variants. The viewer serves and composes both locally; proper dataset storage is a later concern.
-- **The contract is the seam.** Schema in the active spec (`schema_version`); the viewer reads
-  artifacts only — no backend.
-- **Review is PR-style.** Propose a change as a diff plus a one-line rationale; the human accepts,
-  rejects, or redirects.
-- **Lean.** Small diffs, reviewable changes, tight docs.
+See **[AGENTS.md](AGENTS.md)** — the operating guide for agents and humans (layout, commands,
+branch model, the artifact contract, conventions). In short: git is an append-only lab notebook
+(failures kept as `status` labels, never `git reset`); `runs/` is the git-tracked JSON ledger and
+`datasets/` is local & gitignored; review is PR-style; no TDD (verify by running); keep it lean.
 
 ## Runtimes
 
