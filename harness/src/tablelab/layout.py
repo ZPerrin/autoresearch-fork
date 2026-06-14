@@ -34,18 +34,21 @@ def _emit(placed: list[PlacedToken], text: str, cell: tuple[float, float, float,
 
 def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
     """Place one document's tokens (logical, no Pillow). Iterates dc.tables with a
-    vertical cursor; for one table at instances=(1,1) this draws the same RNG in the
-    same order and emits the same labels as the prior single-table builder. A header
-    row (structure.header) is emitted atop each table instance; multi-word values split
-    into per-word tokens (structure.multi_token); background tokens (structure.background)
-    are scattered below everything."""
+    vertical cursor, drawing randint(instances) copies of each table stacked with
+    table_gap. When the class is multi-instance (more than one possible table
+    instance), data and header labels gain a 0-based ``region`` index. Single
+    table/instance output is byte-identical to the prior builder. Header rows
+    (structure.header), multi-token split (structure.multi_token) and background
+    tokens (structure.background) apply as before."""
     L = dc.layout
     W, H = L.page
     mx, my = L.margin
     multi = dc.structure.multi_token
     header = dc.structure.header
+    multi_region = len(dc.tables) > 1 or sum(t.instances[1] for t in dc.tables) > 1
     placed: list[PlacedToken] = []
     y = float(my)
+    region = 0
     for table in dc.tables:
         C = len(table.fields)
         cell_w = (W - 2 * mx) / C
@@ -53,13 +56,14 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
         instances = lo if lo == hi else rng.randint(lo, hi)
         for _inst in range(instances):
             rows = rng.randint(table.rows[0], table.rows[1])
+            reg = {"region": region} if multi_region else {}
             if header:
                 for c in range(C):
                     f = table.fields[c]
                     x0 = mx + c * cell_w
                     cell = (x0, y, x0 + cell_w, y + L.row_h)
                     _emit(placed, _header_text(f.name), cell,
-                          {"field": c, "header": True}, f.align, dc.render.font_size, multi)
+                          {**reg, "field": c, "header": True}, f.align, dc.render.font_size, multi)
                 y += L.row_h
             for r in range(rows):
                 for c in range(C):
@@ -68,9 +72,10 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
                     x0 = mx + c * cell_w
                     cell = (x0, y, x0 + cell_w, y + L.row_h)
                     _emit(placed, value, cell,
-                          {"record": r, "field": c}, f.align, dc.render.font_size, multi)
+                          {**reg, "record": r, "field": c}, f.align, dc.render.font_size, multi)
                 y += L.row_h
             y += L.table_gap
+            region += 1
     n_bg = dc.structure.background
     if n_bg:
         y_lo, y_hi = y, H - my - L.row_h
