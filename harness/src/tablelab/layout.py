@@ -33,13 +33,13 @@ def _emit(placed: list[PlacedToken], text: str, cell: tuple[float, float, float,
 
 
 def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
-    """Place one document's tokens (logical, no Pillow). Iterates dc.tables with a
-    vertical cursor, drawing randint(instances) copies of each table stacked with
-    table_gap. When the class is multi-instance (more than one possible table
-    instance), data and header labels gain a 0-based ``region`` index. Single
-    table/instance output is byte-identical to the prior builder. Header rows
-    (structure.header), multi-token split (structure.multi_token) and background
-    tokens (structure.background) apply as before."""
+    """Place one document's tokens (logical, no Pillow). Global/singleton fields
+    (dc.globals) are laid out first as label:value rows at the top; then each table
+    is drawn as randint(instances) stacked instances with table_gap, tagged with a
+    region when the class is multi-instance. Header rows (structure.header),
+    multi-token split (structure.multi_token) and background tokens
+    (structure.background) apply as before. Single table/instance, no-globals output
+    is byte-identical to the prior builder."""
     L = dc.layout
     W, H = L.page
     mx, my = L.margin
@@ -48,6 +48,17 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
     multi_region = len(dc.tables) > 1 or sum(t.instances[1] for t in dc.tables) > 1
     placed: list[PlacedToken] = []
     y = float(my)
+    if dc.globals:
+        gw = (W - 2 * mx) * 0.35
+        for f in dc.globals:
+            label_cell = (mx, y, mx + gw, y + L.row_h)
+            _emit(placed, _header_text(f.name) + ":", label_cell,
+                  {"global": f.name, "header": True}, "left", dc.render.font_size, multi)
+            value_cell = (mx + gw, y, W - mx, y + L.row_h)
+            _emit(placed, sample(f.type, rng), value_cell,
+                  {"global": f.name}, "left", dc.render.font_size, multi)
+            y += L.row_h
+        y += L.table_gap
     region = 0
     for table in dc.tables:
         C = len(table.fields)
@@ -79,7 +90,7 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
     n_bg = dc.structure.background
     if n_bg:
         y_lo, y_hi = y, H - my - L.row_h
-        if y_hi <= y_lo:  # tables fill the page; fall back to the full interior
+        if y_hi <= y_lo:  # content fills the page; fall back to the full interior
             y_lo, y_hi = float(my), float(H - my - L.row_h)
         for _ in range(n_bg):
             bx = rng.uniform(mx, W - mx - 80)
