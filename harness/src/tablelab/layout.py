@@ -314,15 +314,22 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
     placed: list[PlacedToken] = []
     y = float(my)
     if dc.globals:
-        gw = (W - 2 * mx) * 0.35
-        for f in dc.globals:
-            label_cell = (mx, y, mx + gw, y + L.row_h)
+        gpr = max(L.globals_per_row, 1)
+        usable = W - 2 * mx
+        pair_w = usable / gpr
+        for i, f in enumerate(dc.globals):
+            col = i % gpr
+            if i and col == 0:
+                y += L.row_h
+            px0 = mx + col * pair_w
+            gw = pair_w * 0.35
+            label_cell = (px0, y, px0 + gw, y + L.row_h)
             _emit(placed, _header_text(f.name) + ":", label_cell,
                   {"global": f.name, "header": True}, "left", dc.render.font_size, multi)
-            value_cell = (mx + gw, y, W - mx, y + L.row_h)
+            value_cell = (px0 + gw, y, px0 + pair_w, y + L.row_h)
             _emit(placed, sample(f.type, rng), value_cell,
                   {"global": f.name}, "left", dc.render.font_size, multi)
-            y += L.row_h
+        y += L.row_h
         y += _section_gap(dc)
     region = 0
     for table, table_shape in zip(dc.tables, shape):

@@ -48,3 +48,14 @@ def test_oversized_gaps_fail_capacity_cleanly():
     except LayoutCapacityError:
         raised = True
     assert raised
+
+
+def test_globals_per_row_packs_pairs_and_stays_in_page():
+    dc = classlib.get("eob")
+    W, mx = dc.layout.page[0], dc.layout.margin[0]
+    paired = fork(dc, layout=replace(dc.layout, globals_per_row=2))
+    placed = layout(paired, random.Random(0))
+    gl = [t for t in placed if t.label and "global" in t.label]
+    starts = sorted({round(t.cell[0], 3) for t in gl if t.label.get("header")})
+    assert len(starts) == 2
+    assert all(t.cell[2] <= W - mx + 1e-6 for t in gl)
