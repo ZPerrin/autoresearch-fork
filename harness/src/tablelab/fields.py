@@ -44,3 +44,18 @@ SAMPLERS = {
 
 def sample(type_name: str, rng: random.Random) -> str:
     return SAMPLERS[type_name](rng)
+
+
+# Page-noise vocabulary for non-table (background) tokens — titles, footer notes, refs.
+_BACKGROUND = [
+    "INVOICE", "STATEMENT", "RECEIPT", "Confidential", "Original", "Duplicate",
+    "Page", "Total", "Subtotal", "Balance", "Account", "Customer", "Provider",
+    "Ref", "Paid", "Due", "Remit", "Terms", "Copy", "Notice",
+]
+
+
+def background_token(rng: random.Random) -> str:
+    """A single non-table noise token: a page-furniture word, or sometimes a number."""
+    if rng.random() < 0.3:
+        return str(rng.randint(1000, 99999))
+    return rng.choice(_BACKGROUND)
