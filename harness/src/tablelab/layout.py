@@ -10,7 +10,7 @@ from .fields import sample, background_token
 class PlacedToken:
     text: str
     cell: tuple[float, float, float, float]   # cell rect in page pixels (x0, y0, x1, y1)
-    label: dict | None                        # data {"record": r, "field": c} | header {"field": c, "header": True} (+ "seq": k when multi_token); null = background (future)
+    label: dict | None                        # data {"record": r, "field": c} | header {"field": c, "header": True}; + "region": g when multi-instance, + "seq": k when multi_token; null = background
     align: str = "left"
     font_size: int = 22
 
