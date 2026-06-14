@@ -18,6 +18,10 @@ from tablelab.specs import fork
 def _full_eob(**layout_overrides):
     dc = classlib.get("eob")
     tables = tuple(replace(table, instances=(1, 3)) for table in dc.tables)
+    # The eob recipe now adds banner + section + totals rows per instance; give the
+    # maxed-out stress config (instances 1-3, background 4) a taller page so 2-3
+    # instances remain feasible. Callers that test the too-short path override `page`.
+    layout_overrides.setdefault("page", (1500, 2000))
     return fork(
         dc,
         tables=tables,

@@ -7,6 +7,15 @@ from tablelab.layout import layout, validate_layout_capacity, LayoutCapacityErro
 from tablelab.render import render
 
 
+def _content_sized(p) -> bool:
+    """A token whose cell width is governed by content-aware column sizing: a data or
+    leaf-header column token. Banners and span rows (section/totals) are intentionally
+    not column-content-sized (see the spanning-cells design), so they are excluded."""
+    lab = p.label
+    return bool(lab and "field" in lab
+                and not (lab.get("group") or lab.get("section") or lab.get("subtotal")))
+
+
 def test_field_weight_uses_explicit_override():
     assert field_weight(FieldSpec("amount", "amount", "right", width=3.0)) == 3.0
 
@@ -67,22 +76,24 @@ def test_content_aware_columns_prevent_overflow():
     placed = layout(dc, random.Random(0))
     _img, boxes = render(placed, dc)
     for p, b in zip(placed, boxes):
-        if not (p.label and "field" in p.label):
-            continue  # only table columns are content-sized; globals are separate
+        if not _content_sized(p):
+            continue  # only column-content-sized tokens; globals/span rows are separate
         cx0, _cy0, cx1, _cy1 = p.cell
         assert b[0] >= cx0 - 1 and b[2] <= cx1 + 1, (p.text, p.cell, b)
 
 
 def test_eob_rich_columns_fit_at_template_width_with_header():
     # The eob class declares a wide page so its ten claim-line columns fit; verify
-    # no table token overflows its cell when headers are on (the realistic build).
-    dc = fork(classlib.get("eob"),
-              structure=replace(classlib.get("eob").structure, header=True))
+    # no data/header token overflows its cell when headers are on (the realistic build).
+    # Banners and span rows (section/totals) are intentionally not column-content-sized
+    # (see docs/specs/2026-06-14-spanning-cells-grouped-headers-design.md), so they are
+    # excluded — only data + leaf-header containment is guaranteed.
+    dc = classlib.get("eob")  # header is on by default in the eob recipe
     for seed in range(10):
         placed = layout(dc, random.Random(seed))
         _img, boxes = render(placed, dc)
         for p, b in zip(placed, boxes):
-            if not (p.label and "field" in p.label):
+            if not _content_sized(p):
                 continue
             cx0, _cy0, cx1, _cy1 = p.cell
             assert b[0] >= cx0 - 1 and b[2] <= cx1 + 1, (p.text, p.cell, b)
