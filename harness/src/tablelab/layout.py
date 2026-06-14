@@ -2,7 +2,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 
-from .fields import sample, background_token
+from .fields import sample, background_token, field_weight
 from .specs import DocumentClass, TableSpec
 
 
@@ -12,6 +12,19 @@ class LayoutCapacityError(ValueError):
 
 Shape = tuple[tuple[int, ...], ...]
 _BACKGROUND_COLUMNS = 2
+
+
+def _column_edges(fields, usable: float, mx: float) -> list[float]:
+    """Left/right pixel edges for each column from normalized field weights.
+    Returns len(fields)+1 edges; columns sum to exactly `usable` by construction."""
+    weights = [field_weight(f) for f in fields]
+    total = sum(weights)
+    edges = [mx]
+    acc = 0.0
+    for w in weights:
+        acc += w
+        edges.append(mx + usable * (acc / total))
+    return edges
 
 
 @dataclass
@@ -304,14 +317,14 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
         if not table_shape:
             continue
         C = len(table.fields)
-        cell_w = (W - 2 * mx) / C
+        edges = _column_edges(table.fields, W - 2 * mx, mx)
         for rows in table_shape:
             reg = {"region": region} if multi_region else {}
             if header:
                 for c in range(C):
                     f = table.fields[c]
-                    x0 = mx + c * cell_w
-                    cell = (x0, y, x0 + cell_w, y + L.row_h)
+                    x0, x1 = edges[c], edges[c + 1]
+                    cell = (x0, y, x1, y + L.row_h)
                     _emit(placed, _header_text(f.name), cell,
                           {**reg, "field": c, "header": True}, f.align, dc.render.font_size, multi)
                 y += L.row_h
@@ -319,8 +332,8 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
                 for c in range(C):
                     f = table.fields[c]
                     value = sample(f.type, rng)
-                    x0 = mx + c * cell_w
-                    cell = (x0, y, x0 + cell_w, y + L.row_h)
+                    x0, x1 = edges[c], edges[c + 1]
+                    cell = (x0, y, x1, y + L.row_h)
                     _emit(placed, value, cell,
                           {**reg, "record": r, "field": c}, f.align, dc.render.font_size, multi)
                 y += L.row_h
