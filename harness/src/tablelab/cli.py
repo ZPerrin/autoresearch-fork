@@ -12,10 +12,11 @@ from .artifacts import read_dataset
 def _build(args):
     dc = classlib.get(args.cls)
     L = dc.layout
-    if args.rows:
-        L = replace(L, rows=(args.rows[0], args.rows[1]))
     if args.page:
         L = replace(L, page=(args.page[0], args.page[1]))
+    tables = dc.tables
+    if args.rows:
+        tables = tuple(replace(t, rows=(args.rows[0], args.rows[1])) for t in tables)
     S = dc.structure
     if args.multi_token:
         S = replace(S, multi_token=True)
@@ -23,8 +24,8 @@ def _build(args):
         S = replace(S, header=True)
     if args.background:
         S = replace(S, background=args.background)
-    if L is not dc.layout or S is not dc.structure:
-        dc = fork(dc, layout=L, structure=S)
+    if L is not dc.layout or tables is not dc.tables or S is not dc.structure:
+        dc = fork(dc, layout=L, tables=tables, structure=S)
     out = Path(args.out)
     build_dataset(out.parent, out.name, dc, seed=args.seed, n=args.n)
     print(f"built {args.n} {args.cls} samples -> {out}")
@@ -48,7 +49,8 @@ def _inspect(args):
     d = Path(args.datasets_dir) / args.id
     m, samples = read_dataset(d)
     spec = m.config.get("spec", {})
-    fields = [f["name"] for f in spec.get("fields", [])]
+    tables = spec.get("tables", [])
+    fields = [f["name"] for t in tables for f in t.get("fields", [])]
     page = spec.get("layout", {}).get("page")
     ntok = sum(len(s.tokens) for s in samples)
     print(f"id:       {m.dataset_id}")
@@ -56,6 +58,7 @@ def _inspect(args):
     print(f"task:     {m.task}")
     print(f"samples:  {m.count}")
     print(f"tokens:   {ntok} ({ntok / max(m.count, 1):.1f}/sample)")
+    print(f"tables:   {[t.get('name') for t in tables]}")
     print(f"fields:   {fields}")
     print(f"page:     {page}")
 
