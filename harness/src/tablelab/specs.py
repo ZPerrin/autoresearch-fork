@@ -10,12 +10,20 @@ class FieldSpec:
 
 
 @dataclass(frozen=True)
-class LayoutSpec:
+class TableSpec:
+    name: str
+    fields: tuple[FieldSpec, ...]
     rows: tuple[int, int] = (2, 6)        # record-count range, inclusive (passed to randint)
+    instances: tuple[int, int] = (1, 1)   # number of instances of this table per document
+
+
+@dataclass(frozen=True)
+class LayoutSpec:
     page: tuple[int, int] = (1000, 1414)  # page pixel size (W, H)
     margin: tuple[int, int] = (60, 80)    # (x, y) page margins in px
     row_h: int = 74                       # row height in px
     pad: int = 12                         # in-cell text padding in px
+    table_gap: int = 40                   # vertical gap after each table instance in px
 
 
 @dataclass(frozen=True)
@@ -42,14 +50,15 @@ class RenderSpec:
 @dataclass(frozen=True)
 class DocumentClass:
     name: str
-    fields: tuple[FieldSpec, ...]
+    tables: tuple[TableSpec, ...]
+    globals: tuple[FieldSpec, ...] = ()
     layout: LayoutSpec = LayoutSpec()
     structure: StructureSpec = StructureSpec()
     render: RenderSpec = RenderSpec()
 
 
 def fork(dc: DocumentClass, name: str | None = None, **overrides) -> DocumentClass:
-    """Copy a DocumentClass with top-level fields replaced (e.g. ``layout=...``).
-    Nested specs are replaced wholesale — build the replacement with
-    ``dataclasses.replace(dc.layout, rows=...)`` and pass it in."""
+    """Copy a DocumentClass with top-level fields replaced (e.g. ``tables=...``,
+    ``layout=...``). Nested specs are replaced wholesale — build the replacement with
+    ``dataclasses.replace(dc.tables[0], rows=...)`` and pass it in."""
     return replace(dc, name=name or dc.name, **overrides)
