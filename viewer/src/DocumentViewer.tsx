@@ -191,7 +191,6 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
       startPan: panRef.current,
       dragging: false,
     }
-    event.currentTarget.setPointerCapture(event.pointerId)
   }, [])
 
   const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
@@ -205,6 +204,7 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
       drag.dragging = true
       suppressClickRef.current = true
       setIsPanning(true)
+      event.currentTarget.setPointerCapture(event.pointerId)
     }
 
     applyPan({
@@ -379,13 +379,14 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
               const h = (tok.y1 - tok.y0) * height
 
               return (
-                <g key={i} onClick={() => handleTokenClick(tok, sel)}>
+                <g key={i}>
                   <rect
                     x={x} y={y} width={w} height={h}
                     fill={fill}
                     stroke={stroke}
                     strokeWidth={sel ? 2.5 : 1.5}
                     rx={3}
+                    onClick={() => handleTokenClick(tok, sel)}
                   />
                 </g>
               )
