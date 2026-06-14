@@ -5,7 +5,7 @@ from dataclasses import replace
 
 from tablelab import classes as classlib
 from tablelab.fields import background_token
-from tablelab.specs import fork
+from tablelab.specs import DocumentClass, fork
 from tablelab.layout import layout
 from tablelab.render import render
 
@@ -61,12 +61,46 @@ def test_background_token_uses_document_class_terms():
     assert words.isdisjoint({"Invoice", "Receipt"})
 
 
-def test_builtin_background_vocabularies_are_distinct():
-    invoice = classlib.get("invoice").background_terms
-    eob = classlib.get("eob").background_terms
-    receipt = classlib.get("receipt").background_terms
+def test_builtin_background_vocabularies_match_contract():
+    assert classlib.get("invoice").background_terms == (
+        "Invoice", "Account", "Customer", "Subtotal", "Total", "Balance",
+        "Payment Terms", "Remit To", "Page", "Reference",
+    )
+    assert classlib.get("eob").background_terms == (
+        "Explanation of Benefits", "Patient Responsibility", "Plan Paid",
+        "Claim Reference", "Benefit Notice", "This Is Not a Bill",
+        "Member Services", "Page", "Reference",
+    )
+    assert classlib.get("receipt").background_terms == (
+        "Receipt", "Paid", "Subtotal", "Total", "Payment", "Thank You",
+        "Store Copy", "Page", "Reference",
+    )
 
-    assert len({invoice, eob, receipt}) == 3
-    assert {"Invoice", "Account", "Remit To"} <= set(invoice)
-    assert {"Explanation of Benefits", "Patient Responsibility", "This Is Not a Bill"} <= set(eob)
-    assert {"Receipt", "Thank You", "Store Copy"} <= set(receipt)
+
+def test_background_token_uses_neutral_fallback_for_empty_terms():
+    neutral = {"Page", "Reference", "Notice", "Confidential", "Original", "Copy"}
+    rng = random.Random(7)
+    values = {background_token((), rng) for _ in range(200)}
+    words = {value for value in values if not value.isdigit()}
+
+    assert all(value.isdigit() or value in neutral for value in values)
+    assert words
+    assert words <= neutral
+
+
+def test_background_token_numeric_branch_is_deterministic():
+    class NumericRng:
+        def random(self):
+            return 0.29
+
+        def randint(self, low, high):
+            assert (low, high) == (1000, 99999)
+            return 4242
+
+    assert background_token(("unused",), NumericRng()) == "4242"
+
+
+def test_document_class_background_terms_default_to_empty_tuple():
+    bare = DocumentClass(name="bare", tables=classlib.get("invoice").tables)
+
+    assert bare.background_terms == ()
