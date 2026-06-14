@@ -6,6 +6,7 @@ from dataclasses import replace
 import pytest
 
 from tablelab import classes as classlib
+from tablelab import layout as layout_module
 from tablelab.layout import LayoutCapacityError, layout, validate_layout_capacity
 from tablelab.specs import fork
 
@@ -61,7 +62,12 @@ def test_default_invoice_validates():
 
 @pytest.mark.parametrize(
     ("attribute", "bounds"),
-    [("instances", (2, 1)), ("rows", (3, 2)), ("rows", (-1, 2))],
+    [
+        ("instances", (-1, 2)),
+        ("instances", (2, 1)),
+        ("rows", (-1, 2)),
+        ("rows", (3, 2)),
+    ],
 )
 def test_invalid_table_ranges_fail_clearly(attribute, bounds):
     dc = classlib.get("invoice")
@@ -78,3 +84,50 @@ def test_negative_background_count_fails_clearly():
         validate_layout_capacity(
             fork(dc, structure=replace(dc.structure, background=-1))
         )
+
+
+def test_empty_field_table_with_possible_instance_fails_clearly():
+    dc = classlib.get("invoice")
+    table = replace(dc.tables[0], fields=(), instances=(0, 1))
+
+    with pytest.raises(LayoutCapacityError, match="table 'line_item'.*no fields"):
+        validate_layout_capacity(fork(dc, tables=(table,)))
+
+
+@pytest.mark.parametrize(
+    ("layout_overrides", "message"),
+    [
+        ({"page": (0, 1414)}, "invalid page dimensions"),
+        ({"page": (1000, 0)}, "invalid page dimensions"),
+        ({"margin": (-1, 80)}, "invalid margins"),
+        ({"margin": (60, -1)}, "invalid margins"),
+        ({"page": (100, 1414), "margin": (50, 80)}, "invalid usable page width"),
+        ({"page": (1000, 100), "margin": (60, 50)}, "invalid available page height"),
+        ({"row_h": 0}, "invalid row height"),
+        ({"row_h": -1}, "invalid row height"),
+    ],
+)
+def test_invalid_layout_dimensions_fail_clearly(layout_overrides, message):
+    dc = classlib.get("invoice")
+
+    with pytest.raises(LayoutCapacityError, match=message):
+        validate_layout_capacity(
+            fork(dc, layout=replace(dc.layout, **layout_overrides))
+        )
+
+
+def test_enormous_impossible_range_fails_before_shape_enumeration(monkeypatch):
+    dc = classlib.get("invoice")
+    table = replace(dc.tables[0], rows=(1, 1_000_000), instances=(1, 1_000_000))
+    impossible = fork(
+        dc,
+        tables=(table,),
+        layout=replace(dc.layout, page=(1000, 200)),
+    )
+
+    def fail_if_enumerated(_dc):
+        raise AssertionError("minimum-height precheck did not stop enumeration")
+
+    monkeypatch.setattr(layout_module, "_iter_feasible_shapes", fail_if_enumerated)
+    with pytest.raises(LayoutCapacityError, match="no page-feasible document shape"):
+        validate_layout_capacity(impossible)

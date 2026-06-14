@@ -1,10 +1,9 @@
 from __future__ import annotations
 import random
 from dataclasses import dataclass
-from itertools import product
 
-from .specs import DocumentClass
 from .fields import sample, background_token
+from .specs import DocumentClass, TableSpec
 
 
 class LayoutCapacityError(ValueError):
@@ -45,7 +44,34 @@ def _background_rows(count: int) -> int:
     return (count + _BACKGROUND_COLUMNS - 1) // _BACKGROUND_COLUMNS
 
 
-def _validate_ranges(dc: DocumentClass) -> None:
+def _validate_layout(dc: DocumentClass) -> None:
+    L = dc.layout
+    width, height = L.page
+    mx, my = L.margin
+    if width <= 0 or height <= 0:
+        raise LayoutCapacityError(
+            f"invalid page dimensions: page={L.page}; width and height must be positive"
+        )
+    if mx < 0 or my < 0:
+        raise LayoutCapacityError(
+            f"invalid margins: margin={L.margin}; margins must be nonnegative"
+        )
+    if L.row_h <= 0:
+        raise LayoutCapacityError(
+            f"invalid row height: row_h={L.row_h}; row_h must be positive"
+        )
+    usable_width = width - 2 * mx
+    if usable_width <= 0:
+        raise LayoutCapacityError(
+            f"invalid usable page width: page={L.page}, margin={L.margin}, "
+            f"usable_width={usable_width}px"
+        )
+    available = height - 2 * my
+    if available <= 0:
+        raise LayoutCapacityError(
+            f"invalid available page height: page={L.page}, margin={L.margin}, "
+            f"available={available}px"
+        )
     if dc.structure.background < 0:
         raise LayoutCapacityError(
             f"invalid background count: {dc.structure.background}"
@@ -57,6 +83,11 @@ def _validate_ranges(dc: DocumentClass) -> None:
                 raise LayoutCapacityError(
                     f"invalid {name} range for table {table.name!r}: {bounds!r}"
                 )
+        if table.instances[1] > 0 and not table.fields:
+            raise LayoutCapacityError(
+                f"table {table.name!r} allows up to {table.instances[1]} instances "
+                "but has no fields"
+            )
 
 
 def _fixed_height(dc: DocumentClass) -> int:
@@ -94,13 +125,15 @@ def _is_safe_legacy(dc: DocumentClass) -> bool:
     return _fixed_height(dc) + _shape_height(dc, maximum) <= _available_height(dc)
 
 
-def _table_shapes(table) -> list[tuple[int, ...]]:
-    row_counts = range(table.rows[0], table.rows[1] + 1)
-    return [
-        rows
-        for instances in range(table.instances[0], table.instances[1] + 1)
-        for rows in product(row_counts, repeat=instances)
-    ]
+def _instance_height(dc: DocumentClass, rows: int) -> int:
+    return (int(dc.structure.header) + rows) * dc.layout.row_h + dc.layout.table_gap
+
+
+def _minimum_shape_height(dc: DocumentClass) -> int:
+    return sum(
+        table.instances[0] * _instance_height(dc, table.rows[0])
+        for table in dc.tables
+    )
 
 
 def _capacity_error(dc: DocumentClass, available: int, fixed: int) -> LayoutCapacityError:
@@ -116,36 +149,97 @@ def _capacity_error(dc: DocumentClass, available: int, fixed: int) -> LayoutCapa
     )
 
 
-def _feasible_shapes(dc: DocumentClass) -> list[Shape]:
-    _validate_ranges(dc)
+def _iter_table_shapes(
+    dc: DocumentClass,
+    table: TableSpec,
+    instances: int,
+    budget: int,
+):
+    minimum_instance = _instance_height(dc, table.rows[0])
+
+    def visit(rows: tuple[int, ...], used: int):
+        remaining = instances - len(rows)
+        if used + remaining * minimum_instance > budget:
+            return
+        if not remaining:
+            yield rows, used
+            return
+        for row_count in range(table.rows[0], table.rows[1] + 1):
+            height = _instance_height(dc, row_count)
+            if used + height > budget:
+                break
+            yield from visit((*rows, row_count), used + height)
+
+    yield from visit((), 0)
+
+
+def _iter_feasible_shapes(dc: DocumentClass):
+    budget = _available_height(dc) - _fixed_height(dc)
+    minimum_by_table = [
+        table.instances[0] * _instance_height(dc, table.rows[0])
+        for table in dc.tables
+    ]
+    minimum_suffix = [0] * (len(dc.tables) + 1)
+    for index in range(len(dc.tables) - 1, -1, -1):
+        minimum_suffix[index] = minimum_by_table[index] + minimum_suffix[index + 1]
+
+    def visit(table_index: int, shape: Shape, used: int):
+        if used + minimum_suffix[table_index] > budget:
+            return
+        if table_index == len(dc.tables):
+            yield shape
+            return
+
+        table = dc.tables[table_index]
+        remaining_budget = budget - used - minimum_suffix[table_index + 1]
+        for instances in range(table.instances[0], table.instances[1] + 1):
+            minimum = instances * _instance_height(dc, table.rows[0])
+            if minimum > remaining_budget:
+                break
+            for table_shape, table_height in _iter_table_shapes(
+                dc, table, instances, remaining_budget
+            ):
+                yield from visit(
+                    table_index + 1,
+                    (*shape, table_shape),
+                    used + table_height,
+                )
+
+    yield from visit(0, (), 0)
+
+
+def _ensure_minimum_fits(dc: DocumentClass) -> None:
     available = _available_height(dc)
     fixed = _fixed_height(dc)
-    table_shapes = [_table_shapes(table) for table in dc.tables]
-    return [
-        shape
-        for shape in product(*table_shapes)
-        if fixed + _shape_height(dc, shape) <= available
-    ]
+    if fixed + _minimum_shape_height(dc) > available:
+        raise _capacity_error(dc, available, fixed)
 
 
 def _choose_shape(dc: DocumentClass, rng: random.Random) -> Shape:
-    _validate_ranges(dc)
+    _validate_layout(dc)
     if _is_safe_legacy(dc):
         table = dc.tables[0]
         return ((rng.randint(table.rows[0], table.rows[1]),),)
 
-    feasible = _feasible_shapes(dc)
-    if not feasible:
+    _ensure_minimum_fits(dc)
+    chosen = None
+    count = 0
+    for shape in _iter_feasible_shapes(dc):
+        count += 1
+        if rng.randrange(count) == 0:
+            chosen = shape
+    if chosen is None:
         raise _capacity_error(dc, _available_height(dc), _fixed_height(dc))
-    return rng.choice(feasible)
+    return chosen
 
 
 def validate_layout_capacity(dc: DocumentClass) -> None:
     """Raise when no declared document shape can fit within the page height."""
-    _validate_ranges(dc)
+    _validate_layout(dc)
     if _is_safe_legacy(dc):
         return
-    if not _feasible_shapes(dc):
+    _ensure_minimum_fits(dc)
+    if next(_iter_feasible_shapes(dc), None) is None:
         raise _capacity_error(dc, _available_height(dc), _fixed_height(dc))
 
 
