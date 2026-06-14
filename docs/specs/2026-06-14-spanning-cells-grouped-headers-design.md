@@ -1,6 +1,7 @@
 # Spanning cells + grouped headers — design
 
-- Status: **designed** (not yet implemented). Sixth structural-realism feature.
+- Status: **shipped** (merged to `master`). Sixth structural-realism feature; completes the ordered
+  structural-realism list. Plan: `docs/plans/2026-06-14-spanning-cells-grouped-headers.md`.
 - Date: 2026-06-14
 - Parent: `docs/specs/2026-06-13-design-and-roadmap.md` (§ structural realism, item 6).
 - Follows: `docs/specs/2026-06-14-realistic-spacing-jitter-design.md` (item 5).
