@@ -17,7 +17,15 @@ Device-aware torch — MPS on Apple silicon, CUDA on NVIDIA, CPU fallback:
 uv run python -c "from tablelab.device import get_device; print(get_device())"
 ```
 
-Build a dataset: `uv run python -m tablelab.cli build --class eob --n 100 --out ../datasets/<id>`
+## CLI (`tablelab.cli`)
+
+```bash
+uv run python -m tablelab.cli build --class eob --n 100 --out ../datasets/eob-demo
+uv run python -m tablelab.cli list
+uv run python -m tablelab.cli inspect eob-demo
+```
+
+`build` overrides: `--seed`, `--rows MIN MAX`, `--page W H`. Classes: `invoice`, `eob`, `receipt`.
 
 ## Modules (`src/tablelab/`)
 
