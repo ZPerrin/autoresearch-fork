@@ -53,11 +53,18 @@ Data is multimodal from the start (LayoutLMv3 stack): **spatial** (token boxes),
   token per cell, captures word boxes + text → `datasets/<id>/`.
 - **Viewer**: split-pane, image overlay (ground-truth + prediction modes), source picker, token
   detail, dataset metadata.
+- **Synth-toolkit backbone**: compositional spec API (`FieldSpec`/`LayoutSpec`/`StructureSpec`/
+  `RenderSpec`/`DocumentClass` + `fork`; modules `specs`/`fields`/`classes`/`layout`/`render`/
+  `build`) joined by a Pillow-free `PlacedToken` IR, plus a `build`/`list`/`inspect` CLI.
+  Byte-identical to the prior builder (golden regression test). See
+  `2026-06-13-synth-toolkit-backbone-design.md`.
 
 ## Roadmap (milestones — each gets its own plan when started)
 
-1. **Synthetic data toolkit — ACTIVE** (this doc, below): CLI + compositional API; structural
-   realism; document-class breadth. Visual realism architecturally provisioned but deferred.
+1. **Synthetic data toolkit — ACTIVE** (this doc, below): backbone **shipped** (compositional API +
+   CLI). Next is **structural realism** in order — multi-token cells → header row → background/
+   non-table tokens → multiple tables + globals → jitter/irregular → spanning cells — then
+   document-class breadth. Visual realism architecturally provisioned but deferred.
 2. **The loop closes**: M0 spatial model trains on a dataset → emits run artifacts → predictions
    overlaid in the viewer; validate it learns. (Detail in the prior
    `2026-06-13-v0-loop-closes-design.md`, now the *model-loop* milestone — deferred until the

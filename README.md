@@ -29,9 +29,11 @@ Authoritative design & roadmap:
 [docs/specs/2026-06-13-design-and-roadmap.md](docs/specs/2026-06-13-design-and-roadmap.md).
 
 The harness is in place — env, contract v2, multimodal dataset builder, split-pane viewer. The
-**active milestone is the synthetic data toolkit**: a CLI + compositional API to declare document
-classes, compose structural features, and curate/fork datasets — before we build the model loop.
-Specs live in `docs/specs/`; each milestone gets its own.
+**active milestone is the synthetic data toolkit**: its backbone is built — a compositional API
+(`FieldSpec`/`LayoutSpec`/`StructureSpec`/`RenderSpec`/`DocumentClass`) and a `build`/`list`/
+`inspect` CLI to declare document classes and curate/fork datasets. Next we climb **structural
+realism** (multi-token cells first), then document-class breadth, before the model loop. Specs
+live in `docs/specs/`; each milestone gets its own.
 
 ## How to work in this repo
 
@@ -48,9 +50,10 @@ just need to train and evaluate.
 
 ## Status
 
-Harness built: env ✓, contract v2 ✓, multimodal dataset builder ✓, split-pane viewer ✓.
-**Active: the synthetic data toolkit** (CLI + compositional API → structural realism →
-document-class breadth; visual realism deferred). The model loop comes after. Upstream LM files
+Harness built: env ✓, contract v2 ✓, multimodal dataset builder ✓, split-pane viewer ✓,
+synth-toolkit backbone ✓ (compositional API + `build`/`list`/`inspect` CLI). **Active: the
+synthetic data toolkit** — next is structural realism (multi-token cells → … → spanning cells) →
+document-class breadth; visual realism deferred. The model loop comes after. Upstream LM files
 (`train.py`, `prepare.py`, `program.md`) are parked in `reference/`.
 
 ## License

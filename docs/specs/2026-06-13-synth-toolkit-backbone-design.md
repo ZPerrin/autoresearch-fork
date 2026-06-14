@@ -1,6 +1,6 @@
 # Synthetic data toolkit — compositional API + CLI backbone
 
-- Status: **design** (approved in brainstorming; first slice of the active "synthetic data toolkit" milestone)
+- Status: **shipped** (merged to `master`; first slice of the active "synthetic data toolkit" milestone). Plan: `docs/plans/2026-06-13-synth-toolkit-backbone.md`.
 - Date: 2026-06-13
 - Parent: `docs/specs/2026-06-13-design-and-roadmap.md` (§ "Active milestone: the synthetic data toolkit")
 
