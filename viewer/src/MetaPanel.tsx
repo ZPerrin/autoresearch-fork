@@ -1,7 +1,9 @@
 import type { ActiveSource, LabelValue, Token, TokenLabel } from './types'
+import { predictionMatchStatus } from './tokenMatch'
 
 interface Props {
   source: ActiveSource | null
+  task?: string
   selectedToken: Token | null
 }
 
@@ -53,7 +55,11 @@ function Sparkline({ curve }: { curve: { step: number; val_exact: number }[] }) 
   )
 }
 
-export default function MetaPanel({ source, selectedToken }: Props) {
+export default function MetaPanel({ source, task, selectedToken }: Props) {
+  const matchStatus = selectedToken == null
+    ? 'not-applicable'
+    : predictionMatchStatus(task, selectedToken.label, selectedToken.pred)
+
   return (
     <div className="meta-panel">
       {/* Source metadata */}
@@ -234,20 +240,16 @@ export default function MetaPanel({ source, selectedToken }: Props) {
                     <span className="meta-val mono">{Number(selectedToken.pred.confidence).toFixed(3)}</span>
                   </div>
                 )}
-                {'record' in selectedToken.pred && 'field' in selectedToken.pred && (
-                  <div className="meta-row">
-                    <span className="meta-key">grid match</span>
-                    <span className={`meta-val ${
-                      selectedToken.pred.record === selectedToken.label?.record &&
-                      selectedToken.pred.field === selectedToken.label?.field
-                        ? 'correct-tag' : 'wrong-tag'
-                    }`}>
-                      {selectedToken.pred.record === selectedToken.label?.record &&
-                       selectedToken.pred.field === selectedToken.label?.field
-                        ? 'correct' : 'mismatch'}
-                    </span>
-                  </div>
-                )}
+                <div className="meta-row">
+                  <span className="meta-key">match</span>
+                  <span className={`meta-val ${
+                    matchStatus === 'correct'
+                      ? 'correct-tag'
+                      : matchStatus === 'mismatch' ? 'wrong-tag' : ''
+                  }`}>
+                    {matchStatus === 'not-applicable' ? 'not evaluated' : matchStatus}
+                  </span>
+                </div>
               </>
             )}
             <div className="meta-row coords-row">

@@ -165,6 +165,7 @@ export default function App() {
 
           <MetaPanel
             source={activeSource}
+            task={task}
             selectedToken={selectedToken}
           />
         </div>

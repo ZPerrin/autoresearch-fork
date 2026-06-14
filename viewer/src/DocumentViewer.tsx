@@ -1,27 +1,19 @@
 import { useState } from 'react'
 import type { Sample, Token } from './types'
+import { predictionMatchStatus } from './tokenMatch'
 
 const COLOR_CORRECT  = { fill: 'rgba(29,158,117,0.18)',  stroke: '#1D9E75' }
 const COLOR_WRONG    = { fill: 'rgba(226,75,74,0.18)',   stroke: '#E24B4A' }
 const COLOR_GT       = { fill: 'rgba(55,138,221,0.10)',  stroke: '#378ADD' }
 const COLOR_SELECTED = { fill: 'rgba(255,180,0,0.28)',   stroke: '#F59E0B' }
 
-function isCorrect(tok: Token, task: string | undefined): boolean {
-  const l = tok.label
-  const p = tok.pred
-  if (task !== 'grid_record_field' || p == null || l == null) return false
-  return typeof p.record === 'number' &&
-    typeof p.field === 'number' &&
-    typeof l.record === 'number' &&
-    typeof l.field === 'number' &&
-    p.record === l.record &&
-    p.field === l.field
-}
-
 function tokenColors(tok: Token, task: string | undefined, selected: boolean) {
   if (selected) return COLOR_SELECTED
   if (tok.pred == null) return COLOR_GT
-  return isCorrect(tok, task) ? COLOR_CORRECT : COLOR_WRONG
+  const status = predictionMatchStatus(task, tok.label, tok.pred)
+  if (status === 'correct') return COLOR_CORRECT
+  if (status === 'mismatch') return COLOR_WRONG
+  return COLOR_GT
 }
 
 interface Props {
@@ -42,8 +34,12 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
   const sample = samples[Math.min(sampleIdx, samples.length - 1)]
   const { width, height, tokens, image } = sample
 
-  const hasGT    = tokens.some(t => t.pred == null)
-  const hasPreds = tokens.some(t => t.pred != null)
+  const statuses = tokens.map(token => predictionMatchStatus(task, token.label, token.pred))
+  const hasGT = tokens.some(token => token.pred == null)
+  const hasCorrect = statuses.includes('correct')
+  const hasMismatch = statuses.includes('mismatch')
+  const hasNotEvaluatedPreds = tokens.some((token, index) =>
+    token.pred != null && statuses[index] === 'not-applicable')
 
   const showImage = image && !imgError
 
@@ -118,20 +114,21 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
 
       {/* Legend */}
       <div className="legend">
-        {hasGT && (
+        {(hasGT || hasNotEvaluatedPreds) && (
           <span className="legend-item">
-            <span className="legend-swatch swatch-gt" /> ground truth
+            <span className="legend-swatch swatch-gt" />
+            {hasNotEvaluatedPreds ? 'ground truth / not evaluated' : 'ground truth'}
           </span>
         )}
-        {hasPreds && (
-          <>
-            <span className="legend-item">
-              <span className="legend-swatch swatch-correct" /> correct
-            </span>
-            <span className="legend-item">
-              <span className="legend-swatch swatch-wrong" /> mismatch
-            </span>
-          </>
+        {hasCorrect && (
+          <span className="legend-item">
+            <span className="legend-swatch swatch-correct" /> correct
+          </span>
+        )}
+        {hasMismatch && (
+          <span className="legend-item">
+            <span className="legend-swatch swatch-wrong" /> mismatch
+          </span>
         )}
         <span className="legend-item">
           <span className="legend-swatch swatch-selected" /> selected
