@@ -40,6 +40,12 @@ jitter. Everything stays a flat grid of single-cell tokens. Out of scope: spanni
 grouped multi-level headers, totals/summary rows, visual realism (fonts/rules/scan noise/skew), and
 arbitrary free-space packing.
 
+Every knob in this design hangs off the `DocumentClass` (its `LayoutSpec`, its tables' `FieldSpec`
+weights, and a class-level `JitterSpec`), so configuration is **per-class**. The intended workflow is
+to iterate a class's spacing/jitter profile in the viewer until its output looks right, then keep
+that class definition as a repeatable recipe: the deterministic knobs hold the look constant while
+jitter plus feasible-shape sampling supply controlled per-document variance.
+
 ## Non-uniform column widths (hybrid)
 
 `FieldSpec` gains an optional `width: float | None` weight. The field **type** registry carries a
