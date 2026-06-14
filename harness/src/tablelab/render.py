@@ -27,11 +27,10 @@ def render(placed: list[PlacedToken], dc: DocumentClass) -> tuple[Image.Image, l
     font = _font(dc.render.font_size)
     boxes: list[Box] = [(0.0, 0.0, 0.0, 0.0)] * len(placed)
 
-    # Group token indices by their cell (record, field); order within a cell by seq.
+    # Group token indices by their cell rect; order within a cell by seq.
     groups: dict[tuple, list[int]] = {}
     for i, p in enumerate(placed):
-        key = (p.label["record"], p.label["field"])
-        groups.setdefault(key, []).append(i)
+        groups.setdefault(p.cell, []).append(i)
 
     for idxs in groups.values():
         if len(idxs) > 1:
