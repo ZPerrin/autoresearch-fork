@@ -147,6 +147,31 @@ def _emit(placed: list[PlacedToken], text: str, cell: tuple[float, float, float,
             label=base_label, align=align, font_size=font_size))
 
 
+def _emit_span_row(placed: list[PlacedToken], cells, edges, y: float, row_h: float,
+                   base_label: dict, font: int, multi: bool, rng: random.Random,
+                   header_on_text: bool = False) -> None:
+    """Emit one spanning row: each cell covers a contiguous column range starting at the
+    running column index. text cells are literal, type cells are sampled (RNG drawn left to
+    right), empty cells emit nothing. Each token gets field=c0 and span=[c0, c1]; a literal
+    label additionally gets header=True when ``header_on_text`` (the totals label cell)."""
+    c = 0
+    for cell in cells:
+        c0, c1 = c, c + cell.span - 1
+        rect = (edges[c0], y, edges[c1 + 1], y + row_h)
+        if cell.text is not None:
+            value, is_text = cell.text, True
+        elif cell.type is not None:
+            value, is_text = sample(cell.type, rng), False
+        else:
+            value, is_text = "", False
+        if value:
+            label = {**base_label, "field": c0, "span": [c0, c1]}
+            if is_text and header_on_text:
+                label["header"] = True
+            _emit(placed, value, rect, label, cell.align, font, multi)
+        c = c1 + 1
+
+
 def _sample_cell(field, rng: random.Random) -> str:
     """Sample a data cell's value, honoring sparsity: a field with fill < 1.0 leaves
     some cells empty. fill >= 1.0 samples directly (no extra RNG draw), so existing
@@ -491,6 +516,10 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
                     _emit(placed, _header_text(f.name), cell,
                           {**reg, "field": c, "header": True}, f.align, cell_font, multi)
                 y += L.row_h
+            if table.section is not None:
+                _emit_span_row(placed, table.section.cells, edges, y, L.row_h,
+                               {**reg, "section": True}, cell_font, multi, rng)
+                y += L.row_h
             for r in range(rows):
                 row_edges = (jitter_column_edges(edges, J.col_w, rng)
                              if J.col_w > 0 else edges)
@@ -511,6 +540,11 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
                 y += cell_h
                 if r < rows - 1:
                     y += gap_after
+            if table.totals is not None:
+                _emit_span_row(placed, table.totals.cells, edges, y, L.row_h,
+                               {**reg, "subtotal": True}, cell_font, multi, rng,
+                               header_on_text=True)
+                y += L.row_h
             y += _instance_gap(dc)
             region += 1
     n_bg = dc.structure.background
