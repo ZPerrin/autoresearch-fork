@@ -1,6 +1,6 @@
 # Synthetic reviewability - design
 
-- Status: **design approved; awaiting written-spec review** (implementation plan not started)
+- Status: **implementation active** - generator validity/background/compatibility shipped; viewer pending
 - Date: 2026-06-14
 - Parent: `docs/specs/2026-06-13-design-and-roadmap.md`
 - Follows: `docs/specs/2026-06-13-multi-table-globals-design.md`
@@ -32,6 +32,8 @@ The in-flight viewer change that removes `record.field` text from the SVG overla
 milestone. Labels belong in token detail, not on top of source text.
 
 ## Generator validity
+
+Status: **shipped** (fit-aware composition, reserved class-aware background, and compatibility).
 
 ### Fit before sampling
 
@@ -83,6 +85,8 @@ draws on that path. Existing manifests remain readable; resolved new background 
 recorded in newly built manifests.
 
 ## Viewer review surface
+
+Status: **active/pending**.
 
 ### Complete-page rendering
 
