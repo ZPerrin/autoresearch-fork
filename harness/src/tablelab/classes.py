@@ -1,5 +1,5 @@
 from __future__ import annotations
-from .specs import FieldSpec, TableSpec, DocumentClass
+from .specs import FieldSpec, TableSpec, DocumentClass, LayoutSpec
 
 REGISTRY: dict[str, DocumentClass] = {}
 
@@ -60,14 +60,15 @@ register(DocumentClass(
     ),
     tables=(
         TableSpec(name="claim_line", fields=(
-            _f("service_date", "date", "left"),
-            _f("code", "code", "left"),
-            _f("description", "description", "left"),
-            _f("amount_billed", "amount", "right"),
-            _f("amount_owed", "amount", "right"),
+            _f("service_date", "date", "left", 2.0),
+            _f("code", "code", "left", 1.0),
+            _f("description", "description", "left", 4.0),
+            _f("amount_billed", "amount", "right", 1.5),
+            _f("amount_owed", "amount", "right", 1.5),
         ), rows=(2, 5), instances=(1, 2)),
     ),
     background_terms=_EOB_BACKGROUND,
+    layout=LayoutSpec(globals_per_row=2),
 ))
 
 register(DocumentClass(name="receipt", tables=(
