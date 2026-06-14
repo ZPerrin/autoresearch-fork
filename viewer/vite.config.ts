@@ -75,6 +75,8 @@ function synthesizeDatasetsIndex(datasetsDir: string): { schema_version: number;
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Honor the PORT env var (e.g. from preview/launch tooling); default to Vite's 5173.
+  server: process.env.PORT ? { port: Number(process.env.PORT) } : undefined,
   plugins: [
     react(),
     {
