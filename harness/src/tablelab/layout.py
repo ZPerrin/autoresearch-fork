@@ -246,8 +246,8 @@ def _fixed_height(dc: DocumentClass) -> int:
 
 
 def _shape_height(dc: DocumentClass, shape: Shape) -> int:
-    return sum(_instance_height(dc, rows)
-               for table_shape in shape for rows in table_shape)
+    return sum(_instance_height(dc, rows, table)
+               for table, table_shape in zip(dc.tables, shape) for rows in table_shape)
 
 
 def _available_height(dc: DocumentClass) -> int:
@@ -267,16 +267,22 @@ def _is_safe_legacy(dc: DocumentClass) -> bool:
     return _fixed_height(dc) + _shape_height(dc, maximum) <= _available_height(dc)
 
 
-def _instance_height(dc: DocumentClass, rows: int) -> int:
+def _instance_height(dc: DocumentClass, rows: int, table: TableSpec | None = None) -> int:
     L = dc.layout
     header = int(dc.structure.header)
-    return (header * L.row_h + rows * L.row_h
+    banner = section = totals = 0
+    if table is not None:
+        banner = header * int(any(f.group for f in table.fields))
+        section = int(table.section is not None)
+        totals = int(table.totals is not None)
+    fixed_rows = header + banner + section + totals
+    return (fixed_rows * L.row_h + rows * L.row_h
             + max(rows - 1, 0) * _row_gap(dc) + _instance_gap(dc))
 
 
 def _minimum_shape_height(dc: DocumentClass) -> int:
     return sum(
-        table.instances[0] * _instance_height(dc, table.rows[0])
+        table.instances[0] * _instance_height(dc, table.rows[0], table)
         for table in dc.tables
     )
 
@@ -300,7 +306,7 @@ def _iter_table_shapes(
     instances: int,
     budget: int,
 ):
-    minimum_instance = _instance_height(dc, table.rows[0])
+    minimum_instance = _instance_height(dc, table.rows[0], table)
     stack = [((), 0)]
     while stack:
         rows, used = stack.pop()
@@ -311,7 +317,7 @@ def _iter_table_shapes(
             yield rows, used
             continue
         for row_count in range(table.rows[1], table.rows[0] - 1, -1):
-            height = _instance_height(dc, row_count)
+            height = _instance_height(dc, row_count, table)
             if used + height > budget:
                 continue
             stack.append(((*rows, row_count), used + height))
@@ -320,7 +326,7 @@ def _iter_table_shapes(
 def _iter_feasible_shapes(dc: DocumentClass):
     budget = _available_height(dc) - _fixed_height(dc)
     minimum_by_table = [
-        table.instances[0] * _instance_height(dc, table.rows[0])
+        table.instances[0] * _instance_height(dc, table.rows[0], table)
         for table in dc.tables
     ]
     minimum_suffix = [0] * (len(dc.tables) + 1)
@@ -331,7 +337,7 @@ def _iter_feasible_shapes(dc: DocumentClass):
         table = dc.tables[table_index]
         remaining_budget = budget - used - minimum_suffix[table_index + 1]
         for instances in range(table.instances[0], table.instances[1] + 1):
-            minimum = instances * _instance_height(dc, table.rows[0])
+            minimum = instances * _instance_height(dc, table.rows[0], table)
             if minimum > remaining_budget:
                 break
             for table_shape, table_height in _iter_table_shapes(
