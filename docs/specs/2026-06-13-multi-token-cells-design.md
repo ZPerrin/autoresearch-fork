@@ -1,6 +1,6 @@
 # Multi-token cells — design
 
-- Status: **design** (full-agentic build; first structural-realism follow-on on the synth-toolkit backbone)
+- Status: **shipped** (merged to `master`; first structural-realism follow-on on the synth-toolkit backbone). Plan: `docs/plans/2026-06-13-multi-token-cells.md`.
 - Date: 2026-06-13
 - Parent: `docs/specs/2026-06-13-design-and-roadmap.md` (§ structural realism, item 1) and the backbone
   spec `2026-06-13-synth-toolkit-backbone-design.md`.
