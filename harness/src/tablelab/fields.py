@@ -90,18 +90,18 @@ SAMPLERS["name"] = _name
 SAMPLERS["id"] = _id
 SAMPLERS["category"] = _category
 
-# Verbose service-line descriptions (multi-word) for wrapped/multi-line cells. Sized to
-# wrap to ~2 lines under the eob description column cap; keep individual words short so a
-# single word never overflows the column (see wrapped-cells design).
+# Verbose service-line descriptions (multi-word) for wrapped/multi-line cells. Entries are
+# sized to wrap to ≤ 2 lines at the eob description column cap (max_width=178 → col_text_w=154);
+# every individual word must be ≤ 154px at font 22 so no single word overflows its line cell.
 _SERVICE_DESC = (
-    "Office visit established patient",
-    "Comprehensive metabolic blood panel",
-    "Diagnostic chest radiograph series",
-    "Physical therapy exercise session",
-    "Preventive annual wellness exam",
-    "Outpatient specialist consultation visit",
-    "Complete blood count laboratory",
-    "Influenza immunization administration",
+    "annual wellness exam",
+    "physical exam visit",
+    "blood panel test",
+    "preventive care exam",
+    "specialist consult visit",
+    "chest imaging scan",
+    "routine blood test",
+    "follow-up care visit",
 )
 
 

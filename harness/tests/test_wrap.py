@@ -136,3 +136,29 @@ def test_capacity_reserves_worst_case_lines():
 def test_capacity_ok_for_single_line_reservation():
     # 2 rows * (1 * 40) = 80 < available 180 -> fits.
     validate_layout_capacity(_short_page_wrap_class(max_lines=1))
+
+
+def test_eob_description_wraps_within_max_lines():
+    from tablelab import classes as classlib
+    from tablelab.render import render
+    dc = classlib.get("eob")
+    desc_field = next(i for i, f in enumerate(dc.tables[0].fields) if f.name == "description")
+    saw_wrap = False
+    for seed in range(40):
+        placed = layout(dc, random.Random(seed))
+        # group description tokens by (region, record); each group's distinct line-tops <= max_lines
+        groups: dict[tuple, set] = {}
+        for p in placed:
+            if p.label and p.label.get("field") == desc_field and "record" in p.label:
+                key = (p.label.get("region"), p.label["record"])
+                groups.setdefault(key, set()).add(round(p.cell[1], 1))
+        for tops in groups.values():
+            assert len(tops) <= dc.tables[0].fields[desc_field].max_lines
+            if len(tops) >= 2:
+                saw_wrap = True
+        # every box stays in page
+        _img, boxes = render(placed, dc)
+        W, H = dc.layout.page
+        for (x0, y0, x1, y1) in boxes:
+            assert 0 <= x0 <= x1 <= W and 0 <= y0 <= y1 <= H
+    assert saw_wrap, "expected the eob description to wrap on at least one seed"
