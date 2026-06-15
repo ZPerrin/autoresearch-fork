@@ -21,9 +21,10 @@ def classes() -> list[str]:
 
 
 def _f(name: str, type_: str, align: str, width: float | None = None,
-       fill: float = 1.0, group: str | None = None) -> FieldSpec:
+       fill: float = 1.0, group: str | None = None,
+       max_width: float | None = None, max_lines: int = 1) -> FieldSpec:
     return FieldSpec(name=name, type=type_, align=align, width=width, fill=fill,
-                     group=group)
+                     group=group, max_width=max_width, max_lines=max_lines)
 
 
 _INVOICE_BACKGROUND = (
@@ -65,7 +66,7 @@ register(DocumentClass(
         TableSpec(name="claim_line", fields=(
             _f("service_date", "date", "left"),
             _f("code", "code", "left"),
-            _f("description", "description", "left"),
+            _f("description", "service_desc", "left", max_width=178.0, max_lines=2),
             _f("amount_billed", "amount", "right", group="Charges"),
             _f("allowed", "amount", "right", group="Charges"),
             _f("deductible", "amount", "right", fill=0.3, group="Patient Responsibility"),

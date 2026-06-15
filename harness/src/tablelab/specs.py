@@ -10,6 +10,8 @@ class FieldSpec:
     width: float | None = None  # column weight; None => fields.TYPE_WIDTH default
     fill: float = 1.0    # probability a data cell is populated; < 1.0 leaves some cells empty (no token)
     group: str | None = None  # contiguous fields sharing a group name form one header banner cell
+    max_width: float | None = None  # cap on content-aware column width (px); wider values wrap. None = grow-to-fit
+    max_lines: int = 1              # upper bound on wrapped lines; used for worst-case capacity reservation
 
 
 @dataclass(frozen=True)
@@ -48,6 +50,7 @@ class LayoutSpec:
     instance_gap: int | None = None       # gap between stacked instances (None => table_gap)
     section_gap: int | None = None        # gap between sections globals->tables->background (None => table_gap)
     globals_per_row: int = 1              # label:value pairs packed across one global row
+    line_h: int | None = None             # intra-cell wrapped-line height; None => round(font_size * 1.4)
 
 
 @dataclass(frozen=True)

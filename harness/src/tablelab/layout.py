@@ -46,14 +46,19 @@ def _fit_font(fields, usable: float, pad: int, header: bool, grid: list[list[str
     """Largest font (<= base) at which the columns' content fits the usable width.
     Sums each column's widest content (header + populated cells); leaves the fixed
     padding out of the scale and keeps a safety margin so the re-measured widths fit
-    without tripping the degenerate column-scale. Returns base_font when it already fits."""
+    without tripping the degenerate column-scale. Returns base_font when it already fits.
+    A field with max_width set has its contribution capped at max_width - 2*pad so that
+    a column that will wrap does not needlessly trigger a font shrink."""
     text_total = 0.0
     for c, f in enumerate(fields):
         texts = [row[c] for row in grid if row[c]]
         if header:
             texts.append(_header_text(f.name))
         if texts:
-            text_total += max(text_width(t, base_font) for t in texts)
+            longest = max(text_width(t, base_font) for t in texts)
+            if f.max_width is not None:
+                longest = min(longest, max(f.max_width - 2 * pad, 0.0))
+            text_total += longest
     avail = usable - len(fields) * 2 * pad
     if text_total <= 0:
         return base_font
@@ -68,22 +73,32 @@ def _fit_font(fields, usable: float, pad: int, header: bool, grid: list[list[str
 def _content_column_widths(fields, usable: float, pad: int, header: bool,
                            grid: list[list[str]], font_size: int) -> list[float]:
     """Content floor + weighted slack. Each column is at least wide enough for the
-    widest of its header label and sampled values (plus padding); leftover usable
-    width is shared across columns in proportion to their weights."""
+    widest of its header label and sampled values (plus padding); a field with
+    max_width is frozen at min(content_floor, max_width) and excluded from slack, so
+    its value wraps. Leftover usable width is shared across the remaining columns by
+    weight, so the table still fills the page."""
     mins = []
+    capped: set[int] = set()
     for c, f in enumerate(fields):
         texts = [row[c] for row in grid]
         if header:
             texts.append(_header_text(f.name))
         longest = max((text_width(t, font_size) for t in texts), default=0.0)
-        mins.append(longest + 2 * pad)
+        floor = longest + 2 * pad
+        if f.max_width is not None:
+            floor = min(floor, float(f.max_width))
+            capped.add(c)
+        mins.append(floor)
     total_min = sum(mins)
     if total_min >= usable:
         scale = usable / total_min if total_min > 0 else 1.0
         return [m * scale for m in mins]
     slack = usable - total_min
-    weights = [field_weight(f) for f in fields]
-    wtotal = sum(weights) or 1.0
+    weights = [0.0 if c in capped else field_weight(f) for c, f in enumerate(fields)]
+    wtotal = sum(weights)
+    if wtotal <= 0:  # every column capped: fall back to weighting all so the table fills
+        weights = [field_weight(f) for f in fields]
+        wtotal = sum(weights) or 1.0
     return [mins[c] + slack * weights[c] / wtotal for c in range(len(fields))]
 
 
@@ -114,9 +129,45 @@ class PlacedToken:
     dy: float = 0.0
 
 
+@dataclass
+class PlacedRegion:
+    region: int                                # matches the {"region": k} token label
+    table: str                                 # table name (e.g. "claim_line")
+    bbox: tuple[float, float, float, float]    # page px (x0, y0, x1, y1)
+
+
 def _header_text(name: str) -> str:
     """Field name → display header, e.g. 'unit_price' -> 'Unit Price'."""
     return name.replace("_", " ").title()
+
+
+def _line_h(dc: DocumentClass) -> int:
+    """Intra-cell wrapped-line height: explicit LayoutSpec.line_h, else font-scaled.
+    Kept below the default row_h so a single-line row keeps height row_h."""
+    L = dc.layout
+    return L.line_h if L.line_h is not None else round(dc.render.font_size * 1.4)
+
+
+def _wrap(words: list[str], col_width: float, font_size: int) -> list[list[str]]:
+    """Greedy word-wrap: pack words into lines no wider than col_width px. A single word
+    wider than col_width gets its own line (never split mid-word). Order is preserved."""
+    lines: list[list[str]] = []
+    cur: list[str] = []
+    cur_w = 0.0
+    space = text_width(" ", font_size)
+    for w in words:
+        ww = text_width(w, font_size)
+        if not cur:
+            cur, cur_w = [w], ww
+        elif cur_w + space + ww <= col_width:
+            cur.append(w)
+            cur_w += space + ww
+        else:
+            lines.append(cur)
+            cur, cur_w = [w], ww
+    if cur:
+        lines.append(cur)
+    return lines
 
 
 def _group_runs(fields) -> list[tuple[str, int, int]]:
@@ -308,6 +359,15 @@ def _is_safe_legacy(dc: DocumentClass) -> bool:
     return _fixed_height(dc) + _shape_height(dc, maximum) <= _available_height(dc)
 
 
+def _data_row_h(dc: DocumentClass, table: TableSpec | None) -> int:
+    """Reserved height of one data row: row_h, grown to the worst-case wrapped height
+    (max field max_lines * line_h) so capacity planning never underestimates."""
+    if table is None:
+        return dc.layout.row_h
+    max_lines = max((f.max_lines for f in table.fields), default=1)
+    return max(dc.layout.row_h, max_lines * _line_h(dc))
+
+
 def _instance_height(dc: DocumentClass, rows: int, table: TableSpec | None = None) -> int:
     L = dc.layout
     header = int(dc.structure.header)
@@ -317,7 +377,7 @@ def _instance_height(dc: DocumentClass, rows: int, table: TableSpec | None = Non
         section = int(table.section is not None)
         totals = int(table.totals is not None)
     fixed_rows = header + banner + section + totals
-    return (fixed_rows * L.row_h + rows * L.row_h
+    return (fixed_rows * L.row_h + rows * _data_row_h(dc, table)
             + max(rows - 1, 0) * _row_gap(dc) + _instance_gap(dc))
 
 
@@ -447,7 +507,7 @@ def validate_layout_capacity(dc: DocumentClass) -> None:
         raise _capacity_error(dc, _available_height(dc), _fixed_height(dc))
 
 
-def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
+def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[PlacedToken], list[PlacedRegion]]:
     """Place one document's tokens (logical, no Pillow). Global/singleton fields
     (dc.globals) are laid out first as label:value rows at the top; then each table
     is drawn as stacked instances with table_gap, tagged with a
@@ -465,6 +525,7 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
     shape = _choose_shape(dc, rng)
     multi_region = len(dc.tables) > 1 or sum(t.instances[1] for t in dc.tables) > 1
     placed: list[PlacedToken] = []
+    regions: list[PlacedRegion] = []
     y = float(my)
     if dc.globals:
         gpr = max(L.globals_per_row, 1)
@@ -491,6 +552,7 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
         C = len(table.fields)
         explicit_widths = all(f.width is not None for f in table.fields)
         for rows in table_shape:
+            y_start = y
             reg = {"region": region} if multi_region else {}
             grid = [[_sample_cell(table.fields[c], rng) for c in range(C)]
                     for _ in range(rows)]
@@ -520,13 +582,23 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
                 _emit_span_row(placed, table.section.cells, edges, y, L.row_h,
                                {**reg, "section": True}, cell_font, multi, rng)
                 y += L.row_h
+            line_h = _line_h(dc)
             for r in range(rows):
                 row_edges = (jitter_column_edges(edges, J.col_w, rng)
                              if J.col_w > 0 else edges)
-                cell_h = L.row_h
+                # Content-aware height: a wrappable cell that wraps to N lines grows the row.
+                row_lines = 1
+                for c in range(C):
+                    f = table.fields[c]
+                    v = grid[r][c]
+                    if f.max_width is not None and v:
+                        col_text_w = (row_edges[c + 1] - row_edges[c]) - 2 * L.pad
+                        row_lines = max(row_lines, len(_wrap(v.split(), col_text_w, cell_font)))
+                base_h = max(L.row_h, row_lines * line_h)
+                cell_h = base_h
                 gap_after = _row_gap(dc)
                 if J.row_h > 0 and _row_gap(dc) > 0:
-                    cell_h, delta = jitter_row_height(L.row_h, J.row_h, _row_gap(dc), rng)
+                    cell_h, delta = jitter_row_height(base_h, J.row_h, _row_gap(dc), rng)
                     gap_after = _row_gap(dc) + delta
                 for c in range(C):
                     f = table.fields[c]
@@ -534,9 +606,25 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
                     if not value:
                         continue  # sparse cell: leave it empty, emit no token
                     x0, x1 = row_edges[c], row_edges[c + 1]
-                    cell = (x0, y, x1, y + cell_h)
-                    _emit(placed, value, cell,
-                          {**reg, "record": r, "field": c}, f.align, cell_font, multi)
+                    if f.max_width is not None:
+                        col_text_w = (x1 - x0) - 2 * L.pad
+                        lines = _wrap(value.split(), col_text_w, cell_font)
+                        block_h = len(lines) * line_h
+                        top = y + (cell_h - block_h) / 2
+                        seq = 0
+                        for k, words in enumerate(lines):
+                            ly0 = top + k * line_h
+                            line_cell = (x0, ly0, x1, ly0 + line_h)
+                            for w in words:
+                                placed.append(PlacedToken(
+                                    text=w, cell=line_cell,
+                                    label={**reg, "record": r, "field": c, "seq": seq},
+                                    align=f.align, font_size=cell_font))
+                                seq += 1
+                    else:
+                        cell = (x0, y, x1, y + cell_h)
+                        _emit(placed, value, cell,
+                              {**reg, "record": r, "field": c}, f.align, cell_font, multi)
                 y += cell_h
                 if r < rows - 1:
                     y += gap_after
@@ -545,6 +633,9 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
                                {**reg, "subtotal": True}, cell_font, multi, rng,
                                header_on_text=True)
                 y += L.row_h
+            regions.append(PlacedRegion(
+                region=region, table=table.name,
+                bbox=(edges[0], y_start, edges[-1], y)))
             y += _instance_gap(dc)
             region += 1
     n_bg = dc.structure.background
@@ -563,4 +654,9 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
         for p in placed:
             p.dx, p.dy = jitter_offset(J.offset, J.baseline, L.pad, rng)
     rng.shuffle(placed)
-    return placed
+    return placed, regions
+
+
+def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
+    """Tokens only (back-compat). Use layout_with_regions when per-instance bboxes are needed."""
+    return layout_with_regions(dc, rng)[0]

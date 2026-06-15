@@ -279,6 +279,7 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
   }
 
   const { tokens, image } = sample
+  const regions = sample.regions ?? []
 
   const statuses = tokens.map(token => predictionMatchStatus(task, token.label, token.pred))
   const hasGT = tokens.some(token => token.pred == null)
@@ -370,6 +371,21 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
             preserveAspectRatio="xMidYMid meet"
             xmlns="http://www.w3.org/2000/svg"
           >
+            {regions.map((rg, i) => (
+              <rect
+                key={`region-${i}`}
+                x={rg.bbox[0] * width}
+                y={rg.bbox[1] * height}
+                width={(rg.bbox[2] - rg.bbox[0]) * width}
+                height={(rg.bbox[3] - rg.bbox[1]) * height}
+                fill="none"
+                stroke="#9333EA"
+                strokeWidth={2}
+                strokeDasharray="8 6"
+                rx={4}
+                pointerEvents="none"
+              />
+            ))}
             {tokens.map((tok, i) => {
               const sel = tok === selectedToken
               const { fill, stroke } = tokenColors(tok, task, sel)

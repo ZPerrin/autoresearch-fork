@@ -45,8 +45,14 @@ def test_row_gap_increases_row_pitch():
     dc = classlib.get("eob")
     base = layout(dc, random.Random(1))
     spaced = layout(fork(dc, layout=replace(dc.layout, row_gap=30)), random.Random(1))
-    ys = lambda p: sorted({t.cell[1] for t in p if t.label and t.label.get("record") is not None})
-    assert ys(spaced)[1] - ys(spaced)[0] > ys(base)[1] - ys(base)[0]
+    # Exclude wrapped-line tokens (they carry "seq" and span intra-row lines; those
+    # would pollute the set with positions that reflect centering within a row rather
+    # than the row's top, confusing the inter-row pitch comparison).
+    def row_ys(p):
+        return sorted({t.cell[1] for t in p
+                       if t.label and t.label.get("record") is not None
+                       and "seq" not in t.label})
+    assert row_ys(spaced)[1] - row_ys(spaced)[0] > row_ys(base)[1] - row_ys(base)[0]
 
 
 def test_oversized_gaps_fail_capacity_cleanly():
