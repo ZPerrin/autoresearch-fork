@@ -1,6 +1,7 @@
 # Wrapped (multi-line) cells + table bbox metadata — design
 
-- Status: **proposed**. Two structural additions requested before document-class breadth. Parent:
+- Status: **shipped** (branch `exp/wrapped-cells-table-bbox`). Two structural additions requested
+  before document-class breadth. Plan: `docs/plans/2026-06-14-wrapped-cells-table-bbox.md`. Parent:
   `docs/specs/2026-06-13-design-and-roadmap.md`.
 - Date: 2026-06-14
 - Follows: `docs/specs/2026-06-14-spanning-cells-grouped-headers-design.md` (completed the ordered

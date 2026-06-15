@@ -83,6 +83,12 @@ Data is multimodal from the start (LayoutLMv3 stack): **spatial** (token boxes),
   class is now a representative ten-column claim form on a wide page. CLI exposes all knobs; the
   viewer surfaces resolved spacing/jitter. Default output stays byte-identical (golden test). See
   `2026-06-14-realistic-spacing-jitter-design.md`.
+- **Wrapped cells + table bbox**: `FieldSpec.max_width`/`max_lines` wrap a cell's value to multiple
+  per-word line-tokens (each its own sub-rect; renderer untouched; content-aware row height with
+  worst-case capacity reservation), with line breaks independent of labeling. `Sample.regions`
+  records each table-instance bbox (layout cell-rect extent, additive to contract v2; surfaced as a
+  viewer overlay). The eob `description` column wraps to two lines. Default output stays
+  byte-identical (golden). See `2026-06-14-wrapped-cells-table-bbox-design.md`.
 
 ## Roadmap (milestones — each gets its own plan when started)
 
