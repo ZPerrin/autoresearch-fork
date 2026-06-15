@@ -83,3 +83,34 @@ def test_uncapped_columns_still_fill_page():
     placed = layout(dc, random.Random(0))
     x1s = [p.cell[2] for p in placed if p.label and "field" in p.label]
     assert abs(max(x1s) - (W - mx)) < 1e-6  # table still spans to the right margin
+
+
+def test_wrapped_cell_emits_stacked_line_tokens():
+    # A capped column whose value wraps emits one token per word, sharing the field label,
+    # split across >=2 distinct vertical line positions.
+    dc = _capped_class(max_width=110.0)
+    found = False
+    for seed in range(30):
+        placed = layout(dc, random.Random(seed))
+        desc = [p for p in placed if p.label and p.label.get("field") == 0 and "record" in p.label]
+        ys = sorted({round(p.cell[1], 1) for p in desc})
+        if len(ys) >= 2:                                  # this sample wrapped
+            found = True
+            assert all(p.label["field"] == 0 and "record" in p.label for p in desc)
+            assert all("seq" in p.label for p in desc)    # individual word tokens carry order
+            # words on the same line share one cell rect
+            line0 = [p for p in desc if round(p.cell[1], 1) == ys[0]]
+            assert len({p.cell for p in line0}) == 1
+            break
+    assert found, "expected at least one wrapped sample at max_width=110"
+
+
+def test_wrapped_words_stay_within_their_column():
+    from tablelab.render import render
+    dc = _capped_class(max_width=110.0)
+    for seed in range(10):
+        placed = layout(dc, random.Random(seed))
+        _img, boxes = render(placed, dc)
+        for p, b in zip(placed, boxes):
+            if p.label and p.label.get("field") == 0 and "record" in p.label:
+                assert b[0] >= p.cell[0] - 1 and b[2] <= p.cell[2] + 1, (p.text, p.cell, b)

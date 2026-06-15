@@ -564,13 +564,23 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
                 _emit_span_row(placed, table.section.cells, edges, y, L.row_h,
                                {**reg, "section": True}, cell_font, multi, rng)
                 y += L.row_h
+            line_h = _line_h(dc)
             for r in range(rows):
                 row_edges = (jitter_column_edges(edges, J.col_w, rng)
                              if J.col_w > 0 else edges)
-                cell_h = L.row_h
+                # Content-aware height: a wrappable cell that wraps to N lines grows the row.
+                row_lines = 1
+                for c in range(C):
+                    f = table.fields[c]
+                    v = grid[r][c]
+                    if f.max_width is not None and v:
+                        col_text_w = (row_edges[c + 1] - row_edges[c]) - 2 * L.pad
+                        row_lines = max(row_lines, len(_wrap(v.split(), col_text_w, cell_font)))
+                base_h = max(L.row_h, row_lines * line_h)
+                cell_h = base_h
                 gap_after = _row_gap(dc)
                 if J.row_h > 0 and _row_gap(dc) > 0:
-                    cell_h, delta = jitter_row_height(L.row_h, J.row_h, _row_gap(dc), rng)
+                    cell_h, delta = jitter_row_height(base_h, J.row_h, _row_gap(dc), rng)
                     gap_after = _row_gap(dc) + delta
                 for c in range(C):
                     f = table.fields[c]
@@ -578,9 +588,25 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
                     if not value:
                         continue  # sparse cell: leave it empty, emit no token
                     x0, x1 = row_edges[c], row_edges[c + 1]
-                    cell = (x0, y, x1, y + cell_h)
-                    _emit(placed, value, cell,
-                          {**reg, "record": r, "field": c}, f.align, cell_font, multi)
+                    if f.max_width is not None:
+                        col_text_w = (x1 - x0) - 2 * L.pad
+                        lines = _wrap(value.split(), col_text_w, cell_font)
+                        block_h = len(lines) * line_h
+                        top = y + (cell_h - block_h) / 2
+                        seq = 0
+                        for k, words in enumerate(lines):
+                            ly0 = top + k * line_h
+                            line_cell = (x0, ly0, x1, ly0 + line_h)
+                            for w in words:
+                                placed.append(PlacedToken(
+                                    text=w, cell=line_cell,
+                                    label={**reg, "record": r, "field": c, "seq": seq},
+                                    align=f.align, font_size=cell_font))
+                                seq += 1
+                    else:
+                        cell = (x0, y, x1, y + cell_h)
+                        _emit(placed, value, cell,
+                              {**reg, "record": r, "field": c}, f.align, cell_font, multi)
                 y += cell_h
                 if r < rows - 1:
                     y += gap_after
