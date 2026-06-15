@@ -90,6 +90,27 @@ SAMPLERS["name"] = _name
 SAMPLERS["id"] = _id
 SAMPLERS["category"] = _category
 
+# Verbose service-line descriptions (multi-word) for wrapped/multi-line cells. Sized to
+# wrap to ~2 lines under the eob description column cap; keep individual words short so a
+# single word never overflows the column (see wrapped-cells design).
+_SERVICE_DESC = (
+    "Office visit established patient",
+    "Comprehensive metabolic blood panel",
+    "Diagnostic chest radiograph series",
+    "Physical therapy exercise session",
+    "Preventive annual wellness exam",
+    "Outpatient specialist consultation visit",
+    "Complete blood count laboratory",
+    "Influenza immunization administration",
+)
+
+
+def _service_desc(rng: random.Random) -> str:
+    return rng.choice(_SERVICE_DESC)
+
+
+SAMPLERS["service_desc"] = _service_desc
+
 # Default column width weights by field type. A column's pixel width is
 # usable_width * weight / sum(weights). Explicit FieldSpec.width overrides this.
 TYPE_WIDTH = {
@@ -101,6 +122,7 @@ TYPE_WIDTH = {
     "quantity": 1.0,
     "unit_price": 1.5,
     "amount": 1.5,
+    "service_desc": 4.0,
 }
 
 

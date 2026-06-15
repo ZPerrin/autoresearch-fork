@@ -20,3 +20,11 @@ def test_fieldspec_wrap_knobs_default_off():
 
 def test_layoutspec_line_h_defaults_none():
     assert LayoutSpec().line_h is None
+
+
+def test_service_desc_sampler_is_multiword():
+    from tablelab.fields import sample
+    rng = random.Random(0)
+    vals = {sample("service_desc", rng) for _ in range(50)}
+    assert vals  # non-empty vocab
+    assert all(len(v.split()) >= 2 for v in vals)  # always multi-word so it can wrap
