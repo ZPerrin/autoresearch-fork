@@ -16,12 +16,19 @@ export interface Token {
   pred: TokenPrediction | null
 }
 
+export interface Region {
+  region: number
+  table: string
+  bbox: [number, number, number, number]   // normalized [0,1] (x0, y0, x1, y1)
+}
+
 export interface Sample {
   id: number
   image: string        // URL like /datasets/<id>/images/0.png
   width: number        // page pixel width
   height: number       // page pixel height
   tokens: Token[]
+  regions?: Region[]
 }
 
 export interface SamplesFile {
