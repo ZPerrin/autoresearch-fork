@@ -552,6 +552,7 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
         C = len(table.fields)
         explicit_widths = all(f.width is not None for f in table.fields)
         for rows in table_shape:
+            y_start = y
             reg = {"region": region} if multi_region else {}
             grid = [[_sample_cell(table.fields[c], rng) for c in range(C)]
                     for _ in range(rows)]
@@ -632,6 +633,9 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
                                {**reg, "subtotal": True}, cell_font, multi, rng,
                                header_on_text=True)
                 y += L.row_h
+            regions.append(PlacedRegion(
+                region=region, table=table.name,
+                bbox=(edges[0], y_start, edges[-1], y)))
             y += _instance_gap(dc)
             region += 1
     n_bg = dc.structure.background
