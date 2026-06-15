@@ -58,3 +58,28 @@ def test_line_h_honors_explicit_override():
         TableSpec(name="x", fields=(FieldSpec("a", "amount", "right"),)),),
         layout=LayoutSpec(line_h=40))
     assert _line_h(dc) == 40
+
+
+def _capped_class(max_width, page=(600, 400)):
+    fields = (FieldSpec("desc", "service_desc", "left", max_width=max_width),
+              FieldSpec("amt", "amount", "right"))
+    return DocumentClass(name="t", tables=(
+        TableSpec(name="x", fields=fields, rows=(2, 2), instances=(1, 1)),),
+        layout=LayoutSpec(page=page, margin=(20, 20)))
+
+
+def test_capped_column_does_not_exceed_max_width():
+    dc = _capped_class(max_width=120.0)
+    placed = layout(dc, random.Random(0))
+    desc_w = {round(p.cell[2] - p.cell[0], 1)
+              for p in placed if p.label and p.label.get("field") == 0 and "record" in p.label}
+    assert desc_w  # has description tokens
+    assert max(desc_w) <= 120.0 + 0.5  # frozen at the cap
+
+
+def test_uncapped_columns_still_fill_page():
+    dc = _capped_class(max_width=120.0)
+    W, mx = dc.layout.page[0], dc.layout.margin[0]
+    placed = layout(dc, random.Random(0))
+    x1s = [p.cell[2] for p in placed if p.label and "field" in p.label]
+    assert abs(max(x1s) - (W - mx)) < 1e-6  # table still spans to the right margin

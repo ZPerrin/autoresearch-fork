@@ -46,14 +46,19 @@ def _fit_font(fields, usable: float, pad: int, header: bool, grid: list[list[str
     """Largest font (<= base) at which the columns' content fits the usable width.
     Sums each column's widest content (header + populated cells); leaves the fixed
     padding out of the scale and keeps a safety margin so the re-measured widths fit
-    without tripping the degenerate column-scale. Returns base_font when it already fits."""
+    without tripping the degenerate column-scale. Returns base_font when it already fits.
+    A field with max_width set has its contribution capped at max_width - 2*pad so that
+    a column that will wrap does not needlessly trigger a font shrink."""
     text_total = 0.0
     for c, f in enumerate(fields):
         texts = [row[c] for row in grid if row[c]]
         if header:
             texts.append(_header_text(f.name))
         if texts:
-            text_total += max(text_width(t, base_font) for t in texts)
+            longest = max(text_width(t, base_font) for t in texts)
+            if f.max_width is not None:
+                longest = min(longest, max(f.max_width - 2 * pad, 0.0))
+            text_total += longest
     avail = usable - len(fields) * 2 * pad
     if text_total <= 0:
         return base_font
@@ -68,22 +73,32 @@ def _fit_font(fields, usable: float, pad: int, header: bool, grid: list[list[str
 def _content_column_widths(fields, usable: float, pad: int, header: bool,
                            grid: list[list[str]], font_size: int) -> list[float]:
     """Content floor + weighted slack. Each column is at least wide enough for the
-    widest of its header label and sampled values (plus padding); leftover usable
-    width is shared across columns in proportion to their weights."""
+    widest of its header label and sampled values (plus padding); a field with
+    max_width is frozen at min(content_floor, max_width) and excluded from slack, so
+    its value wraps. Leftover usable width is shared across the remaining columns by
+    weight, so the table still fills the page."""
     mins = []
+    capped: set[int] = set()
     for c, f in enumerate(fields):
         texts = [row[c] for row in grid]
         if header:
             texts.append(_header_text(f.name))
         longest = max((text_width(t, font_size) for t in texts), default=0.0)
-        mins.append(longest + 2 * pad)
+        floor = longest + 2 * pad
+        if f.max_width is not None:
+            floor = min(floor, float(f.max_width))
+            capped.add(c)
+        mins.append(floor)
     total_min = sum(mins)
     if total_min >= usable:
         scale = usable / total_min if total_min > 0 else 1.0
         return [m * scale for m in mins]
     slack = usable - total_min
-    weights = [field_weight(f) for f in fields]
-    wtotal = sum(weights) or 1.0
+    weights = [0.0 if c in capped else field_weight(f) for c, f in enumerate(fields)]
+    wtotal = sum(weights)
+    if wtotal <= 0:  # every column capped: fall back to weighting all so the table fills
+        weights = [field_weight(f) for f in fields]
+        wtotal = sum(weights) or 1.0
     return [mins[c] + slack * weights[c] / wtotal for c in range(len(fields))]
 
 
