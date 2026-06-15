@@ -119,6 +119,35 @@ def _header_text(name: str) -> str:
     return name.replace("_", " ").title()
 
 
+def _line_h(dc: DocumentClass) -> int:
+    """Intra-cell wrapped-line height: explicit LayoutSpec.line_h, else font-scaled.
+    Kept below the default row_h so a single-line row keeps height row_h."""
+    L = dc.layout
+    return L.line_h if L.line_h is not None else round(dc.render.font_size * 1.4)
+
+
+def _wrap(words: list[str], col_width: float, font_size: int) -> list[list[str]]:
+    """Greedy word-wrap: pack words into lines no wider than col_width px. A single word
+    wider than col_width gets its own line (never split mid-word). Order is preserved."""
+    lines: list[list[str]] = []
+    cur: list[str] = []
+    cur_w = 0.0
+    space = text_width(" ", font_size)
+    for w in words:
+        ww = text_width(w, font_size)
+        if not cur:
+            cur, cur_w = [w], ww
+        elif cur_w + space + ww <= col_width:
+            cur.append(w)
+            cur_w += space + ww
+        else:
+            lines.append(cur)
+            cur, cur_w = [w], ww
+    if cur:
+        lines.append(cur)
+    return lines
+
+
 def _group_runs(fields) -> list[tuple[str, int, int]]:
     """Maximal runs of equal non-None FieldSpec.group → (name, c0, c1) inclusive ranges.
     Ungrouped (group=None) columns are skipped (they get no banner cell)."""
