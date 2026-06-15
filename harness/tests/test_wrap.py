@@ -106,8 +106,10 @@ def test_wrapped_cell_emits_stacked_line_tokens():
 
 
 def test_wrapped_words_stay_within_their_column():
+    # max_width wide enough that every individual service_desc word fits the column (so a
+    # phrase wraps across lines but no single word overflows — a word cannot be split).
     from tablelab.render import render
-    dc = _capped_class(max_width=110.0)
+    dc = _capped_class(max_width=240.0)
     for seed in range(10):
         placed = layout(dc, random.Random(seed))
         _img, boxes = render(placed, dc)

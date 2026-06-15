@@ -49,10 +49,7 @@ def render(placed: list[PlacedToken], dc: DocumentClass) -> tuple[Image.Image, l
             tx += p.dx
             ty += p.dy
             draw.text((tx, ty), p.text, fill="black", font=font)
-            raw = draw.textbbox((tx, ty), p.text, font=font)
-            # Clamp reported box to cell horizontal bounds so callers can rely on
-            # box ⊆ cell; needed when an oversized word exceeds the column cap.
-            boxes[idxs[0]] = (raw[0], raw[1], min(raw[2], cx1), raw[3])
+            boxes[idxs[0]] = draw.textbbox((tx, ty), p.text, font=font)
             continue
 
         # Multi-word: lay the words out as a contiguous phrase within the cell.
