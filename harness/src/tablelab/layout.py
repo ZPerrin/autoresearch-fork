@@ -129,6 +129,13 @@ class PlacedToken:
     dy: float = 0.0
 
 
+@dataclass
+class PlacedRegion:
+    region: int                                # matches the {"region": k} token label
+    table: str                                 # table name (e.g. "claim_line")
+    bbox: tuple[float, float, float, float]    # page px (x0, y0, x1, y1)
+
+
 def _header_text(name: str) -> str:
     """Field name → display header, e.g. 'unit_price' -> 'Unit Price'."""
     return name.replace("_", " ").title()
@@ -500,7 +507,7 @@ def validate_layout_capacity(dc: DocumentClass) -> None:
         raise _capacity_error(dc, _available_height(dc), _fixed_height(dc))
 
 
-def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
+def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[PlacedToken], list[PlacedRegion]]:
     """Place one document's tokens (logical, no Pillow). Global/singleton fields
     (dc.globals) are laid out first as label:value rows at the top; then each table
     is drawn as stacked instances with table_gap, tagged with a
@@ -518,6 +525,7 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
     shape = _choose_shape(dc, rng)
     multi_region = len(dc.tables) > 1 or sum(t.instances[1] for t in dc.tables) > 1
     placed: list[PlacedToken] = []
+    regions: list[PlacedRegion] = []
     y = float(my)
     if dc.globals:
         gpr = max(L.globals_per_row, 1)
@@ -642,4 +650,9 @@ def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
         for p in placed:
             p.dx, p.dy = jitter_offset(J.offset, J.baseline, L.pad, rng)
     rng.shuffle(placed)
-    return placed
+    return placed, regions
+
+
+def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
+    """Tokens only (back-compat). Use layout_with_regions when per-instance bboxes are needed."""
+    return layout_with_regions(dc, rng)[0]
