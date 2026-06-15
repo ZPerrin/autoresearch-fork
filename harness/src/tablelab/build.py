@@ -13,8 +13,8 @@ from pathlib import Path
 from tqdm import tqdm
 
 from .specs import DocumentClass
-from .artifacts import Sample, Token, DatasetManifest, write_dataset
-from .layout import layout, validate_layout_capacity
+from .artifacts import Sample, Token, Region, DatasetManifest, write_dataset
+from .layout import layout_with_regions, validate_layout_capacity
 from .render import render
 
 GENERATOR_VERSION = 2
@@ -181,7 +181,7 @@ def build_dataset(datasets_dir: Path | str, dataset_id: str, doc_class: Document
             (staging_dir / "images").mkdir(parents=True)
             samples: list[Sample] = []
             for i in tqdm(range(n), desc=dataset_id):
-                placed = layout(doc_class, rng)
+                placed, placed_regions = layout_with_regions(doc_class, rng)
                 img, boxes = render(placed, doc_class)
                 _validate_boxes(boxes, placed, dataset_id, i, W, H)
                 img.save(staging_dir / "images" / f"{i}.png")
@@ -189,8 +189,13 @@ def build_dataset(datasets_dir: Path | str, dataset_id: str, doc_class: Document
                                 x1=round(b[2] / W, 4), y1=round(b[3] / H, 4),
                                 text=p.text, label=p.label)
                           for p, b in zip(placed, boxes)]
+                regions = [Region(region=r.region, table=r.table,
+                                  bbox=[round(r.bbox[0] / W, 4), round(r.bbox[1] / H, 4),
+                                        round(r.bbox[2] / W, 4), round(r.bbox[3] / H, 4)])
+                           for r in placed_regions]
                 samples.append(Sample(id=i, tokens=tokens, width=W, height=H,
-                                      image=f"/datasets/{dataset_id}/images/{i}.png"))
+                                      image=f"/datasets/{dataset_id}/images/{i}.png",
+                                      regions=regions))
             manifest = DatasetManifest(
                 dataset_id=dataset_id, generator_version=GENERATOR_VERSION,
                 task="grid_record_field", modalities=["spatial", "semantic", "visual"],

@@ -68,3 +68,17 @@ def test_sample_regions_round_trip(tmp_path):
 def test_sample_regions_default_none():
     from tablelab.artifacts import Sample
     assert Sample(id=0, tokens=[]).regions is None
+
+
+def test_build_dataset_writes_normalized_regions(tmp_path):
+    from tablelab.build import build_dataset
+    from tablelab.artifacts import read_dataset, Region
+    ds = build_dataset(tmp_path, "rg-eob", classlib.get("eob"), seed=7, n=2)
+    _m, samples = read_dataset(ds)
+    assert all(s.regions for s in samples)
+    for s in samples:
+        for r in s.regions:
+            assert isinstance(r, Region)
+            assert r.table == "claim_line"
+            assert all(0.0 <= v <= 1.0 for v in r.bbox)
+            assert r.bbox[0] < r.bbox[2] and r.bbox[1] < r.bbox[3]
