@@ -352,6 +352,15 @@ def _is_safe_legacy(dc: DocumentClass) -> bool:
     return _fixed_height(dc) + _shape_height(dc, maximum) <= _available_height(dc)
 
 
+def _data_row_h(dc: DocumentClass, table: TableSpec | None) -> int:
+    """Reserved height of one data row: row_h, grown to the worst-case wrapped height
+    (max field max_lines * line_h) so capacity planning never underestimates."""
+    if table is None:
+        return dc.layout.row_h
+    max_lines = max((f.max_lines for f in table.fields), default=1)
+    return max(dc.layout.row_h, max_lines * _line_h(dc))
+
+
 def _instance_height(dc: DocumentClass, rows: int, table: TableSpec | None = None) -> int:
     L = dc.layout
     header = int(dc.structure.header)
@@ -361,7 +370,7 @@ def _instance_height(dc: DocumentClass, rows: int, table: TableSpec | None = Non
         section = int(table.section is not None)
         totals = int(table.totals is not None)
     fixed_rows = header + banner + section + totals
-    return (fixed_rows * L.row_h + rows * L.row_h
+    return (fixed_rows * L.row_h + rows * _data_row_h(dc, table)
             + max(rows - 1, 0) * _row_gap(dc) + _instance_gap(dc))
 
 

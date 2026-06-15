@@ -116,3 +116,23 @@ def test_wrapped_words_stay_within_their_column():
         for p, b in zip(placed, boxes):
             if p.label and p.label.get("field") == 0 and "record" in p.label:
                 assert b[0] >= p.cell[0] - 1 and b[2] <= p.cell[2] + 1, (p.text, p.cell, b)
+
+
+def _short_page_wrap_class(max_lines):
+    # row_h == line_h == 40, so a data row reserves max_lines * 40; a page tall enough for
+    # 1-line rows but not max_lines rows must fail capacity validation up front.
+    fields = (FieldSpec("desc", "service_desc", "left", max_width=200.0, max_lines=max_lines),)
+    return DocumentClass(name="t", tables=(
+        TableSpec(name="x", fields=fields, rows=(2, 2), instances=(1, 1)),),
+        layout=LayoutSpec(page=(400, 200), margin=(10, 10), row_h=40, line_h=40, table_gap=0))
+
+
+def test_capacity_reserves_worst_case_lines():
+    # 2 rows * (3 * 40) = 240 > available 180 -> capacity error.
+    with pytest.raises(LayoutCapacityError):
+        validate_layout_capacity(_short_page_wrap_class(max_lines=3))
+
+
+def test_capacity_ok_for_single_line_reservation():
+    # 2 rows * (1 * 40) = 80 < available 180 -> fits.
+    validate_layout_capacity(_short_page_wrap_class(max_lines=1))
