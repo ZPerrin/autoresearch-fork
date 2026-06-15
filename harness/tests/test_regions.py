@@ -45,3 +45,26 @@ def test_single_instance_class_has_one_region():
     assert isinstance(regions[0], PlacedRegion)
     assert regions[0].table == "line_item"
     assert regions[0].region == 0
+
+
+def test_sample_regions_round_trip(tmp_path):
+    from tablelab.artifacts import (Sample, Token, Region, DatasetManifest,
+                                    write_dataset, read_dataset)
+    sample = Sample(
+        id=0,
+        tokens=[Token(x0=0.1, y0=0.1, x1=0.2, y1=0.2, text="x", label={"region": 0})],
+        width=100, height=100, image="/datasets/x/images/0.png",
+        regions=[Region(region=0, table="claim_line", bbox=[0.05, 0.05, 0.9, 0.5])])
+    manifest = DatasetManifest(dataset_id="x", generator_version=2, task="grid_record_field",
+                               modalities=["spatial"], count=1)
+    write_dataset(tmp_path, manifest, [sample])
+    _m, got = read_dataset(tmp_path / "x")
+    assert got[0].regions is not None
+    assert isinstance(got[0].regions[0], Region)
+    assert got[0].regions[0].table == "claim_line"
+    assert got[0].regions[0].bbox == [0.05, 0.05, 0.9, 0.5]
+
+
+def test_sample_regions_default_none():
+    from tablelab.artifacts import Sample
+    assert Sample(id=0, tokens=[]).regions is None

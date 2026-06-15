@@ -15,12 +15,20 @@ class Token:
 
 
 @dataclass
+class Region:
+    region: int                         # matches the {"region": k} token label
+    table: str                          # table name (e.g. "claim_line")
+    bbox: list[float]                   # normalized [0,1] (x0, y0, x1, y1)
+
+
+@dataclass
 class Sample:
     id: int
     tokens: list[Token]
     image: str | None = None      # path/URL the viewer can fetch (e.g. /datasets/<id>/images/0.png)
     width: int | None = None      # page pixel dims; token boxes stay normalized to [0,1]
     height: int | None = None
+    regions: list[Region] | None = None   # per table-instance bbox; additive structural metadata
 
 
 @dataclass
@@ -71,8 +79,11 @@ def _token_from_dict(d: dict) -> Token:
 
 
 def _sample_from_dict(d: dict) -> Sample:
+    raw = d.get("regions")
+    regions = [Region(**r) for r in raw] if raw is not None else None
     return Sample(id=d["id"], tokens=[_token_from_dict(t) for t in d["tokens"]],
-                  image=d.get("image"), width=d.get("width"), height=d.get("height"))
+                  image=d.get("image"), width=d.get("width"), height=d.get("height"),
+                  regions=regions)
 
 
 def _write_samples(path: Path, samples: list[Sample], extra: dict | None = None) -> None:
