@@ -127,6 +127,7 @@ class PlacedToken:
     font_size: int = 22
     dx: float = 0.0
     dy: float = 0.0
+    seq: int = 0                              # within-rect reading order (render hint; not serialized)
 
 
 @dataclass
@@ -219,8 +220,8 @@ def _emit_tokens(placed: list[PlacedToken], text: str,
     if not text:
         return new
     words = text.split() if multi else [text]
-    for word in words:
-        tok = PlacedToken(text=word, cell=rect, align=align, font_size=font_size)
+    for k, word in enumerate(words):
+        tok = PlacedToken(text=word, cell=rect, align=align, font_size=font_size, seq=k)
         placed.append(tok)
         new.append(tok)
     return new
@@ -658,9 +659,9 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
                         for k, words in enumerate(lines):
                             ly0 = top + k * line_h
                             line_rect = (x0, ly0, x1, ly0 + line_h)
-                            for w in words:
+                            for wi, w in enumerate(words):
                                 tok = PlacedToken(text=w, cell=line_rect, align=f.align,
-                                                  font_size=cell_font)
+                                                  font_size=cell_font, seq=wi)
                                 placed.append(tok)
                                 toks.append(tok)
                     elif value:
