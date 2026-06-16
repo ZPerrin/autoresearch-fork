@@ -10,6 +10,8 @@ from tablelab.layout import (layout, _group_runs, validate_layout_capacity,
                              LayoutCapacityError)
 from tablelab.render import render
 
+from _cells import placed, cells_where, text_of
+
 F = FieldSpec
 
 
@@ -30,10 +32,6 @@ def _grouped_class(page=(800, 800), multi_token=False, **over):
         name="t", tables=(table,),
         structure=StructureSpec(header=True, multi_token=multi_token),
         layout=LayoutSpec(page=page, margin=(20, 20)), **over)
-
-
-def _placed(dc, seed=0):
-    return layout(dc, random.Random(seed))
 
 
 # ---- contiguous-run inference ----
@@ -57,59 +55,66 @@ def test_group_runs_two_non_adjacent_same_name_runs():
 
 def test_banner_sits_above_leaf_header_with_correct_span():
     dc = _grouped_class()
-    placed = _placed(dc)
-    banners = [p for p in placed if p.label and p.label.get("group")]
-    leaf = [p for p in placed
-            if p.label and p.label.get("header") and "group" not in p.label
-            and "subtotal" not in p.label]
-    assert {p.text for p in banners} == {"G1", "G2"}
-    assert min(p.cell[1] for p in banners) < min(p.cell[1] for p in leaf)
-    g1 = next(p for p in banners if p.text == "G1")
-    # G1 spans cols 0..1: its x-range equals the leaf headers' for cols 0 and 1.
-    assert g1.label["span"] == [0, 1]
-    col0 = next(p for p in leaf if p.label["field"] == 0)
-    col1 = next(p for p in leaf if p.label["field"] == 1)
-    assert g1.cell[0] == pytest.approx(col0.cell[0])
-    assert g1.cell[2] == pytest.approx(col1.cell[2])
+    tokens, cells, _regions = placed(dc)
+    banners = cells_where(cells, role="group_header")
+    leaf_hdrs = cells_where(cells, role="header")
+
+    banner_names = {text_of(tokens, c) for c in banners}
+    assert banner_names == {"G1", "G2"}
+
+    # banners sit above leaf headers
+    assert min(c.bbox[1] for c in banners) < min(c.bbox[1] for c in leaf_hdrs)
+
+    # G1 spans cols 0..1 (colspan=2), G2 spans col 3 (colspan=1)
+    g1 = next(c for c in banners if text_of(tokens, c) == "G1")
+    assert g1.column_index == 0
+    assert g1.span[0] == 2  # colspan = 2
+
+    # G1's x-range should match the combined range of leaf headers for cols 0 and 1
+    col0_hdr = next(c for c in leaf_hdrs if c.column_index == 0)
+    col1_hdr = next(c for c in leaf_hdrs if c.column_index == 1)
+    assert g1.bbox[0] == pytest.approx(col0_hdr.bbox[0])
+    assert g1.bbox[2] == pytest.approx(col1_hdr.bbox[2])
 
 
 def test_row_band_order_top_to_bottom():
     dc = _grouped_class()
-    placed = _placed(dc)
+    tokens, cells, _regions = placed(dc)
 
-    def top(pred):
-        return min(p.cell[1] for p in placed if pred(p))
+    def top_of_role(role):
+        return min(c.bbox[1] for c in cells_where(cells, role=role))
 
-    banner = top(lambda p: p.label and p.label.get("group"))
-    leaf = top(lambda p: p.label and p.label.get("header")
-               and "group" not in p.label and "subtotal" not in p.label)
-    section = top(lambda p: p.label and p.label.get("section"))
-    data = top(lambda p: p.label and "record" in p.label)
-    totals = top(lambda p: p.label and p.label.get("subtotal"))
-    assert banner < leaf < section < data < totals
+    banner_top = top_of_role("group_header")
+    leaf_top = top_of_role("header")
+    section_top = top_of_role("section")
+    data_top = top_of_role("data")
+    summary_top = top_of_role("summary")
+    assert banner_top < leaf_top < section_top < data_top < summary_top
 
 
 # ---- spanning data rows ----
 
 def test_section_label_from_category_vocab():
     dc = _grouped_class()
-    placed = _placed(dc)
-    section = [p for p in placed if p.label and p.label.get("section")]
-    assert len(section) == 1
-    assert section[0].text in _CATEGORIES
-    assert section[0].label["span"] == [0, 3]
+    tokens, cells, _regions = placed(dc)
+    section_cells = cells_where(cells, role="section")
+    assert len(section_cells) == 1
+    sc = section_cells[0]
+    assert text_of(tokens, sc) in _CATEGORIES
+    assert sc.span[0] == 4  # colspan = 4 (full-width span)
+    assert sc.column_index == 0  # starts at the first column
 
 
 def test_totals_label_spans_left_values_under_numeric_columns():
     dc = _grouped_class()
-    placed = _placed(dc)
-    label = [p for p in placed if p.label
-             and p.label.get("subtotal") and p.label.get("header")]
-    values = [p for p in placed if p.label
-              and p.label.get("subtotal") and not p.label.get("header")]
-    assert [p.text for p in label] == ["TOTALS"]
-    assert label[0].label["span"] == [0, 1]
-    assert sorted(p.label["field"] for p in values) == [2, 3]
+    tokens, cells, _regions = placed(dc)
+    summary_cells = cells_where(cells, role="summary")
+    # TOTALS label cell: span=2, column_index=0
+    label_cell = next(c for c in summary_cells if text_of(tokens, c) == "TOTALS")
+    assert label_cell.span[0] == 2
+    # value cells: column_index 2 and 3
+    value_cells = [c for c in summary_cells if c != label_cell and c.token_ids]
+    assert sorted(c.column_index for c in value_cells) == [2, 3]
 
 
 # ---- multi_token banner split ----
@@ -122,11 +127,19 @@ def test_multi_token_splits_banner_label():
         tables=(TableSpec(name="x", fields=fields, rows=(1, 1), instances=(1, 1)),),
         structure=StructureSpec(header=True, multi_token=True),
         layout=LayoutSpec(page=(800, 400), margin=(20, 20)))
-    placed = _placed(dc)
-    words = [p for p in placed if p.label and p.label.get("group")]
-    assert [p.text for p in words] == ["Patient", "Responsibility"]
-    assert words[0].cell == words[1].cell           # share the banner cell
-    assert [p.label["seq"] for p in words] == [0, 1]
+    tokens, cells, _regions = placed(dc)
+    banner_cells = cells_where(cells, role="group_header")
+    # One banner cell for "Patient Responsibility" with two token_ids
+    assert len(banner_cells) == 1
+    bc = banner_cells[0]
+    words = [tokens[i].text for i in bc.token_ids]
+    assert words == ["Patient", "Responsibility"]
+    # all tokens in the banner cell share the same cell rect
+    rects = {tokens[i].cell for i in bc.token_ids}
+    assert len(rects) == 1
+    # seq values are 0, 1
+    seqs = [tokens[i].seq for i in bc.token_ids]
+    assert seqs == [0, 1]
 
 
 # ---- validation ----
@@ -173,9 +186,11 @@ def test_short_page_that_fits_data_but_not_extra_rows_raises():
 
 def test_plain_table_emits_no_spanning_or_group_tokens():
     dc = classlib.get("invoice")
-    placed = _placed(dc)
-    assert not any(p.label and (p.label.get("group") or p.label.get("section")
-                                or p.label.get("subtotal")) for p in placed)
+    _tokens, cells, _regions = placed(dc)
+    # plain invoice has no group_header, section, or summary cells
+    assert cells_where(cells, role="group_header") == []
+    assert cells_where(cells, role="section") == []
+    assert cells_where(cells, role="summary") == []
 
 
 # ---- end to end: every eob box stays in page ----
@@ -185,8 +200,8 @@ def test_eob_boxes_stay_in_page():
     W, H = dc.layout.page
     rng = random.Random(7)
     for _ in range(12):
-        placed = layout(dc, rng)
-        _img, boxes = render(placed, dc)
+        placed_toks = layout(dc, rng)
+        _img, boxes = render(placed_toks, dc)
         for (x0, y0, x1, y1) in boxes:
             assert 0 <= x0 <= x1 <= W
             assert 0 <= y0 <= y1 <= H

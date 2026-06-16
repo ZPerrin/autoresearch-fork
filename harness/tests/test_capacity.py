@@ -11,7 +11,7 @@ from tablelab import classes as classlib
 from tablelab import build as build_module
 from tablelab import layout as layout_module
 from tablelab.build import _validate_boxes, build_dataset
-from tablelab.layout import LayoutCapacityError, layout, validate_layout_capacity
+from tablelab.layout import LayoutCapacityError, layout, layout_with_regions, validate_layout_capacity
 from tablelab.specs import fork
 
 
@@ -57,12 +57,9 @@ def test_full_eob_samples_feasible_region_counts():
     observed = set()
 
     for seed in range(200):
-        placed = layout(dc, random.Random(seed))
-        observed.add(len({
-            token.label["region"]
-            for token in placed
-            if token.label and "region" in token.label
-        }))
+        _tokens, _cells, regions = layout_with_regions(dc, random.Random(seed))
+        # count only table regions (exclude the globals form region)
+        observed.add(sum(1 for r in regions if r.type == "table"))
 
     assert observed <= {1, 2, 3}
     assert {1, 2} <= observed
@@ -235,8 +232,8 @@ def test_default_invoice_validates():
 
 
 def test_validate_boxes_accepts_page_boundaries():
-    placed = [layout_module.PlacedToken("first", (0, 0, 1, 1), None),
-              layout_module.PlacedToken("second", (0, 0, 1, 1), None)]
+    placed = [layout_module.PlacedToken("first", (0, 0, 1, 1)),
+              layout_module.PlacedToken("second", (0, 0, 1, 1))]
     _validate_boxes(
         [(0, 0, 1000, 500), (4, 5, 4, 5)], placed, "boundary", 7, 1000, 500
     )
@@ -254,7 +251,7 @@ def test_validate_boxes_accepts_page_boundaries():
 )
 def test_validate_boxes_rejects_invalid_geometry(boxes, bad_index):
     placed = [
-        layout_module.PlacedToken(f"token-{index}", (0, 0, 1, 1), None)
+        layout_module.PlacedToken(f"token-{index}", (0, 0, 1, 1))
         for index in range(len(boxes))
     ]
     with pytest.raises(
