@@ -33,3 +33,7 @@ datasets/
 .claude/
 .codex/
 *.iml
+
+# OS / build cruft
+.DS_Store
+viewer/.vite/
