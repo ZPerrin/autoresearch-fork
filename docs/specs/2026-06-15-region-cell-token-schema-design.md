@@ -34,7 +34,7 @@ The fix is a clean three-layer split, named honestly, aligned to Textract (the r
 ## Model
 
 ```
-Region { type: "table" | "form" | "footer" | …,   index: int,   bbox }
+Region { type: "table" | "form" | "footer" | …,  name: str | None,  index: int,  bbox }
 Cell   { region_index: int, row_index: int, column_index: int, span: [int, int],
          bbox, role: "header"|"group_header"|"data"|"section"|"summary"|"key"|"value",
          field: str | None, token_ids: list[int] }
@@ -43,10 +43,14 @@ Token  { x0, y0, x1, y1, text }
 
 Per-sample the document is `regions` + `cells` + `tokens`:
 
-- **`Region`** — a typed area (≈ Textract `LAYOUT_*` / `TABLE`). `index` is **per-type** (two claim
-  tables → `table` regions index 0 and 1; the globals block → a `form` region index 0). Geometry is
-  the explicit `bbox` (no struct is named "region" as a stand-in for an area — the area *is* the
-  bbox).
+- **`Region`** — a typed area (≈ Textract `LAYOUT_*` / `TABLE`). `type` is the coarse layout class;
+  `name` is the specific definition (the table name `"claim_line"`; `"globals"` for the form) so two
+  different table *types* sharing `type:"table"` stay distinguishable. `index` is the instance
+  ordinal **scoped per (type, name)** — two `claim_line` instances → index 0 and 1; a separate
+  `payment_summary` table → its own index 0. Geometry is the explicit `bbox` (no struct is named
+  "region" as a stand-in for an area — the area *is* the bbox). A `Cell` joins to its region by
+  `region_index`, the **flat position in `Sample.regions`** (unambiguous), while `Region.index` is
+  the semantic instance ordinal.
 - **`Cell`** — the unit that owns structure and meaning. `row_index`/`column_index` are positional
   (≈ Textract `CELL.RowIndex`/`ColumnIndex`); `span` is `[colspan, rowspan]` (≈ `ColumnSpan`/
   `RowSpan`); `role` is the cell's structural role (≈ Textract `CELL.EntityType`); `field` is the
@@ -78,8 +82,8 @@ Per-sample the document is `regions` + `cells` + `tokens`:
 
 | current (token `label`) | new |
 |---|---|
-| `Region{region, table, bbox}` struct | `Region{type, index, bbox}` |
-| `region: int` (token key) | dropped from token → `Cell.region_index` |
+| `Region{region, table, bbox}` struct | `Region{type, name, index, bbox}` (table name kept as `name`) |
+| `region: int` (token key) | dropped from token → `Cell.region_index` (flat pointer into `Sample.regions`) |
 | `record: int` | `Cell.row_index` |
 | `field: int` (data/header) | `Cell.column_index` |
 | `seq: int` | dropped → order of `Cell.token_ids` |
