@@ -1,6 +1,6 @@
 from __future__ import annotations
 import random
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field as dc_field, replace
 
 from .fields import sample, background_token, field_weight
 from .jitter import jitter_column_edges, jitter_row_height, jitter_offset
@@ -121,8 +121,7 @@ def _resolve_column_edges(fields, usable: float, mx: float, pad: int, header: bo
 @dataclass
 class PlacedToken:
     text: str
-    cell: tuple[float, float, float, float]   # cell rect in page pixels (x0, y0, x1, y1)
-    label: dict | None                        # data {"record": r, "field": c} | header {"field": c, "header": True}; + "region": g when multi-instance, + "seq": k when multi_token; null = background
+    cell: tuple[float, float, float, float]   # render rect in page px (x0, y0, x1, y1)
     align: str = "left"
     font_size: int = 22
     dx: float = 0.0
@@ -130,10 +129,23 @@ class PlacedToken:
 
 
 @dataclass
+class PlacedCell:
+    region_index: int
+    row_index: int
+    column_index: int
+    span: tuple[int, int]                      # (colspan, rowspan)
+    bbox: tuple[float, float, float, float]    # cell rect in page px
+    role: str
+    field: str | None
+    tokens: list[PlacedToken] = dc_field(default_factory=list)   # transient refs; resolved to ids on return
+
+
+@dataclass
 class PlacedRegion:
-    region: int                                # matches the {"region": k} token label
-    table: str                                 # table name (e.g. "claim_line")
-    bbox: tuple[float, float, float, float]    # page px (x0, y0, x1, y1)
+    type: str
+    name: str | None
+    index: int
+    bbox: tuple[float, float, float, float]    # page px
 
 
 def _header_text(name: str) -> str:
@@ -197,40 +209,42 @@ def _group_runs(fields) -> list[tuple[str, int, int]]:
     return runs
 
 
-def _emit(placed: list[PlacedToken], text: str, cell: tuple[float, float, float, float],
-          base_label: dict, align: str, font_size: int, multi: bool) -> None:
-    """Append one token for `text`, or one per word (sharing cell + label, with seq) when multi."""
-    if multi:
-        for k, word in enumerate(text.split()):
-            placed.append(PlacedToken(text=word, cell=cell,
-                label={**base_label, "seq": k}, align=align, font_size=font_size))
-    else:
-        placed.append(PlacedToken(text=text, cell=cell,
-            label=base_label, align=align, font_size=font_size))
+def _emit_tokens(placed: list[PlacedToken], text: str,
+                 rect: tuple[float, float, float, float],
+                 align: str, font_size: int, multi: bool) -> list[PlacedToken]:
+    """Append one token for `text`, or one per word when `multi`. Empty text appends
+    nothing. Returns the appended tokens (in reading order) for cell membership."""
+    new: list[PlacedToken] = []
+    if not text:
+        return new
+    words = text.split() if multi else [text]
+    for word in words:
+        tok = PlacedToken(text=word, cell=rect, align=align, font_size=font_size)
+        placed.append(tok)
+        new.append(tok)
+    return new
 
 
-def _emit_span_row(placed: list[PlacedToken], cells, edges, y: float, row_h: float,
-                   base_label: dict, font: int, multi: bool, rng: random.Random,
-                   header_on_text: bool = False) -> None:
-    """Emit one spanning row: each cell covers a contiguous column range starting at the
-    running column index. text cells are literal, type cells are sampled (RNG drawn left to
-    right), empty cells emit nothing. Each token gets field=c0 and span=[c0, c1]; a literal
-    label additionally gets header=True when ``header_on_text`` (the totals label cell)."""
+def _emit_span_row(placed: list[PlacedToken], cells: list[PlacedCell], spans, edges,
+                   y: float, row_h: float, region_index: int, row_index: int, role: str,
+                   font: int, multi: bool, rng: random.Random) -> None:
+    """Emit one spanning row (section or totals). Each SpanCell covers a contiguous
+    column range from the running column index; text cells are literal, type cells are
+    sampled left-to-right, empty cells still produce a cell (no tokens)."""
     c = 0
-    for cell in cells:
-        c0, c1 = c, c + cell.span - 1
+    for sc in spans:
+        c0, c1 = c, c + sc.span - 1
         rect = (edges[c0], y, edges[c1 + 1], y + row_h)
-        if cell.text is not None:
-            value, is_text = cell.text, True
-        elif cell.type is not None:
-            value, is_text = sample(cell.type, rng), False
+        if sc.text is not None:
+            value = sc.text
+        elif sc.type is not None:
+            value = sample(sc.type, rng)
         else:
-            value, is_text = "", False
-        if value:
-            label = {**base_label, "field": c0, "span": [c0, c1]}
-            if is_text and header_on_text:
-                label["header"] = True
-            _emit(placed, value, rect, label, cell.align, font, multi)
+            value = ""
+        toks = _emit_tokens(placed, value, rect, sc.align, font, multi)
+        cells.append(PlacedCell(region_index=region_index, row_index=row_index,
+                                column_index=c0, span=(c1 - c0 + 1, 1), bbox=rect,
+                                role=role, field=None, tokens=toks))
         c = c1 + 1
 
 
