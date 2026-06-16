@@ -13,6 +13,7 @@ goals pursued together: **learn multimodal DL by building it from scratch**, and
 generalizable repeated-record extraction** (EOBs, invoices, receipts). Real labeled data is scarce,
 so we curate **synthetic** data ourselves.
 
+Canonical *why* (what we're solving for, stable): `docs/CHARTER.md`.
 Authoritative design + roadmap: `docs/specs/2026-06-13-design-and-roadmap.md`.
 
 ## Layout

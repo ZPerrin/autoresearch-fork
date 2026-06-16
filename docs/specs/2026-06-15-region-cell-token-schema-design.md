@@ -1,0 +1,157 @@
+# Region / Cell / Token schema — nomenclature + structure cleanup — design
+
+- Status: **proposed**. Parent: `docs/specs/2026-06-13-design-and-roadmap.md`. Canonical *why*:
+  `docs/CHARTER.md`.
+- Date: 2026-06-15
+- Precedes: the **labels / task-projection** milestone (`derive_*` functions, record/global rollup).
+  This spec deliberately fixes the *representation* first so labels land on a clean foundation.
+
+## Motivation
+
+The contract grew semantically-loaded names for what are really positional indices, conflating two
+layers that the labeling milestone needs kept apart:
+
+- `region: int` is a table-instance ordinal, but the word implies a generic area; the `Region`
+  struct already carries the table name and a bbox, so "region" was doing the job of "which
+  instance."
+- `record`/`field` are row/column **indices** (`r`/`c`), but the names imply semantic identity (a
+  logical record; a named attribute). `field: 3` does not say `amount_billed` — you must join
+  `TableSpec.fields[3]`.
+
+This matters specifically because **semantic field ≠ column index in general** (a wrapped/composite
+cell can host tokens with distinct field labels — see the wrapped-cells design). The moment that is
+true you need `column_index` (structural position, 1:1 with layout) and `field` (semantic meaning) to
+be *different keys*. The current schema spent the word `field` on the index.
+
+The fix is a clean three-layer split, named honestly, aligned to Textract (the real input):
+
+| layer | unit | keys |
+|---|---|---|
+| **observables** (locked) | `Token` (word) | `bbox`, `text` |
+| **structural truth** (derivable-in-principle; what Textract `TABLES` gives) | `Cell`, `Region` | `region_index`, `row_index`, `column_index`, `span`, `bbox` |
+| **semantic truth** (free for synthetic; the extraction target) | `Cell` | `field` (template slot), `role` |
+
+## Model
+
+```
+Region { type: "table" | "form" | "footer" | …,   index: int,   bbox }
+Cell   { region_index: int, row_index: int, column_index: int, span: [int, int],
+         bbox, role: "header"|"group_header"|"data"|"section"|"summary"|"key"|"value",
+         field: str | None, token_ids: list[int] }
+Token  { x0, y0, x1, y1, text }
+```
+
+Per-sample the document is `regions` + `cells` + `tokens`:
+
+- **`Region`** — a typed area (≈ Textract `LAYOUT_*` / `TABLE`). `index` is **per-type** (two claim
+  tables → `table` regions index 0 and 1; the globals block → a `form` region index 0). Geometry is
+  the explicit `bbox` (no struct is named "region" as a stand-in for an area — the area *is* the
+  bbox).
+- **`Cell`** — the unit that owns structure and meaning. `row_index`/`column_index` are positional
+  (≈ Textract `CELL.RowIndex`/`ColumnIndex`); `span` is `[colspan, rowspan]` (≈ `ColumnSpan`/
+  `RowSpan`); `role` is the cell's structural role (≈ Textract `CELL.EntityType`); `field` is the
+  template's named extraction slot (e.g. `service_date`, `copay`, `amount_owed`). A cell may be
+  **empty** (sparse/`fill < 1`): it still has a `bbox` and a `field`, with `token_ids = []` — a thing
+  the word-only model could not express. `token_ids` lists the cell's words in reading order
+  (replaces the old per-token `seq`). A **spanning** cell (`group_header` / `section` / `summary`)
+  anchors at its top-left covered cell: `row_index`/`column_index` are the first covered row/column
+  and `span = [colspan, rowspan]` gives the extent (so a full-width section row is
+  `column_index = 0`, `span = [n_columns, 1]`).
+- **`Token`** — a pure observable: bbox + text. No `label`, no `region`/`record`/`field`, no `seq`.
+  Background/noise words live in `tokens` and are referenced by **no** cell.
+
+### Textract correspondence
+
+| ours | Textract (`TABLES` / `LAYOUT` / `FORMS`) |
+|---|---|
+| `Region{type:"table"}` | `TABLE` block / `LAYOUT_TABLE` |
+| `Region{type:"form"}` | `LAYOUT_KEY_VALUE` / `KEY_VALUE_SET` |
+| `Cell.row_index` / `.column_index` | `CELL.RowIndex` / `ColumnIndex` (note: Textract is 1-based; we stay 0-based) |
+| `Cell.span` | `CELL.ColumnSpan` / `RowSpan` |
+| `Cell.role` | `CELL.EntityType` (`COLUMN_HEADER`, `TABLE_SECTION_TITLE`, `TABLE_SUMMARY`) |
+| `Cell.token_ids` | `CELL` → `WORD` child relationships |
+| `Token` | `WORD` |
+
+(Enum spellings verified against current Textract docs before any are hardcoded.)
+
+## From → to (current label keys)
+
+| current (token `label`) | new |
+|---|---|
+| `Region{region, table, bbox}` struct | `Region{type, index, bbox}` |
+| `region: int` (token key) | dropped from token → `Cell.region_index` |
+| `record: int` | `Cell.row_index` |
+| `field: int` (data/header) | `Cell.column_index` |
+| `seq: int` | dropped → order of `Cell.token_ids` |
+| `header: True` (leaf) | `Cell.role = "header"` |
+| `group` + `header` + `span` (banner) | `Cell.role = "group_header"`, `Cell.span`; group name is the banner cell's token text |
+| (implicit data cell) | `Cell.role = "data"` |
+| `section: True` | `Cell.role = "section"` |
+| `subtotal: True` | `Cell.role = "summary"` |
+| `field` name (semantic) | `Cell.field` (populated from `FieldSpec.name`) |
+| `global: name` (label/value) | `form` region: `Cell.role ∈ {key, value}`, `Cell.field = name` |
+| `null` (background) | `Token` referenced by no cell |
+
+`field`'s **value type** (date/amount/id) is *not* a cell label — it is a property of the
+`DocumentClass` field definition, joined via `Cell.field`. We never classify value types.
+
+## Globals and background (coherent-contract consequence)
+
+A half-migrated sample (tables in the new shape, globals/background in the old) is worse than a
+complete one, so this pass places **every** token in the new model:
+
+- **Tables** → `table` region + grid cells.
+- **Globals** → one `form` region; each global field becomes a key cell (`role:"key"`, the
+  `"Member Name:"` label text) and a value cell (`role:"value"`, the value), both carrying
+  `field = <slot>`; `row_index` = pair index, `column_index` = 0 (key) / 1 (value). This keeps
+  member/provider — central to the end-state — first-class now.
+- **Background** → noise `Token`s referenced by no cell. A `footer` *region* (a bbox around them) is
+  **deferred**; background needs no cell, so nothing is lost.
+
+So `type` values emitted now are `table` and `form`; `footer` and other `LAYOUT_*` types are
+provisioned but unused.
+
+## Contract changes
+
+- `SCHEMA_VERSION` `2 → 3`. The **observables are unchanged** (token bbox + text, sample image) — the
+  contract seam held; only the open label layer restructured and `cells`/typed-`regions` were added.
+  Worth stating plainly: the lock did its job.
+- `artifacts.py`: `Token` loses `label`/`pred`; new `Cell` dataclass; `Region` gains `type`, swaps
+  `region`/`table` for `index`; `Sample` gains `cells`. `write`/`read_dataset` + `write`/`read_run`
+  round-trip the new shape; `_sample_from_dict` parses `cells`.
+- `layout.py`: emit `(tokens, cells, regions)`. The placement math is unchanged; what changes is the
+  *bookkeeping* — each placed cell records `region_index/row_index/column_index/span/role/field/bbox`
+  and the indices of the tokens it owns. `PlacedToken.label` is removed.
+- `build.py`: normalize token + cell + region bboxes to `[0,1]`; assemble the new `Sample`.
+- `viewer`: `types.ts` gains `Cell`, updates `Region`; overlay can draw region areas and cell rects
+  and tint by `role`; `MetaPanel` reads cells.
+- **Golden**: regenerated deliberately (this changes the sample shape — it is a contract change, not
+  an additive feature). The new golden asserts the full `regions/cells/tokens` for the invoice seed.
+
+## Out of scope (next spec — labels / task projections)
+
+- `derive_*` projection functions: `derive_token_labels`, `derive_nlq_pairs`, `derive_records`.
+- The **record / global rollup** (document-class-specific `field → value` records + member/provider
+  association). The schema above makes it near-trivial: cells already carry
+  `region_index`/`row_index`/`field`, and globals are a `form` region.
+- `pred` / model-output representation (designed with the model loop).
+- `footer` region bbox; other `LAYOUT_*` area types; vision-era layout detection.
+
+## Verification
+
+- **Round-trip**: `write` then `read_dataset`/`read_run` reproduces `regions`/`cells`/`tokens`
+  exactly; `schema_version == 3` enforced.
+- **Structural invariants**: every non-background token is referenced by exactly one cell; each
+  cell's `bbox` encloses its tokens; an instance's region `bbox` encloses its cells; `row_index`/
+  `column_index` are contiguous and within bounds; empty cells have `token_ids == []` and a `field`.
+- **Semantic**: every table data/header cell has a `field` matching the originating `FieldSpec.name`;
+  globals appear as key/value cell pairs under a `form` region.
+- **Golden**: regenerated invoice sample matches the committed fixture byte-for-byte on re-run.
+- **Viewer smoke**: build an `eob` set; region areas, cell rects, and role tints render; empty cells
+  show; boxes in-page.
+
+## Sources
+
+- AWS Textract — `AnalyzeDocument` block types (`TABLE`/`CELL`/`WORD`, `CELL.EntityType`,
+  `LAYOUT_*`, `KEY_VALUE_SET`). Exact enum spellings to be confirmed against current docs at
+  implementation time.
