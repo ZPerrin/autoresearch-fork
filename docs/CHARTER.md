@@ -9,9 +9,15 @@
 
 This is a **research harness for exploring multimodal document information extraction**, built from
 scratch to learn DL by building it. The synthetic-data toolkit at its center exists to **explore the
-repeated-record extraction problem space broadly and cover our bases across modeling approaches** —
-not to ship a solution to one task. The driver is graduate ML/DL study; we expect the modeling
-approach to stay open for a long time, so the foundation must not quietly commit to one.
+document-extraction problem space broadly and cover our bases across modeling approaches** — not to
+ship a solution to one task. The driver is graduate ML/DL study; we expect the modeling approach to
+stay open for a long time, so the foundation must not quietly commit to one.
+
+**Current focus: repeated-tabular extraction** — that is the unsolved-at-work problem giving the
+research its grounding. But it is a focus, not a boundary: global/singleton field extraction (member,
+provider, …) and other extraction targets are explicitly **in scope**, not precluded. The
+representation is deliberately general (globals are first-class — a `form` region, not an
+afterthought) so we can turn to them without re-laying the foundation.
 
 ## The real problem (motivation, not the target)
 
