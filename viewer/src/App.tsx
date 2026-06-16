@@ -7,7 +7,6 @@ import type {
   SamplesFile,
   RunDetail,
   ActiveSource,
-  Token,
 } from './types'
 import SourceSelector from './SourceSelector'
 import DocumentViewer from './DocumentViewer'
@@ -30,8 +29,10 @@ export default function App() {
   const [activeKind, setActiveKind]       = useState<'dataset' | 'run' | null>(null)
   const [activeId, setActiveId]           = useState<string | null>(null)
 
-  // Selected token
-  const [selectedToken, setSelectedToken] = useState<Token | null>(null)
+  // Selected token index
+  const [selectedTokenIdx, setSelectedTokenIdx] = useState<number | null>(null)
+  // Active sample index (kept in sync with DocumentViewer)
+  const [sampleIdx, setSampleIdx] = useState(0)
 
   // Load both indices on mount
   useEffect(() => {
@@ -67,7 +68,8 @@ export default function App() {
     setActiveId(id)
     setSourceLoading(true)
     setSourceError(null)
-    setSelectedToken(null)
+    setSelectedTokenIdx(null)
+    setSampleIdx(0)
     setActiveSource(null)
 
     Promise.all([
@@ -95,7 +97,8 @@ export default function App() {
     setActiveId(id)
     setSourceLoading(true)
     setSourceError(null)
-    setSelectedToken(null)
+    setSelectedTokenIdx(null)
+    setSampleIdx(0)
     setActiveSource(null)
 
     Promise.all([
@@ -119,6 +122,7 @@ export default function App() {
   }
 
   const samples = activeSource?.samples.samples ?? []
+  const activeSample = samples[Math.min(sampleIdx, samples.length - 1)] ?? null
   const task = activeSource?.kind === 'run'
     ? activeSource.detail.config.task
     : activeSource?.kind === 'dataset'
@@ -143,8 +147,9 @@ export default function App() {
             <DocumentViewer
               samples={samples}
               task={task}
-              selectedToken={selectedToken}
-              onSelectToken={setSelectedToken}
+              selectedTokenIdx={selectedTokenIdx}
+              onSelectToken={setSelectedTokenIdx}
+              onSampleChange={setSampleIdx}
             />
           )}
         </div>
@@ -166,7 +171,8 @@ export default function App() {
           <MetaPanel
             source={activeSource}
             task={task}
-            selectedToken={selectedToken}
+            selectedTokenIdx={selectedTokenIdx}
+            sample={activeSample}
           />
         </div>
       </div>

@@ -1,10 +1,8 @@
-// ---- Artifact schema types (mirrors runs/ and datasets/ JSON contract v2) ----
+// ---- Artifact schema types (mirrors runs/ and datasets/ JSON contract v3) ----
 
 // ---- Shared ----
 
 export type LabelValue = string | number | boolean | null
-export type TokenLabel = Record<string, LabelValue>
-export type TokenPrediction = TokenLabel & { confidence?: number }
 
 export interface Token {
   x0: number
@@ -12,14 +10,27 @@ export interface Token {
   x1: number
   y1: number
   text: string | null
-  label: TokenLabel | null
-  pred: TokenPrediction | null
+}
+
+export type CellRole =
+  | 'header' | 'group_header' | 'data' | 'section' | 'summary' | 'key' | 'value'
+
+export interface Cell {
+  region_index: number
+  row_index: number
+  column_index: number
+  span: [number, number]                    // [colspan, rowspan]
+  bbox: [number, number, number, number]    // normalized [0,1]
+  role: CellRole
+  field: string | null
+  token_ids: number[]
 }
 
 export interface Region {
-  region: number
-  table: string
-  bbox: [number, number, number, number]   // normalized [0,1] (x0, y0, x1, y1)
+  type: string                              // "table" | "form" | "footer" | …
+  name: string | null
+  index: number
+  bbox: [number, number, number, number]    // normalized [0,1]
 }
 
 export interface Sample {
@@ -28,6 +39,7 @@ export interface Sample {
   width: number        // page pixel width
   height: number       // page pixel height
   tokens: Token[]
+  cells: Cell[]
   regions?: Region[]
 }
 

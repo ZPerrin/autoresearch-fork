@@ -470,14 +470,6 @@
   flex-wrap: wrap;
 }
 
-.legend-list {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  font-size: 0.80rem;
-  color: #666;
-}
-
 .legend-item {
   display: flex;
   align-items: center;
@@ -494,9 +486,6 @@
   flex-shrink: 0;
 }
 
-.swatch-correct  { background: rgba(29,158,117,0.18);  border-color: #1D9E75; }
-.swatch-wrong    { background: rgba(226,75,74,0.18);   border-color: #E24B4A; }
-.swatch-gt       { background: rgba(55,138,221,0.10);  border-color: #378ADD; }
 .swatch-selected { background: rgba(255,180,0,0.28);   border-color: #F59E0B; }
 
 /* ---- Utility ---- */
