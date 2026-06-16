@@ -23,7 +23,10 @@
 - `harness/src/tablelab/build.py` — **assembly**: unpack three lists, normalize bboxes to `[0,1]`, assemble `Sample(tokens, cells, regions)`.
 - `harness/src/tablelab/render.py` — **unaffected** (verify only): it groups by `PlacedToken.cell`, never reads `.label`.
 - `harness/tests/*` — migrate label-shape assertions to cell-shape via a new shared helper; regenerate the golden fixture.
-- Viewer (`viewer/src/*`) — separate follow-on plan (see end). The Python side ships and tests green on its own.
+- Viewer (`viewer/src/*`) — **in scope (Task 8)**. `Token` loses `label`/`pred`, so coloring and the
+  MetaPanel detail move to a token→cell lookup; selection becomes a token *index*. The dead
+  prediction-matching path (`tokenMatch.ts`) is removed — the model loop (deferred) will reintroduce a
+  cell-based prediction view.
 
 ---
 
@@ -771,13 +774,158 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 
 ---
 
-## Out of scope (separate follow-on plans)
+### Task 8: Viewer — read v3, color by cell role (`viewer/src/*`)
 
-- **Viewer** (`viewer/src/types.ts`, `DocumentViewer.tsx`, `MetaPanel`): read v3, draw region areas + cell rects, tint by `role`. Mechanical, independent, and the Python side is green without it. Write as its own short plan.
+The Python side is green and builds v3 datasets; now bring the front-end in line. `Token` loses
+`label`/`pred`; the viewer joins a token to its owning `Cell` via `token_ids` and colors / inspects by
+cell. Run the viewer from repo root: `npm --prefix viewer install` (once), `npm --prefix viewer run build`
+(type-check), `npm --prefix viewer run dev` (→ http://localhost:5173).
+
+**Files:**
+- Modify: `viewer/src/types.ts`, `viewer/src/App.tsx`, `viewer/src/DocumentViewer.tsx`, `viewer/src/MetaPanel.tsx`
+- Delete: `viewer/src/tokenMatch.ts`
+
+- [ ] **Step 1: Update the schema types**
+
+In `viewer/src/types.ts`, replace the `Token`, `Region`, `Sample` interfaces (lines 9–32) and drop
+the now-unused `TokenLabel`/`TokenPrediction` aliases (lines 6–7 — keep `LabelValue`, still used by
+`ResolvedDocumentSpec`):
+
+```ts
+export interface Token {
+  x0: number
+  y0: number
+  x1: number
+  y1: number
+  text: string | null
+}
+
+export type CellRole =
+  | 'header' | 'group_header' | 'data' | 'section' | 'summary' | 'key' | 'value'
+
+export interface Cell {
+  region_index: number
+  row_index: number
+  column_index: number
+  span: [number, number]                    // [colspan, rowspan]
+  bbox: [number, number, number, number]    // normalized [0,1]
+  role: CellRole
+  field: string | null
+  token_ids: number[]
+}
+
+export interface Region {
+  type: string                              // "table" | "form" | "footer" | …
+  name: string | null
+  index: number
+  bbox: [number, number, number, number]    // normalized [0,1]
+}
+
+export interface Sample {
+  id: number
+  image: string
+  width: number
+  height: number
+  tokens: Token[]
+  cells: Cell[]
+  regions?: Region[]
+}
+```
+
+Update the header comment on line 1 from `contract v2` to `contract v3`.
+
+- [ ] **Step 2: Selection becomes a token index**
+
+In `viewer/src/App.tsx`: change `const [selectedToken, setSelectedToken] = useState<Token | null>(null)`
+(line 34) to `const [selectedTokenIdx, setSelectedTokenIdx] = useState<number | null>(null)`. Pass
+`selectedTokenIdx`/`onSelectToken={setSelectedTokenIdx}` to `DocumentViewer` and `selectedTokenIdx` to
+`MetaPanel` (lines 143–170). Remove the now-unused `Token` import if it becomes unused.
+
+- [ ] **Step 3: Color tokens by their owning cell's role**
+
+In `viewer/src/DocumentViewer.tsx`: remove the `predictionMatchStatus` import (line 3) and replace
+`tokenColors` (lines 24–31) with a role-based version. Build, per render, a token→cell map from
+`sample.cells`:
+
+```ts
+const ROLE_COLOR: Record<string, { fill: string; stroke: string }> = {
+  data:         { fill: 'rgba(55,138,221,0.10)',  stroke: '#378ADD' },
+  header:       { fill: 'rgba(124,92,196,0.16)',  stroke: '#7C5CC4' },
+  group_header: { fill: 'rgba(124,92,196,0.22)',  stroke: '#5B3FA0' },
+  section:      { fill: 'rgba(217,119,6,0.16)',   stroke: '#D97706' },
+  summary:      { fill: 'rgba(29,158,117,0.16)',  stroke: '#1D9E75' },
+  key:          { fill: 'rgba(100,116,139,0.14)', stroke: '#64748B' },
+  value:        { fill: 'rgba(55,138,221,0.10)',  stroke: '#378ADD' },
+}
+const COLOR_BACKGROUND = { fill: 'rgba(148,163,184,0.08)', stroke: '#94A3B8' }
+
+function tokenColors(role: string | undefined, selected: boolean) {
+  if (selected) return COLOR_SELECTED
+  return role ? (ROLE_COLOR[role] ?? COLOR_BACKGROUND) : COLOR_BACKGROUND
+}
+```
+
+Inside the component, build `const cellByToken = new Map<number, Cell>()` by iterating
+`sample.cells` and its `token_ids`; when rendering token `i`, look up `cellByToken.get(i)?.role` and
+pass it to `tokenColors`, and treat selection by index (`selected = i === selectedTokenIdx`,
+`onSelectToken(i)`). Update the `Props` interface accordingly (`selectedTokenIdx: number | null`,
+`onSelectToken: (idx: number | null) => void`). Remove the now-dead `statuses`/`hasGT` logic that
+referenced `token.pred` (lines ~284–289).
+
+- [ ] **Step 4: Update the region overlay**
+
+The region overlay (around line 282 / 374) now reads the new `Region` shape: label each outline with
+`${r.type}:${r.name ?? ''}#${r.index}` instead of `region`/`table`. Keep it a toggleable overlay.
+
+- [ ] **Step 5: MetaPanel shows the owning cell + region**
+
+In `viewer/src/MetaPanel.tsx`: take `selectedTokenIdx: number | null` and the active `sample`. Remove
+the `tokenMatch` import and `matchStatus` logic. Replace the token-label/pred block (lines ~256–300)
+with a cell-detail block: find the cell whose `token_ids` includes `selectedTokenIdx`; if found, show
+`role`, `field`, `row_index`, `column_index`, `span`, and the region (`type` / `name` / `index`) from
+`sample.regions[cell.region_index]`; if no cell owns the token, show "background / non-answer". Keep
+the existing `text` row and the spec/tables sections (they read `manifest.config.spec`, unaffected).
+
+- [ ] **Step 6: Delete the dead prediction matcher**
+
+```bash
+git rm viewer/src/tokenMatch.ts
+grep -rn "tokenMatch\|predictionMatchStatus\|TokenPrediction" viewer/src
+```
+Expected: no remaining references.
+
+- [ ] **Step 7: Type-check + build**
+
+Run: `npm --prefix viewer run build`
+Expected: `tsc` + Vite build succeed with no type errors.
+
+- [ ] **Step 8: Visual verify**
+
+Build a dataset for the viewer, start the dev server, and screenshot:
+```bash
+cd harness && uv run python -m tablelab.cli build --class eob --n 6 --seed 5 --out ../datasets/eob-v3-viewer >/dev/null && echo built
+```
+Start `npm --prefix viewer run dev`, open the `eob-v3-viewer` dataset, and confirm: tokens tint by
+role (header/section/summary/data distinct), the region overlay outlines the form + claim tables with
+`type:name#index` labels, and clicking a token shows its cell (role/field/row/col) + region in the
+MetaPanel. Capture a screenshot as proof.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add viewer/src && git commit -m "feat(viewer): read v3 schema; color tokens by cell role
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+```
+
+---
+
+## Out of scope (separate follow-on plan)
+
 - **`derive_*` projections** + the document-class record/global rollup — the next milestone (the spec's deferred section).
 
 ## Self-review notes (already reconciled)
 
-- Spec coverage: contract types (Task 1), layout cells/regions incl. globals→form + background as cell-less tokens + spanning roles (Tasks 2–3), build assembly (Task 4), tests + golden regenerated (Tasks 5–6), schema-version bump + observables-locked statement (Tasks 1, 7). Viewer deferred per spec note.
+- Spec coverage: contract types (Task 1), layout cells/regions incl. globals→form + background as cell-less tokens + spanning roles (Tasks 2–3), build assembly (Task 4), tests + golden regenerated (Tasks 5–6), schema-version bump + observables-locked statement (Tasks 1, 7), viewer brought in line (Task 8).
 - Type consistency: `Cell`/`Region` field names identical across `artifacts.py`, `layout.py` output, `build.py`, and tests (`region_index`, `row_index`, `column_index`, `span`, `role`, `field`, `token_ids`; `type`/`name`/`index`). `PlacedCell.tokens` (refs) is resolved to `Cell.token_ids` (ints) exactly once, post-shuffle.
 - Token-order hazard: `rng.shuffle(placed)` runs before id resolution — handled explicitly in Task 3 Step 1.
