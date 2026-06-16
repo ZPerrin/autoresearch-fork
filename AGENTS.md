@@ -48,9 +48,10 @@ Viewer:
 - **Two data layers.** `runs/` = git-tracked JSON ledger; `datasets/` = local & gitignored curated
   data. The viewer composes both locally; on a machine without the dataset it still renders
   boxes/metrics, just no page image.
-- **Contract is the seam** (`schema_version = 2`, defined in `artifacts.py`): observables (per-token
-  `bbox` + `text`, per-sample `image`) are locked; task labels are open (`label`/`pred` dicts keyed
-  by `config.task`); the annotation schema is deferred.
+- **Contract is the seam** (`schema_version = 3`, defined in `artifacts.py`): observables (per-token
+  `bbox` + `text`, per-sample `image`) are locked; the annotation layer is structured as typed
+  `Region`s (`type`/`name`/`index`/`bbox`) and `Cell`s (`region_index`/`row_index`/`column_index`/
+  `span`/`bbox`/`role`/`field`/`token_ids`); tokens are pure observables with no per-token label.
 - **No TDD** for now — implement and verify by running.
 - **PR-style review.** Propose changes as diffs + a one-line rationale; the human accepts/redirects.
 - **Lean.** Small diffs, reviewable changes, tight docs. Specs in `docs/specs/`; each milestone gets
