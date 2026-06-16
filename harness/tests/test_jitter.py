@@ -29,12 +29,8 @@ def _tokens(dc, seed, n):
 
 def test_jitter_off_is_byte_identical_to_golden():
     dc = fork(classlib.get("invoice"), jitter=JitterSpec())
-    # Load the golden file; it may have a "label" key from the old schema — strip it
-    # before comparing so the test is schema-agnostic going forward.
-    golden_raw = json.loads(GOLDEN.read_text())
-    golden = [[{k: v for k, v in tok.items() if k != "label"} for tok in sample]
-              for sample in golden_raw]
-    assert _tokens(dc, 7, 3) == golden
+    golden = json.loads(GOLDEN.read_text())
+    assert _tokens(dc, 7, 3) == [s["tokens"] for s in golden]
 
 
 def test_jitter_keeps_every_box_in_page():
