@@ -113,12 +113,11 @@ def test_wrapped_cell_emits_stacked_line_tokens():
                 for i in c.token_ids:
                     by_rect[tokens[i].cell].append(i)
                 assert len(by_rect) >= 2  # wrapped onto >= 2 lines
-                # each line group references exactly one rect
+                # each line group references exactly one rect, and within a line the
+                # tokens carry seq 0,1,2,... in reading order (seq resets per line)
                 for line_ids in by_rect.values():
                     assert len({tokens[i].cell for i in line_ids}) == 1
-                # tokens carry ascending seq values
-                seqs = [tokens[i].seq for i in c.token_ids]
-                assert seqs == sorted(seqs)
+                    assert [tokens[i].seq for i in line_ids] == list(range(len(line_ids)))
                 break
         if found:
             break
