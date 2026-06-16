@@ -1,6 +1,6 @@
 from __future__ import annotations
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .fields import sample, background_token, field_weight
 from .jitter import jitter_column_edges, jitter_row_height, jitter_offset
@@ -146,6 +146,17 @@ def _line_h(dc: DocumentClass) -> int:
     Kept below the default row_h so a single-line row keeps height row_h."""
     L = dc.layout
     return L.line_h if L.line_h is not None else round(dc.render.font_size * 1.4)
+
+
+def _resolve_row_h(dc: DocumentClass) -> DocumentClass:
+    """Materialize a font-derived row_h when LayoutSpec.row_h is None (the default),
+    so all downstream reads of dc.layout.row_h see a concrete px height. Explicit
+    values (including invalid 0/-1, caught by _validate_layout) pass through untouched.
+    Font-derived default keeps rows dense relative to the glyph (~1.7x font height)
+    instead of carrying a magic absolute height that strands wide-font classes."""
+    if dc.layout.row_h is not None:
+        return dc
+    return replace(dc, layout=replace(dc.layout, row_h=round(dc.render.font_size * 1.7)))
 
 
 def _wrap(words: list[str], col_width: float, font_size: int) -> list[list[str]]:
@@ -499,6 +510,7 @@ def _choose_shape(dc: DocumentClass, rng: random.Random) -> Shape:
 
 def validate_layout_capacity(dc: DocumentClass) -> None:
     """Raise when no declared document shape can fit within the page height."""
+    dc = _resolve_row_h(dc)
     _validate_layout(dc)
     if _is_safe_legacy(dc):
         return
@@ -516,6 +528,7 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
     (structure.background) apply as before. The single-table, single-instance path
     without globals, headers, or background remains byte-identical when its maximum
     row count fits the page."""
+    dc = _resolve_row_h(dc)
     L = dc.layout
     W, _ = L.page
     mx, my = L.margin
@@ -597,7 +610,10 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
                 base_h = max(L.row_h, row_lines * line_h)
                 cell_h = base_h
                 gap_after = _row_gap(dc)
-                if J.row_h > 0 and _row_gap(dc) > 0:
+                # Height jitter is zero-sum against the trailing gap, so it must skip the
+                # last row (which has no trailing gap) or the instance grows past its
+                # reserved budget and can overrun the page.
+                if J.row_h > 0 and _row_gap(dc) > 0 and r < rows - 1:
                     cell_h, delta = jitter_row_height(base_h, J.row_h, _row_gap(dc), rng)
                     gap_after = _row_gap(dc) + delta
                 for c in range(C):

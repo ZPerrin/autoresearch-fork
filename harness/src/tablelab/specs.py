@@ -43,7 +43,7 @@ class TableSpec:
 class LayoutSpec:
     page: tuple[int, int] = (1000, 1414)
     margin: tuple[int, int] = (60, 80)
-    row_h: int = 74
+    row_h: int | None = None              # row band height (px); None => font-derived (round(font_size * 1.7))
     pad: int = 12
     table_gap: int = 40                   # back-compat base gap; instance_gap/section_gap fall back to this
     row_gap: int = 0                      # extra gap between consecutive data rows within a table

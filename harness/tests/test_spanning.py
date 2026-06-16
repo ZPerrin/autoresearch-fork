@@ -164,7 +164,7 @@ def test_text_and_type_both_set_raises():
 
 def test_short_page_that_fits_data_but_not_extra_rows_raises():
     # 4 fixed rows (header+banner+section+totals) + 2 data rows do not fit a short page.
-    dc = _grouped_class(page=(800, 360))
+    dc = _grouped_class(page=(800, 280))
     with pytest.raises(LayoutCapacityError):
         validate_layout_capacity(dc)
 

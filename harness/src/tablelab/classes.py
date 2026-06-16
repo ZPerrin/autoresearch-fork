@@ -52,7 +52,11 @@ register(DocumentClass(name="invoice", tables=(
         _f("unit_price", "unit_price", "right", 1.0),
         _f("amount", "amount", "right", 1.0),
     )),
-), background_terms=_INVOICE_BACKGROUND))
+),
+    # row_h pinned: invoice is the frozen byte-identical golden guard, so it keeps the
+    # legacy absolute height rather than the new font-derived default.
+    layout=LayoutSpec(row_h=74),
+    background_terms=_INVOICE_BACKGROUND))
 
 register(DocumentClass(
     name="eob",
