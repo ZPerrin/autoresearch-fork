@@ -26,14 +26,14 @@ def render(placed: list[PlacedToken], dc: DocumentClass) -> tuple[Image.Image, l
     draw = ImageDraw.Draw(img)
     boxes: list[Box] = [(0.0, 0.0, 0.0, 0.0)] * len(placed)
 
-    # Group token indices by their cell rect; order within a cell by seq.
+    # Group token indices by their cell rect; order within a cell by placement index.
     groups: dict[tuple, list[int]] = {}
     for i, p in enumerate(placed):
         groups.setdefault(p.cell, []).append(i)
 
     for idxs in groups.values():
         if len(idxs) > 1:
-            idxs.sort(key=lambda i: placed[i].label["seq"])
+            idxs.sort()
         cx0, cy0, cx1, cy1 = placed[idxs[0]].cell
         row_h = cy1 - cy0
         align = placed[idxs[0]].align
