@@ -1,17 +1,29 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { Sample, Token } from './types'
-import { predictionMatchStatus } from './tokenMatch'
+import type { Cell, Sample } from './types'
 import ViewerHelp from './ViewerHelp'
 
-const COLOR_CORRECT  = { fill: 'rgba(29,158,117,0.18)',  stroke: '#1D9E75' }
-const COLOR_WRONG    = { fill: 'rgba(226,75,74,0.18)',   stroke: '#E24B4A' }
-const COLOR_GT       = { fill: 'rgba(55,138,221,0.10)',  stroke: '#378ADD' }
 const COLOR_SELECTED = { fill: 'rgba(255,180,0,0.28)',   stroke: '#F59E0B' }
 const MIN_ZOOM = 0.25
 const MAX_ZOOM = 4
 const ZOOM_STEP = 1.2
 const PAN_DRAG_THRESHOLD = 4
 const PAN_VISIBLE_MARGIN = 48
+
+const ROLE_COLOR: Record<string, { fill: string; stroke: string }> = {
+  data:         { fill: 'rgba(55,138,221,0.10)',  stroke: '#378ADD' },
+  header:       { fill: 'rgba(124,92,196,0.16)',  stroke: '#7C5CC4' },
+  group_header: { fill: 'rgba(124,92,196,0.22)',  stroke: '#5B3FA0' },
+  section:      { fill: 'rgba(217,119,6,0.16)',   stroke: '#D97706' },
+  summary:      { fill: 'rgba(29,158,117,0.16)',  stroke: '#1D9E75' },
+  key:          { fill: 'rgba(100,116,139,0.14)', stroke: '#64748B' },
+  value:        { fill: 'rgba(55,138,221,0.10)',  stroke: '#378ADD' },
+}
+const COLOR_BACKGROUND = { fill: 'rgba(148,163,184,0.08)', stroke: '#94A3B8' }
+
+function tokenColors(role: string | undefined, selected: boolean) {
+  if (selected) return COLOR_SELECTED
+  return role ? (ROLE_COLOR[role] ?? COLOR_BACKGROUND) : COLOR_BACKGROUND
+}
 
 function clampZoom(zoom: number): number {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom))
@@ -21,23 +33,15 @@ function distanceSquared(x: number, y: number): number {
   return x * x + y * y
 }
 
-function tokenColors(tok: Token, task: string | undefined, selected: boolean) {
-  if (selected) return COLOR_SELECTED
-  if (tok.pred == null) return COLOR_GT
-  const status = predictionMatchStatus(task, tok.label, tok.pred)
-  if (status === 'correct') return COLOR_CORRECT
-  if (status === 'mismatch') return COLOR_WRONG
-  return COLOR_GT
-}
-
 interface Props {
   samples: Sample[]
   task?: string
-  selectedToken: Token | null
-  onSelectToken: (tok: Token | null) => void
+  selectedTokenIdx: number | null
+  onSelectToken: (idx: number | null) => void
+  onSampleChange?: (idx: number) => void
 }
 
-export default function DocumentViewer({ samples, task, selectedToken, onSelectToken }: Props) {
+export default function DocumentViewer({ samples, task: _task, selectedTokenIdx, onSelectToken, onSampleChange }: Props) {
   const [sampleIdx, setSampleIdx] = useState(0)
   const [imgError, setImgError] = useState(false)
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -125,14 +129,22 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
   }, [constrainPan])
 
   const previousSample = useCallback(() => {
-    setSampleIdx(index => Math.max(0, index - 1))
+    setSampleIdx(index => {
+      const next = Math.max(0, index - 1)
+      onSampleChange?.(next)
+      return next
+    })
     onSelectToken(null)
-  }, [onSelectToken])
+  }, [onSelectToken, onSampleChange])
 
   const nextSample = useCallback(() => {
-    setSampleIdx(index => Math.min(samples.length - 1, index + 1))
+    setSampleIdx(index => {
+      const next = Math.min(samples.length - 1, index + 1)
+      onSampleChange?.(next)
+      return next
+    })
     onSelectToken(null)
-  }, [onSelectToken, samples.length])
+  }, [onSelectToken, onSampleChange, samples.length])
 
   useLayoutEffect(() => {
     const viewport = viewportRef.current
@@ -235,12 +247,12 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
     finishPointerDrag(event)
   }, [finishPointerDrag])
 
-  const handleTokenClick = useCallback((tok: Token, selected: boolean) => {
+  const handleTokenClick = useCallback((idx: number, selected: boolean) => {
     if (suppressClickRef.current) {
       suppressClickRef.current = false
       return
     }
-    onSelectToken(selected ? null : tok)
+    onSelectToken(selected ? null : idx)
   }, [onSelectToken])
 
   const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -278,15 +290,16 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
     return <p className="empty-note">No samples to display.</p>
   }
 
-  const { tokens, image } = sample
+  const { tokens, cells, image } = sample
   const regions = sample.regions ?? []
 
-  const statuses = tokens.map(token => predictionMatchStatus(task, token.label, token.pred))
-  const hasGT = tokens.some(token => token.pred == null)
-  const hasCorrect = statuses.includes('correct')
-  const hasMismatch = statuses.includes('mismatch')
-  const hasNotEvaluatedPreds = tokens.some((token, index) =>
-    token.pred != null && statuses[index] === 'not-applicable')
+  // Build token → owning cell map
+  const cellByToken = new Map<number, Cell>()
+  for (const cell of (cells ?? [])) {
+    for (const tokenId of cell.token_ids) {
+      cellByToken.set(tokenId, cell)
+    }
+  }
 
   const showImage = image && !imgError
 
@@ -372,23 +385,34 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
             xmlns="http://www.w3.org/2000/svg"
           >
             {regions.map((rg, i) => (
-              <rect
-                key={`region-${i}`}
-                x={rg.bbox[0] * width}
-                y={rg.bbox[1] * height}
-                width={(rg.bbox[2] - rg.bbox[0]) * width}
-                height={(rg.bbox[3] - rg.bbox[1]) * height}
-                fill="none"
-                stroke="#9333EA"
-                strokeWidth={2}
-                strokeDasharray="8 6"
-                rx={4}
-                pointerEvents="none"
-              />
+              <g key={`region-${i}`}>
+                <rect
+                  x={rg.bbox[0] * width}
+                  y={rg.bbox[1] * height}
+                  width={(rg.bbox[2] - rg.bbox[0]) * width}
+                  height={(rg.bbox[3] - rg.bbox[1]) * height}
+                  fill="none"
+                  stroke="#9333EA"
+                  strokeWidth={2}
+                  strokeDasharray="8 6"
+                  rx={4}
+                  pointerEvents="none"
+                />
+                <text
+                  x={rg.bbox[0] * width + 4}
+                  y={rg.bbox[1] * height - 3}
+                  fontSize={10}
+                  fill="#9333EA"
+                  pointerEvents="none"
+                >
+                  {`${rg.type}:${rg.name ?? ''}#${rg.index}`}
+                </text>
+              </g>
             ))}
             {tokens.map((tok, i) => {
-              const sel = tok === selectedToken
-              const { fill, stroke } = tokenColors(tok, task, sel)
+              const sel = i === selectedTokenIdx
+              const role = cellByToken.get(i)?.role
+              const { fill, stroke } = tokenColors(role, sel)
               const x = tok.x0 * width
               const y = tok.y0 * height
               const w = (tok.x1 - tok.x0) * width
@@ -402,7 +426,7 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
                     stroke={stroke}
                     strokeWidth={sel ? 2.5 : 1.5}
                     rx={3}
-                    onClick={() => handleTokenClick(tok, sel)}
+                    onClick={() => handleTokenClick(i, sel)}
                   />
                 </g>
               )
@@ -411,24 +435,21 @@ export default function DocumentViewer({ samples, task, selectedToken, onSelectT
         </div>
       </div>
 
-      {/* Legend */}
+      {/* Legend — derived from ROLE_COLOR + COLOR_BACKGROUND constants above */}
       <div className="legend">
-        {(hasGT || hasNotEvaluatedPreds) && (
-          <span className="legend-item">
-            <span className="legend-swatch swatch-gt" />
-            {hasNotEvaluatedPreds ? 'ground truth / not evaluated' : 'ground truth'}
+        {([
+          ['data',         ROLE_COLOR.data],
+          ['header',       ROLE_COLOR.header],
+          ['group header', ROLE_COLOR.group_header],
+          ['section',      ROLE_COLOR.section],
+          ['summary',      ROLE_COLOR.summary],
+          ['key / value',  ROLE_COLOR.key],
+          ['background',   COLOR_BACKGROUND],
+        ] as [string, { fill: string; stroke: string }][]).map(([label, c]) => (
+          <span className="legend-item" key={label}>
+            <span className="legend-swatch" style={{ background: c.fill, border: `1.5px solid ${c.stroke}` }} /> {label}
           </span>
-        )}
-        {hasCorrect && (
-          <span className="legend-item">
-            <span className="legend-swatch swatch-correct" /> correct
-          </span>
-        )}
-        {hasMismatch && (
-          <span className="legend-item">
-            <span className="legend-swatch swatch-wrong" /> mismatch
-          </span>
-        )}
+        ))}
         <span className="legend-item">
           <span className="legend-swatch swatch-selected" /> selected
         </span>

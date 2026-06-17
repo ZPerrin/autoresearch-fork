@@ -48,9 +48,10 @@ Viewer:
 - **Two data layers.** `runs/` = git-tracked JSON ledger; `datasets/` = local & gitignored curated
   data. The viewer composes both locally; on a machine without the dataset it still renders
   boxes/metrics, just no page image.
-- **Contract is the seam** (`schema_version = 2`, defined in `artifacts.py`): observables (per-token
-  `bbox` + `text`, per-sample `image`) are locked; task labels are open (`label`/`pred` dicts keyed
-  by `config.task`); the annotation schema is deferred.
+- **Contract is the seam** (`schema_version = 3`, defined in `artifacts.py`): observables (per-token
+  `bbox` + `text`, per-sample `image`) are locked; the annotation layer is structured as typed
+  `Region`s (`type`/`name`/`index`/`bbox`) and `Cell`s (`region_index`/`row_index`/`column_index`/
+  `span`/`bbox`/`role`/`field`/`token_ids`); tokens are pure observables with no per-token label.
 - **No TDD** for now — implement and verify by running.
 - **PR-style review.** Propose changes as diffs + a one-line rationale; the human accepts/redirects.
 - **Lean.** Small diffs, reviewable changes, tight docs. Specs in `docs/specs/`; each milestone gets
@@ -58,7 +59,7 @@ Viewer:
 
 ## Current state & active milestone
 
-Built: env (MPS + CUDA), contract v2, multimodal dataset builder, split-pane viewer; synth-toolkit
+Built: env (MPS + CUDA), contract v3 (Region/Cell/Token), multimodal dataset builder, split-pane viewer; synth-toolkit
 backbone (compositional spec API specs/fields/classes/layout/render/build + build/list/inspect CLI);
 multi-token cells (`StructureSpec.multi_token` → per-word tokens sharing record/field + `seq`);
 header row (`StructureSpec.header` → top field-name row, label `{field, header}`); background tokens
@@ -76,6 +77,14 @@ a section heading before / a TOTALS row after each instance, labels `{section}` 
 multi-instance ten-column `claim_line` (billed/allowed/deductible/copay/coinsurance/plan-paid/owed,
 sparse) on a wide `1500x1414` page, with Charges / Patient Responsibility / Plan & Balance header
 banners, a sampled service-category section row, and a TOTALS row.
+
+> **Contract restructure (schema v3) shipped** — the per-token `label` notations in the paragraph
+> above (`{field, header}`, `label = null`, `region`, `{group, header, field, span}`, `{section}`/
+> `{subtotal}`) are historical: the contract is now **Region / Cell / Token**
+> (`docs/specs/2026-06-15-region-cell-token-schema-design.md`). Tokens are pure observables
+> (`bbox` + `text`); structure + meaning live on `Cell`s (`row_index`/`column_index`/`span` + `role` ∈
+> header/group_header/data/section/summary/key/value + `field`) grouped under typed `Region`s
+> (table/form, `type`/`name`/`index`). Globals → a `form` region; background → cell-less tokens.
 
 **Structural realism is complete** (the ordered list items 1–6 are all shipped): spanning cells +
 grouped headers landed last (see `docs/specs/2026-06-14-spanning-cells-grouped-headers-design.md`),

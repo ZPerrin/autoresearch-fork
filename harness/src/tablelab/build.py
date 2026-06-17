@@ -13,7 +13,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 from .specs import DocumentClass
-from .artifacts import Sample, Token, Region, DatasetManifest, write_dataset
+from .artifacts import Sample, Token, Cell, Region, DatasetManifest, write_dataset
 from .layout import layout_with_regions, validate_layout_capacity
 from .render import render
 
@@ -181,21 +181,27 @@ def build_dataset(datasets_dir: Path | str, dataset_id: str, doc_class: Document
             (staging_dir / "images").mkdir(parents=True)
             samples: list[Sample] = []
             for i in tqdm(range(n), desc=dataset_id):
-                placed, placed_regions = layout_with_regions(doc_class, rng)
+                placed, placed_cells, placed_regions = layout_with_regions(doc_class, rng)
                 img, boxes = render(placed, doc_class)
                 _validate_boxes(boxes, placed, dataset_id, i, W, H)
                 img.save(staging_dir / "images" / f"{i}.png")
                 tokens = [Token(x0=round(b[0] / W, 4), y0=round(b[1] / H, 4),
                                 x1=round(b[2] / W, 4), y1=round(b[3] / H, 4),
-                                text=p.text, label=p.label)
+                                text=p.text)
                           for p, b in zip(placed, boxes)]
-                regions = [Region(region=r.region, table=r.table,
+                cells = [Cell(region_index=c.region_index, row_index=c.row_index,
+                              column_index=c.column_index, span=c.span,
+                              bbox=[round(c.bbox[0] / W, 4), round(c.bbox[1] / H, 4),
+                                    round(c.bbox[2] / W, 4), round(c.bbox[3] / H, 4)],
+                              role=c.role, field=c.field, token_ids=c.token_ids)
+                         for c in placed_cells]
+                regions = [Region(type=r.type, name=r.name, index=r.index,
                                   bbox=[round(r.bbox[0] / W, 4), round(r.bbox[1] / H, 4),
                                         round(r.bbox[2] / W, 4), round(r.bbox[3] / H, 4)])
                            for r in placed_regions]
                 samples.append(Sample(id=i, tokens=tokens, width=W, height=H,
                                       image=f"/datasets/{dataset_id}/images/{i}.png",
-                                      regions=regions))
+                                      cells=cells, regions=regions))
             manifest = DatasetManifest(
                 dataset_id=dataset_id, generator_version=GENERATOR_VERSION,
                 task="grid_record_field", modalities=["spatial", "semantic", "visual"],

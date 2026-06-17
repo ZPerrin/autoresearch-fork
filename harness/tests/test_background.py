@@ -9,6 +9,8 @@ from tablelab.specs import DocumentClass, fork
 from tablelab.layout import layout
 from tablelab.render import render
 
+from _cells import placed, bg_token_ids, cells_where
+
 
 def _invoice(**structure):
     dc = classlib.get("invoice")
@@ -20,56 +22,67 @@ def _overlaps(a, b):
 
 
 def test_background_off_is_default():
-    placed = layout(classlib.get("invoice"), random.Random(7))
-    assert all(p.label is not None for p in placed)
+    tokens, cells, _regions = placed(classlib.get("invoice"), seed=7)
+    # no background: every token is claimed by some cell
+    assert bg_token_ids(tokens, cells) == []
 
 
 def test_background_adds_n_null_label_tokens_below_table():
     dc = _invoice(background=5)
-    placed = layout(dc, random.Random(7))
-    bg = [p for p in placed if p.label is None]
-    data = [p for p in placed if p.label is not None]
-    assert len(bg) == 5
+    tokens, cells, _regions = placed(dc, seed=7)
+    bg_ids = bg_token_ids(tokens, cells)
+    assert len(bg_ids) == 5
+
     # background sits at or below the bottom of the lowest table row
-    table_bottom = max(p.cell[3] for p in data)
-    assert all(p.cell[1] >= table_bottom for p in bg)
-    # each background token has a unique cell rect (render groups by cell; null labels must stay singletons)
-    assert len({p.cell for p in bg}) == len(bg)
-    # table tokens are unaffected and still labeled
-    assert all(p.label is not None and "field" in p.label for p in data)
+    claimed_ids = {i for c in cells for i in c.token_ids}
+    table_bottom = max(tokens[i].cell[3] for i in claimed_ids)
+    assert all(tokens[i].cell[1] >= table_bottom for i in bg_ids)
+
+    # each background token has a unique cell rect
+    assert len({tokens[i].cell for i in bg_ids}) == len(bg_ids)
+
+    # every structured (non-background) token is claimed
+    assert all(i in claimed_ids for i in range(len(tokens)) if i not in bg_ids)
 
 
 def test_background_renders_and_round_trips_null_label():
     dc = _invoice(background=4)
-    placed = layout(dc, random.Random(7))
-    img, boxes = render(placed, dc)
-    assert all(b[2] > b[0] and b[3] > b[1] for b in boxes)  # every box set, including background
-    # the null label is preserved through the placed tokens (what build.py serializes)
-    assert sum(1 for p in placed if p.label is None) == 4
+    tokens, cells, _regions = placed(dc, seed=7)
+    # use layout()+render() for the render check (render takes PlacedToken list)
+    p_tokens = layout(dc, random.Random(7))
+    _img, boxes = render(p_tokens, dc)
+    assert all(b[2] > b[0] and b[3] > b[1] for b in boxes)  # every box set
+    # 4 background tokens are present (referenced by no cell)
+    assert len(bg_token_ids(tokens, cells)) == 4
 
 
 def test_background_composes_with_header():
     dc = _invoice(background=3, header=True)
-    placed = layout(dc, random.Random(7))
-    assert sum(1 for p in placed if p.label is None) == 3
-    assert any(p.label and p.label.get("header") for p in placed)
+    tokens, cells, _regions = placed(dc, seed=7)
+    # 3 background tokens
+    assert len(bg_token_ids(tokens, cells)) == 3
+    # at least one header cell exists
+    assert cells_where(cells, role="header")
 
 
 def test_reserved_background_slots_do_not_overlap_content_or_each_other():
     dc = _invoice(background=8, header=True)
-    placed = layout(dc, random.Random(7))
-    background = [p for p in placed if p.label is None]
-    structured = [p for p in placed if p.label is not None]
+    tokens, cells, _regions = placed(dc, seed=7)
+    bg_ids = bg_token_ids(tokens, cells)
+    structured_ids = [i for i in range(len(tokens)) if i not in set(bg_ids)]
+
+    bg_rects = [tokens[i].cell for i in bg_ids]
+    str_rects = [tokens[i].cell for i in structured_ids]
 
     assert not any(
-        _overlaps(bg.cell, token.cell)
-        for bg in background
-        for token in structured
+        _overlaps(bg, st)
+        for bg in bg_rects
+        for st in str_rects
     )
     assert not any(
-        _overlaps(background[i].cell, background[j].cell)
-        for i in range(len(background))
-        for j in range(i + 1, len(background))
+        _overlaps(bg_rects[i], bg_rects[j])
+        for i in range(len(bg_rects))
+        for j in range(i + 1, len(bg_rects))
     )
 
 

@@ -1,7 +1,8 @@
 from __future__ import annotations
 import random
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field as dc_field, replace
 
+from .artifacts import Cell
 from .fields import sample, background_token, field_weight
 from .jitter import jitter_column_edges, jitter_row_height, jitter_offset
 from .metrics import text_width
@@ -121,19 +122,32 @@ def _resolve_column_edges(fields, usable: float, mx: float, pad: int, header: bo
 @dataclass
 class PlacedToken:
     text: str
-    cell: tuple[float, float, float, float]   # cell rect in page pixels (x0, y0, x1, y1)
-    label: dict | None                        # data {"record": r, "field": c} | header {"field": c, "header": True}; + "region": g when multi-instance, + "seq": k when multi_token; null = background
+    cell: tuple[float, float, float, float]   # render rect in page px (x0, y0, x1, y1)
     align: str = "left"
     font_size: int = 22
     dx: float = 0.0
     dy: float = 0.0
+    seq: int = 0                              # within-rect reading order (render hint; not serialized)
+
+
+@dataclass
+class PlacedCell:
+    region_index: int
+    row_index: int
+    column_index: int
+    span: tuple[int, int]                      # (colspan, rowspan)
+    bbox: tuple[float, float, float, float]    # cell rect in page px
+    role: str
+    field: str | None
+    tokens: list[PlacedToken] = dc_field(default_factory=list)   # transient refs; resolved to ids on return
 
 
 @dataclass
 class PlacedRegion:
-    region: int                                # matches the {"region": k} token label
-    table: str                                 # table name (e.g. "claim_line")
-    bbox: tuple[float, float, float, float]    # page px (x0, y0, x1, y1)
+    type: str
+    name: str | None
+    index: int
+    bbox: tuple[float, float, float, float]    # page px
 
 
 def _header_text(name: str) -> str:
@@ -197,40 +211,42 @@ def _group_runs(fields) -> list[tuple[str, int, int]]:
     return runs
 
 
-def _emit(placed: list[PlacedToken], text: str, cell: tuple[float, float, float, float],
-          base_label: dict, align: str, font_size: int, multi: bool) -> None:
-    """Append one token for `text`, or one per word (sharing cell + label, with seq) when multi."""
-    if multi:
-        for k, word in enumerate(text.split()):
-            placed.append(PlacedToken(text=word, cell=cell,
-                label={**base_label, "seq": k}, align=align, font_size=font_size))
-    else:
-        placed.append(PlacedToken(text=text, cell=cell,
-            label=base_label, align=align, font_size=font_size))
+def _emit_tokens(placed: list[PlacedToken], text: str,
+                 rect: tuple[float, float, float, float],
+                 align: str, font_size: int, multi: bool) -> list[PlacedToken]:
+    """Append one token for `text`, or one per word when `multi`. Empty text appends
+    nothing. Returns the appended tokens (in reading order) for cell membership."""
+    new: list[PlacedToken] = []
+    if not text:
+        return new
+    words = text.split() if multi else [text]
+    for k, word in enumerate(words):
+        tok = PlacedToken(text=word, cell=rect, align=align, font_size=font_size, seq=k)
+        placed.append(tok)
+        new.append(tok)
+    return new
 
 
-def _emit_span_row(placed: list[PlacedToken], cells, edges, y: float, row_h: float,
-                   base_label: dict, font: int, multi: bool, rng: random.Random,
-                   header_on_text: bool = False) -> None:
-    """Emit one spanning row: each cell covers a contiguous column range starting at the
-    running column index. text cells are literal, type cells are sampled (RNG drawn left to
-    right), empty cells emit nothing. Each token gets field=c0 and span=[c0, c1]; a literal
-    label additionally gets header=True when ``header_on_text`` (the totals label cell)."""
+def _emit_span_row(placed: list[PlacedToken], cells: list[PlacedCell], spans, edges,
+                   y: float, row_h: float, region_index: int, row_index: int, role: str,
+                   font: int, multi: bool, rng: random.Random) -> None:
+    """Emit one spanning row (section or totals). Each SpanCell covers a contiguous
+    column range from the running column index; text cells are literal, type cells are
+    sampled left-to-right, empty cells still produce a cell (no tokens)."""
     c = 0
-    for cell in cells:
-        c0, c1 = c, c + cell.span - 1
+    for sc in spans:
+        c0, c1 = c, c + sc.span - 1
         rect = (edges[c0], y, edges[c1 + 1], y + row_h)
-        if cell.text is not None:
-            value, is_text = cell.text, True
-        elif cell.type is not None:
-            value, is_text = sample(cell.type, rng), False
+        if sc.text is not None:
+            value = sc.text
+        elif sc.type is not None:
+            value = sample(sc.type, rng)
         else:
-            value, is_text = "", False
-        if value:
-            label = {**base_label, "field": c0, "span": [c0, c1]}
-            if is_text and header_on_text:
-                label["header"] = True
-            _emit(placed, value, rect, label, cell.align, font, multi)
+            value = ""
+        toks = _emit_tokens(placed, value, rect, sc.align, font, multi)
+        cells.append(PlacedCell(region_index=region_index, row_index=row_index,
+                                column_index=c0, span=(c1 - c0 + 1, 1), bbox=rect,
+                                role=role, field=None, tokens=toks))
         c = c1 + 1
 
 
@@ -519,15 +535,14 @@ def validate_layout_capacity(dc: DocumentClass) -> None:
         raise _capacity_error(dc, _available_height(dc), _fixed_height(dc))
 
 
-def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[PlacedToken], list[PlacedRegion]]:
-    """Place one document's tokens (logical, no Pillow). Global/singleton fields
-    (dc.globals) are laid out first as label:value rows at the top; then each table
-    is drawn as stacked instances with table_gap, tagged with a
-    region when the class is multi-instance. Header rows (structure.header),
+def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[PlacedToken], list[Cell], list[PlacedRegion]]:
+    """Place one document's tokens, cells, and typed regions (logical, no Pillow).
+    Global/singleton fields (dc.globals) are laid out first as key/value cells in a
+    'form' region; then each table instance is drawn and tagged with a 'table' region
+    (instance-ordinal indexed per table name). Header rows (structure.header),
     multi-token split (structure.multi_token) and background tokens
-    (structure.background) apply as before. The single-table, single-instance path
-    without globals, headers, or background remains byte-identical when its maximum
-    row count fits the page."""
+    (structure.background) apply as before; background tokens belong to no cell.
+    Returns (tokens, cells, regions) with cell token_ids resolved after the shuffle."""
     dc = _resolve_row_h(dc)
     L = dc.layout
     W, _ = L.page
@@ -536,11 +551,14 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
     header = dc.structure.header
     J = dc.jitter
     shape = _choose_shape(dc, rng)
-    multi_region = len(dc.tables) > 1 or sum(t.instances[1] for t in dc.tables) > 1
     placed: list[PlacedToken] = []
+    cells: list[PlacedCell] = []
     regions: list[PlacedRegion] = []
     y = float(my)
+
     if dc.globals:
+        form_index = len(regions)
+        g_y0 = y
         gpr = max(L.globals_per_row, 1)
         usable = W - 2 * mx
         pair_w = usable / gpr
@@ -550,15 +568,24 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
                 y += L.row_h
             px0 = mx + col * pair_w
             gw = pair_w * 0.35
-            label_cell = (px0, y, px0 + gw, y + L.row_h)
-            _emit(placed, _header_text(f.name) + ":", label_cell,
-                  {"global": f.name, "header": True}, "left", dc.render.font_size, multi)
-            value_cell = (px0 + gw, y, px0 + pair_w, y + L.row_h)
-            _emit(placed, sample(f.type, rng), value_cell,
-                  {"global": f.name}, "left", dc.render.font_size, multi)
+            label_rect = (px0, y, px0 + gw, y + L.row_h)
+            toks = _emit_tokens(placed, _header_text(f.name) + ":", label_rect,
+                                "left", dc.render.font_size, multi)
+            cells.append(PlacedCell(region_index=form_index, row_index=i // gpr,
+                                    column_index=2 * col, span=(1, 1), bbox=label_rect,
+                                    role="key", field=f.name, tokens=toks))
+            value_rect = (px0 + gw, y, px0 + pair_w, y + L.row_h)
+            toks = _emit_tokens(placed, sample(f.type, rng), value_rect,
+                                "left", dc.render.font_size, multi)
+            cells.append(PlacedCell(region_index=form_index, row_index=i // gpr,
+                                    column_index=2 * col + 1, span=(1, 1), bbox=value_rect,
+                                    role="value", field=f.name, tokens=toks))
         y += L.row_h
+        regions.append(PlacedRegion(type="form", name="globals", index=0,
+                                    bbox=(mx, g_y0, W - mx, y)))
         y += _section_gap(dc)
-    region = 0
+
+    name_counts: dict[str, int] = {}
     for table, table_shape in zip(dc.tables, shape):
         if not table_shape:
             continue
@@ -566,7 +593,8 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
         explicit_widths = all(f.width is not None for f in table.fields)
         for rows in table_shape:
             y_start = y
-            reg = {"region": region} if multi_region else {}
+            region_index = len(regions)
+            row_idx = 0
             grid = [[_sample_cell(table.fields[c], rng) for c in range(C)]
                     for _ in range(rows)]
             cell_font = dc.render.font_size
@@ -577,83 +605,85 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
                                           header, grid, cell_font)
             if header and any(f.group for f in table.fields):
                 for name, c0, c1 in _group_runs(table.fields):
-                    cell = (edges[c0], y, edges[c1 + 1], y + L.row_h)
-                    _emit(placed, name, cell,
-                          {**reg, "field": c0, "header": True,
-                           "group": name, "span": [c0, c1]},
-                          "left", cell_font, multi)
+                    rect = (edges[c0], y, edges[c1 + 1], y + L.row_h)
+                    toks = _emit_tokens(placed, name, rect, "left", cell_font, multi)
+                    cells.append(PlacedCell(region_index=region_index, row_index=row_idx,
+                                            column_index=c0, span=(c1 - c0 + 1, 1), bbox=rect,
+                                            role="group_header", field=None, tokens=toks))
                 y += L.row_h
+                row_idx += 1
             if header:
                 for c in range(C):
                     f = table.fields[c]
-                    x0, x1 = edges[c], edges[c + 1]
-                    cell = (x0, y, x1, y + L.row_h)
-                    _emit(placed, _header_text(f.name), cell,
-                          {**reg, "field": c, "header": True}, f.align, cell_font, multi)
+                    rect = (edges[c], y, edges[c + 1], y + L.row_h)
+                    toks = _emit_tokens(placed, _header_text(f.name), rect, f.align,
+                                        cell_font, multi)
+                    cells.append(PlacedCell(region_index=region_index, row_index=row_idx,
+                                            column_index=c, span=(1, 1), bbox=rect,
+                                            role="header", field=f.name, tokens=toks))
                 y += L.row_h
+                row_idx += 1
             if table.section is not None:
-                _emit_span_row(placed, table.section.cells, edges, y, L.row_h,
-                               {**reg, "section": True}, cell_font, multi, rng)
+                _emit_span_row(placed, cells, table.section.cells, edges, y, L.row_h,
+                               region_index, row_idx, "section", cell_font, multi, rng)
                 y += L.row_h
+                row_idx += 1
             line_h = _line_h(dc)
             for r in range(rows):
                 row_edges = (jitter_column_edges(edges, J.col_w, rng)
                              if J.col_w > 0 else edges)
-                # Content-aware height: a wrappable cell that wraps to N lines grows the row.
                 row_lines = 1
                 for c in range(C):
                     f = table.fields[c]
-                    v = grid[r][c]
-                    if f.max_width is not None and v:
+                    value = grid[r][c]
+                    if f.max_width is not None and value:
                         col_text_w = (row_edges[c + 1] - row_edges[c]) - 2 * L.pad
-                        row_lines = max(row_lines, len(_wrap(v.split(), col_text_w, cell_font)))
+                        row_lines = max(row_lines, len(_wrap(value.split(), col_text_w, cell_font)))
                 base_h = max(L.row_h, row_lines * line_h)
                 cell_h = base_h
                 gap_after = _row_gap(dc)
-                # Height jitter is zero-sum against the trailing gap, so it must skip the
-                # last row (which has no trailing gap) or the instance grows past its
-                # reserved budget and can overrun the page.
                 if J.row_h > 0 and _row_gap(dc) > 0 and r < rows - 1:
                     cell_h, delta = jitter_row_height(base_h, J.row_h, _row_gap(dc), rng)
                     gap_after = _row_gap(dc) + delta
                 for c in range(C):
                     f = table.fields[c]
                     value = grid[r][c]
-                    if not value:
-                        continue  # sparse cell: leave it empty, emit no token
                     x0, x1 = row_edges[c], row_edges[c + 1]
-                    if f.max_width is not None:
+                    cell_bbox = (x0, y, x1, y + cell_h)
+                    toks: list[PlacedToken] = []
+                    if value and f.max_width is not None:
                         col_text_w = (x1 - x0) - 2 * L.pad
                         lines = _wrap(value.split(), col_text_w, cell_font)
                         block_h = len(lines) * line_h
                         top = y + (cell_h - block_h) / 2
-                        seq = 0
                         for k, words in enumerate(lines):
                             ly0 = top + k * line_h
-                            line_cell = (x0, ly0, x1, ly0 + line_h)
-                            for w in words:
-                                placed.append(PlacedToken(
-                                    text=w, cell=line_cell,
-                                    label={**reg, "record": r, "field": c, "seq": seq},
-                                    align=f.align, font_size=cell_font))
-                                seq += 1
-                    else:
-                        cell = (x0, y, x1, y + cell_h)
-                        _emit(placed, value, cell,
-                              {**reg, "record": r, "field": c}, f.align, cell_font, multi)
+                            line_rect = (x0, ly0, x1, ly0 + line_h)
+                            for wi, w in enumerate(words):
+                                tok = PlacedToken(text=w, cell=line_rect, align=f.align,
+                                                  font_size=cell_font, seq=wi)
+                                placed.append(tok)
+                                toks.append(tok)
+                    elif value:
+                        toks = _emit_tokens(placed, value, cell_bbox, f.align, cell_font, multi)
+                    cells.append(PlacedCell(region_index=region_index, row_index=row_idx,
+                                            column_index=c, span=(1, 1), bbox=cell_bbox,
+                                            role="data", field=f.name, tokens=toks))
                 y += cell_h
                 if r < rows - 1:
                     y += gap_after
+                row_idx += 1
             if table.totals is not None:
-                _emit_span_row(placed, table.totals.cells, edges, y, L.row_h,
-                               {**reg, "subtotal": True}, cell_font, multi, rng,
-                               header_on_text=True)
+                _emit_span_row(placed, cells, table.totals.cells, edges, y, L.row_h,
+                               region_index, row_idx, "summary", cell_font, multi, rng)
                 y += L.row_h
-            regions.append(PlacedRegion(
-                region=region, table=table.name,
-                bbox=(edges[0], y_start, edges[-1], y)))
+                row_idx += 1
+            idx = name_counts.get(table.name, 0)
+            name_counts[table.name] = idx + 1
+            regions.append(PlacedRegion(type="table", name=table.name, index=idx,
+                                        bbox=(edges[0], y_start, edges[-1], y)))
             y += _instance_gap(dc)
-            region += 1
+
     n_bg = dc.structure.background
     if n_bg:
         columns = min(_BACKGROUND_COLUMNS, n_bg)
@@ -661,18 +691,26 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
         for i in range(n_bg):
             row, col = divmod(i, columns)
             x0 = mx + col * slot_w
-            cell = (x0, y + row * L.row_h,
-                    x0 + slot_w, y + (row + 1) * L.row_h)
-            placed.append(PlacedToken(
-                text=background_token(dc.background_terms, rng), cell=cell, label=None,
-                align="left", font_size=dc.render.font_size))
+            rect = (x0, y + row * L.row_h, x0 + slot_w, y + (row + 1) * L.row_h)
+            placed.append(PlacedToken(text=background_token(dc.background_terms, rng),
+                                      cell=rect, align="left", font_size=dc.render.font_size))
+
     if J.offset > 0 or J.baseline > 0:
         for p in placed:
             p.dx, p.dy = jitter_offset(J.offset, J.baseline, L.pad, rng)
+
     rng.shuffle(placed)
-    return placed, regions
+    index_of = {id(t): i for i, t in enumerate(placed)}
+    out_cells = [
+        Cell(region_index=c.region_index, row_index=c.row_index,
+             column_index=c.column_index, span=list(c.span), bbox=list(c.bbox),
+             role=c.role, field=c.field,
+             token_ids=[index_of[id(t)] for t in c.tokens])
+        for c in cells
+    ]
+    return placed, out_cells, regions
 
 
 def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
-    """Tokens only (back-compat). Use layout_with_regions when per-instance bboxes are needed."""
+    """Tokens only (back-compat for render/golden helpers)."""
     return layout_with_regions(dc, rng)[0]

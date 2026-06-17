@@ -141,6 +141,40 @@ provisioned but unused.
 - `pred` / model-output representation (designed with the model loop).
 - `footer` region bbox; other `LAYOUT_*` area types; vision-era layout detection.
 
+## Known limitation — `Cell` is the *tabular* element (generalization deferred)
+
+`Cell` carries a tabular bias that we should name now so it doesn't calcify. The **token and region
+layers are document-agnostic**; only three `Cell` fields are grid-specific:
+
+```
+Cell { region_index, bbox, role, field, token_ids,   ← general (any document)
+       row_index, column_index, span }                ← grid-only (tables)
+```
+
+A cell-*only* model would force non-grid documents into a grid they don't have. Concretely, for the
+**document-class breadth** milestone:
+
+- **key-value form** (W-2, application — on the breadth list): a key and its value are two elements
+  sharing a `field` (`role=key`/`role=value`). They need `role` + `field` but **not** row/col — the
+  current `form`-as-grid representation (key at `column_index=0`, value at `1`) is a **deliberate
+  compromise to revisit when the real form class lands**, not a precedent to extend.
+- **letter / contract / narrative**: reading-order text blocks (`role=title`/`paragraph`/`list_item`)
+  need an **`order`**, not row/col.
+- **figure / logo / signature / stamp**: a typed bbox, possibly with no tokens — no grid at all.
+
+This mirrors Textract, which never forces everything into cells: `WORD` groups into `CELL` (grid)
+*or* `KEY_VALUE_SET` (form) *or* `LAYOUT_TEXT`/`LAYOUT_TITLE`/`LAYOUT_LIST`/`LAYOUT_FIGURE` (prose),
+keyed by what the content is. Our typed `Region` already provides that seam.
+
+**Generalization path (deferred; let the key-value-form spec drive it):** either (A) add sibling
+element types (Textract-style: `Cell` for tables, a key-value element for forms, a block/line for
+prose), or (B) — leaner, preferred — keep one annotation unit but make `row_index`/`column_index`/
+`span` **optional** (present only for grid roles), add an optional `order` for sequential content,
+and rename `Sample.cells` to a neutral container (`elements`/`segments`). Tables fill the grid
+fields; forms fill `role`+`field`; prose fills `order`; figures fill neither. The token + region
+layers are unchanged either way. We design this with the first concrete non-tabular class in hand
+rather than speculatively.
+
 ## Verification
 
 - **Round-trip**: `write` then `read_dataset`/`read_run` reproduces `regions`/`cells`/`tokens`

@@ -1,34 +1,46 @@
 from __future__ import annotations
 import json
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field as dc_field, asdict
 from pathlib import Path
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 @dataclass
 class Token:
     x0: float; y0: float; x1: float; y1: float
     text: str | None = None
-    label: dict | None = None
-    pred: dict | None = None
+
+
+@dataclass
+class Cell:
+    region_index: int                      # flat index into Sample.regions
+    row_index: int                         # 0-based visual row within the region
+    column_index: int                      # 0-based visual column (leftmost for spanning cells)
+    span: list[int]                        # [colspan, rowspan]
+    bbox: list[float]                      # normalized [0,1] (x0, y0, x1, y1)
+    role: str                              # header|group_header|data|section|summary|key|value
+    field: str | None = None               # template slot name (FieldSpec.name); None for span/group rows
+    token_ids: list[int] = dc_field(default_factory=list)
 
 
 @dataclass
 class Region:
-    region: int                         # matches the {"region": k} token label
-    table: str                          # table name (e.g. "claim_line")
-    bbox: list[float]                   # normalized [0,1] (x0, y0, x1, y1)
+    type: str                              # "table" | "form" | "footer" | …
+    name: str | None                       # table name ("claim_line"); "globals" for the form
+    index: int                             # instance ordinal, scoped per (type, name)
+    bbox: list[float]                      # normalized [0,1] (x0, y0, x1, y1)
 
 
 @dataclass
 class Sample:
     id: int
     tokens: list[Token]
-    image: str | None = None      # path/URL the viewer can fetch (e.g. /datasets/<id>/images/0.png)
-    width: int | None = None      # page pixel dims; token boxes stay normalized to [0,1]
+    image: str | None = None
+    width: int | None = None
     height: int | None = None
-    regions: list[Region] | None = None   # per table-instance bbox; additive structural metadata
+    cells: list[Cell] = dc_field(default_factory=list)
+    regions: list[Region] | None = None
 
 
 @dataclass
@@ -38,7 +50,7 @@ class DatasetManifest:
     task: str
     modalities: list[str]
     count: int
-    config: dict = field(default_factory=dict)
+    config: dict = dc_field(default_factory=dict)
     created: str = ""
 
 
@@ -51,7 +63,7 @@ class RunRecord:
     config: dict
     metrics: dict
     dataset_id: str = ""
-    curve: list[dict] = field(default_factory=list)
+    curve: list[dict] = dc_field(default_factory=list)
     wall_seconds: float = 0.0
     status: str = "keep"
     description: str = ""
@@ -79,11 +91,12 @@ def _token_from_dict(d: dict) -> Token:
 
 
 def _sample_from_dict(d: dict) -> Sample:
-    raw = d.get("regions")
-    regions = [Region(**r) for r in raw] if raw is not None else None
+    raw_regions = d.get("regions")
+    regions = [Region(**r) for r in raw_regions] if raw_regions is not None else None
+    cells = [Cell(**c) for c in d.get("cells", [])]
     return Sample(id=d["id"], tokens=[_token_from_dict(t) for t in d["tokens"]],
                   image=d.get("image"), width=d.get("width"), height=d.get("height"),
-                  regions=regions)
+                  cells=cells, regions=regions)
 
 
 def _write_samples(path: Path, samples: list[Sample], extra: dict | None = None) -> None:

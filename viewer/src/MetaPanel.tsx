@@ -1,10 +1,10 @@
-import type { ActiveSource, LabelValue, Token, TokenLabel } from './types'
-import { predictionMatchStatus } from './tokenMatch'
+import type { ActiveSource, LabelValue, Sample } from './types'
 
 interface Props {
   source: ActiveSource | null
   task?: string
-  selectedToken: Token | null
+  selectedTokenIdx: number | null
+  sample: Sample | null
 }
 
 const KEY_METRICS = ['exact', 'record_acc', 'field_acc', 'baseline_majority_exact', 'baseline_geosort_exact']
@@ -17,8 +17,8 @@ function formatValue(value: LabelValue): string {
   return value === null ? 'null' : String(value)
 }
 
-function entries(label: TokenLabel): [string, LabelValue][] {
-  return Object.entries(label)
+function entries(obj: Record<string, LabelValue>): [string, LabelValue][] {
+  return Object.entries(obj)
 }
 
 function MetricRow({ label, value }: { label: string; value: number | undefined }) {
@@ -55,10 +55,7 @@ function Sparkline({ curve }: { curve: { step: number; val_exact: number }[] }) 
   )
 }
 
-export default function MetaPanel({ source, task, selectedToken }: Props) {
-  const matchStatus = selectedToken == null
-    ? 'not-applicable'
-    : predictionMatchStatus(task, selectedToken.label, selectedToken.pred)
+export default function MetaPanel({ source, task: _task, selectedTokenIdx, sample }: Props) {
 
   return (
     <div className="meta-panel">
@@ -243,83 +240,85 @@ export default function MetaPanel({ source, task, selectedToken }: Props) {
       {/* Token detail */}
       <section className="meta-section token-detail">
         <div className="meta-section-title">Selected token</div>
-        {selectedToken == null ? (
+        {selectedTokenIdx == null ? (
           <p className="empty-note">Click a box in the document to inspect it.</p>
-        ) : (
-          <>
-            {selectedToken.text != null && (
-              <div className="meta-row">
-                <span className="meta-key">text</span>
-                <span className="meta-val mono">"{selectedToken.text}"</span>
-              </div>
-            )}
-            <div className="meta-row">
-              <span className="meta-key">label</span>
-              <span className="meta-val mono">
-                {selectedToken.label != null ? 'ground truth' : 'background / non-answer'}
-              </span>
-            </div>
-            {selectedToken.label != null && (
-              entries(selectedToken.label).map(([key, value]) => (
-                <div className="meta-row" key={key}>
-                  <span className="meta-key">{key}</span>
-                  <span className="meta-val mono">{formatValue(value)}</span>
-                </div>
-              ))
-            )}
-            {selectedToken.pred != null && (
-              <>
+        ) : (() => {
+          const token = sample?.tokens[selectedTokenIdx]
+          const cell = sample?.cells.find(c => c.token_ids.includes(selectedTokenIdx))
+          const region = cell != null ? sample?.regions?.[cell.region_index] : undefined
+          return (
+            <>
+              {token?.text != null && (
                 <div className="meta-row">
-                  <span className="meta-key">pred</span>
-                  <span className="meta-val mono">prediction</span>
+                  <span className="meta-key">text</span>
+                  <span className="meta-val mono">"{token.text}"</span>
                 </div>
-                {entries(selectedToken.pred)
-                  .filter(([key]) => key !== 'confidence')
-                  .map(([key, value]) => (
-                    <div className="meta-row" key={key}>
-                      <span className="meta-key">{key}</span>
-                      <span className="meta-val mono">{formatValue(value)}</span>
-                    </div>
-                  ))}
-                {selectedToken.pred.confidence != null && (
-                  <div className="meta-row">
-                    <span className="meta-key">confidence</span>
-                    <span className="meta-val mono">{Number(selectedToken.pred.confidence).toFixed(3)}</span>
-                  </div>
-                )}
-                <div className="meta-row">
-                  <span className="meta-key">match</span>
-                  <span className={`meta-val ${
-                    matchStatus === 'correct'
-                      ? 'correct-tag'
-                      : matchStatus === 'mismatch' ? 'wrong-tag' : ''
-                  }`}>
-                    {matchStatus === 'not-applicable' ? 'not evaluated' : matchStatus}
+              )}
+              {token && (
+                <div className="meta-row coords-row">
+                  <span className="meta-key">coords</span>
+                  <span className="meta-val mono" style={{ fontSize: '0.78rem' }}>
+                    ({token.x0.toFixed(3)}, {token.y0.toFixed(3)}) →
+                    ({token.x1.toFixed(3)}, {token.y1.toFixed(3)})
                   </span>
                 </div>
-              </>
-            )}
-            <div className="meta-row coords-row">
-              <span className="meta-key">coords</span>
-              <span className="meta-val mono" style={{ fontSize: '0.78rem' }}>
-                ({selectedToken.x0.toFixed(3)}, {selectedToken.y0.toFixed(3)}) →
-                ({selectedToken.x1.toFixed(3)}, {selectedToken.y1.toFixed(3)})
-              </span>
-            </div>
-          </>
-        )}
+              )}
+              {cell == null ? (
+                <div className="meta-row">
+                  <span className="meta-key">cell</span>
+                  <span className="meta-val mono">background / non-answer</span>
+                </div>
+              ) : (
+                <>
+                  <div className="meta-subsection-title">Cell</div>
+                  <div className="meta-row">
+                    <span className="meta-key">role</span>
+                    <span className="meta-val mono">{cell.role}</span>
+                  </div>
+                  {cell.field != null && (
+                    <div className="meta-row">
+                      <span className="meta-key">field</span>
+                      <span className="meta-val mono">{cell.field}</span>
+                    </div>
+                  )}
+                  <div className="meta-row">
+                    <span className="meta-key">row</span>
+                    <span className="meta-val mono">{cell.row_index}</span>
+                  </div>
+                  <div className="meta-row">
+                    <span className="meta-key">col</span>
+                    <span className="meta-val mono">{cell.column_index}</span>
+                  </div>
+                  <div className="meta-row">
+                    <span className="meta-key">span</span>
+                    <span className="meta-val mono">{cell.span[0]}×{cell.span[1]}</span>
+                  </div>
+                  {region != null && (
+                    <>
+                      <div className="meta-subsection-title">Region</div>
+                      <div className="meta-row">
+                        <span className="meta-key">type</span>
+                        <span className="meta-val mono">{region.type}</span>
+                      </div>
+                      {region.name != null && (
+                        <div className="meta-row">
+                          <span className="meta-key">name</span>
+                          <span className="meta-val mono">{region.name}</span>
+                        </div>
+                      )}
+                      <div className="meta-row">
+                        <span className="meta-key">index</span>
+                        <span className="meta-val mono">{region.index}</span>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </>
+          )
+        })()}
       </section>
 
-      {/* Legend */}
-      <section className="meta-section">
-        <div className="meta-section-title">Legend</div>
-        <div className="legend-list">
-          <span className="legend-item"><span className="legend-swatch swatch-gt" /> ground truth (no pred)</span>
-          <span className="legend-item"><span className="legend-swatch swatch-correct" /> correct prediction</span>
-          <span className="legend-item"><span className="legend-swatch swatch-wrong" /> mismatch</span>
-          <span className="legend-item"><span className="legend-swatch swatch-selected" /> selected</span>
-        </div>
-      </section>
     </div>
   )
 }

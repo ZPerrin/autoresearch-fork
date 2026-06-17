@@ -9,6 +9,8 @@ from tablelab.specs import fork
 from tablelab.layout import layout
 from tablelab.render import render
 
+from _cells import placed, cells_where
+
 
 def _instanced(n_lo, n_hi, **structure):
     dc = classlib.get("invoice")
@@ -17,48 +19,76 @@ def _instanced(n_lo, n_hi, **structure):
 
 
 def test_single_instance_has_no_region():
-    placed = layout(classlib.get("invoice"), random.Random(7))
-    assert all("region" not in p.label for p in placed if p.label)
+    _tokens, cells, regions = placed(classlib.get("invoice"), seed=7)
+    # single-instance: exactly one table region; data cells all share region_index 0
+    # (for a multi-table class there could be multiple, but invoice has one table)
+    table_regions = [r for r in regions if r.type == "table"]
+    assert len(table_regions) == 1
+    data_cells = cells_where(cells, role="data")
+    assert all(c.region_index == regions.index(table_regions[0]) for c in data_cells)
+    # all data cells share a single region_index (one table region)
+    region_indices = {c.region_index for c in data_cells}
+    assert len(region_indices) == 1
 
 
 def test_multiple_instances_label_region_contiguous():
-    placed = layout(_instanced(2, 2), random.Random(7))
-    regions = sorted({p.label["region"] for p in placed if p.label})
-    assert regions == [0, 1]
-    # records restart per instance (each region is its own table)
-    by_region = defaultdict(set)
-    for p in placed:
-        if p.label:
-            by_region[p.label["region"]].add(p.label.get("record"))
-    assert all(0 in records for records in by_region.values())
+    _tokens, cells, regions = placed(_instanced(2, 2), seed=7)
+    table_regions = [r for r in regions if r.type == "table"]
+    # Two instances → two table regions with index 0 and 1
+    assert len(table_regions) == 2
+    assert sorted(r.index for r in table_regions) == [0, 1]
+
+    # Data cells must map to two distinct region_indices
+    data_cells = cells_where(cells, role="data")
+    region_indices = sorted({c.region_index for c in data_cells})
+    assert len(region_indices) == 2
+
+    # Row_index restarts per instance (both instances start at row_index 0)
+    by_region_index: dict[int, set] = defaultdict(set)
+    for c in data_cells:
+        by_region_index[c.region_index].add(c.row_index)
+    assert all(0 in rows for rows in by_region_index.values())
 
 
 def test_instances_stacked_vertically():
-    placed = layout(_instanced(2, 2), random.Random(7))
-    r0 = [p for p in placed if p.label and p.label.get("region") == 0]
-    r1 = [p for p in placed if p.label and p.label.get("region") == 1]
-    assert max(p.cell[3] for p in r0) <= min(p.cell[1] for p in r1) + 1
+    _tokens, cells, regions = placed(_instanced(2, 2), seed=7)
+    table_regions = sorted([r for r in regions if r.type == "table"], key=lambda r: r.index)
+    r0_idx = regions.index(table_regions[0])
+    r1_idx = regions.index(table_regions[1])
+    r0_cells = [c for c in cells if c.region_index == r0_idx]
+    r1_cells = [c for c in cells if c.region_index == r1_idx]
+    r0_bottom = max(c.bbox[3] for c in r0_cells)
+    r1_top = min(c.bbox[1] for c in r1_cells)
+    assert r0_bottom <= r1_top + 1
 
 
 def test_instances_render_all_boxes_set():
     dc = _instanced(2, 3)
-    placed = layout(dc, random.Random(7))
-    _img, boxes = render(placed, dc)
+    p_tokens = layout(dc, random.Random(7))
+    _img, boxes = render(p_tokens, dc)
     assert all(b[2] > b[0] and b[3] > b[1] for b in boxes)
-    region_count = len({p.label["region"] for p in placed if p.label})
-    assert 2 <= region_count <= 3
+    _tokens, cells, regions = placed(dc, seed=7)
+    table_region_count = sum(1 for r in regions if r.type == "table")
+    assert 2 <= table_region_count <= 3
 
 
 def test_instances_compose_with_header_and_region():
-    placed = layout(_instanced(2, 2, header=True), random.Random(7))
-    # each instance's header tokens carry that region
-    hdr = [p for p in placed if p.label and p.label.get("header")]
-    assert sorted({p.label["region"] for p in hdr}) == [0, 1]
+    _tokens, cells, regions = placed(_instanced(2, 2, header=True), seed=7)
+    # header cells exist in both table regions
+    header_cells = cells_where(cells, role="header")
+    table_regions = [r for r in regions if r.type == "table"]
+    assert len(table_regions) == 2
+    hdr_region_indices = {c.region_index for c in header_cells}
+    table_region_indices = {regions.index(r) for r in table_regions}
+    assert hdr_region_indices == table_region_indices
 
 
 def test_instances_compose_with_multi_token():
-    placed = layout(_instanced(2, 2, multi_token=True), random.Random(7))
-    # a split data word carries region + record + field + seq together
-    words = [p for p in placed if p.label and "seq" in p.label and "record" in p.label]
-    assert words
-    assert {"region", "record", "field", "seq"}.issubset(words[0].label.keys())
+    _tokens, cells, regions = placed(_instanced(2, 2, multi_token=True), seed=7)
+    # multi-word data cells exist; each belongs to a table region
+    multi_data_cells = [c for c in cells_where(cells, role="data") if len(c.token_ids) > 1]
+    table_region_indices = {i for i, r in enumerate(regions) if r.type == "table"}
+    # at least some multi-token data cells have a region_index in a table region
+    # (split header words are in group_header/header cells, not data)
+    assert multi_data_cells
+    assert all(c.region_index in table_region_indices for c in multi_data_cells)

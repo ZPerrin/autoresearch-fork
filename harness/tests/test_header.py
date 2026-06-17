@@ -8,6 +8,8 @@ from tablelab.specs import fork
 from tablelab.layout import layout
 from tablelab.render import render
 
+from _cells import placed, cells_where, text_of
+
 
 def _invoice(**structure):
     dc = classlib.get("invoice")
@@ -15,39 +17,53 @@ def _invoice(**structure):
 
 
 def test_header_off_is_default():
-    placed = layout(classlib.get("invoice"), random.Random(7))
-    assert all(not (p.label and p.label.get("header")) for p in placed)
+    _tokens, cells, _regions = placed(classlib.get("invoice"), seed=7)
+    # no header cells when structure.header is off
+    assert cells_where(cells, role="header") == []
 
 
 def test_header_row_emits_field_name_tokens_above_data():
     dc = _invoice(header=True)
-    placed = layout(dc, random.Random(7))
-    headers = [p for p in placed if p.label.get("header")]
-    data = [p for p in placed if not p.label.get("header")]
+    tokens, cells, _regions = placed(dc, seed=7)
+    header_cells = cells_where(cells, role="header")
+    data_cells = cells_where(cells, role="data")
     C = len(dc.tables[0].fields)
     my, row_h = dc.layout.margin[1], dc.layout.row_h
-    # one header token per field, carrying the titleized field name
-    assert sorted(p.label["field"] for p in headers) == list(range(C))
-    assert {p.label["field"]: p.text for p in headers}[0] == "Description"
-    # header cells sit at the top margin; every data cell is below the first row
-    assert all(p.cell[1] == my for p in headers)
-    assert all(p.cell[1] >= my + row_h for p in data)
+
+    # one header cell per field
+    assert len(header_cells) == C
+    # column indices cover 0..C-1
+    assert sorted(c.column_index for c in header_cells) == list(range(C))
+    # field 0 → "Description"
+    hdr0 = next(c for c in header_cells if c.column_index == 0)
+    assert text_of(tokens, hdr0) == "Description"
+    # header cell tops sit at the top margin
+    assert all(c.bbox[1] == my for c in header_cells)
+    # every data cell is below the first row
+    assert all(c.bbox[1] >= my + row_h for c in data_cells)
 
 
 def test_header_with_multi_token_splits_header_text():
     dc = _invoice(header=True, multi_token=True)
-    placed = layout(dc, random.Random(7))
-    # "Unit Price" (field 2) -> two header tokens sharing the header cell, ordered by seq
-    unit = [p for p in placed if p.label.get("header") and p.label["field"] == 2]
-    assert [p.text for p in sorted(unit, key=lambda p: p.label["seq"])] == ["Unit", "Price"]
-    assert len({p.cell for p in unit}) == 1
+    tokens, cells, _regions = placed(dc, seed=7)
+    # "Unit Price" (field 2) → one header cell with two token_ids
+    unit_hdr = next(c for c in cells_where(cells, role="header") if c.column_index == 2)
+    words = [tokens[i].text for i in unit_hdr.token_ids]
+    assert words == ["Unit", "Price"]
+    # all tokens share the same cell rect
+    rects = {tokens[i].cell for i in unit_hdr.token_ids}
+    assert len(rects) == 1
 
 
 def test_header_renders_boxes_above_data():
     dc = _invoice(header=True)
-    placed = layout(dc, random.Random(7))
-    _img, boxes = render(placed, dc)
-    hb = [b for p, b in zip(placed, boxes) if p.label.get("header")]
-    db = [b for p, b in zip(placed, boxes) if not p.label.get("header")]
+    tokens, cells, _regions = placed(dc, seed=7)
+    # use layout()+render() for render geometry check
+    p_tokens = layout(dc, random.Random(7))
+    _img, boxes = render(p_tokens, dc)
+    header_cells = cells_where(cells, role="header")
+    data_cells = cells_where(cells, role="data")
+    hb = [boxes[i] for c in header_cells for i in c.token_ids]
+    db = [boxes[i] for c in data_cells for i in c.token_ids]
     assert all(b[2] > b[0] for b in boxes)          # every box set
     assert max(b[3] for b in hb) <= min(b[1] for b in db) + 1  # headers above data

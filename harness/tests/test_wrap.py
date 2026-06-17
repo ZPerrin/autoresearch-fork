@@ -5,6 +5,8 @@ import pytest
 from tablelab.specs import FieldSpec, LayoutSpec, TableSpec, DocumentClass
 from tablelab.layout import layout, validate_layout_capacity, LayoutCapacityError
 
+from _cells import placed, cells_where, text_of
+
 
 def test_fieldspec_has_wrap_knobs():
     f = FieldSpec("desc", "description", "left", max_width=200.0, max_lines=2)
@@ -70,52 +72,72 @@ def _capped_class(max_width, page=(600, 400)):
 
 def test_capped_column_does_not_exceed_max_width():
     dc = _capped_class(max_width=120.0)
-    placed = layout(dc, random.Random(0))
-    desc_w = {round(p.cell[2] - p.cell[0], 1)
-              for p in placed if p.label and p.label.get("field") == 0 and "record" in p.label}
-    assert desc_w  # has description tokens
-    assert max(desc_w) <= 120.0 + 0.5  # frozen at the cap
+    _tokens, cells, _regions = placed(dc, seed=0)
+    # desc is field "desc" (column_index=0), data cells only
+    desc_cells = cells_where(cells, role="data", field="desc")
+    assert desc_cells  # has description cells
+    desc_widths = {round(c.bbox[2] - c.bbox[0], 1) for c in desc_cells}
+    assert max(desc_widths) <= 120.0 + 0.5  # frozen at the cap
 
 
 def test_uncapped_columns_still_fill_page():
     dc = _capped_class(max_width=120.0)
     W, mx = dc.layout.page[0], dc.layout.margin[0]
-    placed = layout(dc, random.Random(0))
-    x1s = [p.cell[2] for p in placed if p.label and "field" in p.label]
-    assert abs(max(x1s) - (W - mx)) < 1e-6  # table still spans to the right margin
+    _tokens, cells, _regions = placed(dc, seed=0)
+    # all data/header cells: rightmost bbox edge should reach right margin
+    content_cells = [c for c in cells if c.role in ("data", "header")]
+    x1s = [c.bbox[2] for c in content_cells]
+    assert abs(max(x1s) - (W - mx)) < 1e-4  # table still spans to the right margin
 
 
 def test_wrapped_cell_emits_stacked_line_tokens():
-    # A capped column whose value wraps emits one token per word, sharing the field label,
-    # split across >=2 distinct vertical line positions.
+    # A capped column whose value wraps emits multiple tokens in the data cell,
+    # spanning >=2 distinct vertical line positions.
+    from collections import defaultdict
     dc = _capped_class(max_width=110.0)
     found = False
     for seed in range(30):
-        placed = layout(dc, random.Random(seed))
-        desc = [p for p in placed if p.label and p.label.get("field") == 0 and "record" in p.label]
-        ys = sorted({round(p.cell[1], 1) for p in desc})
-        if len(ys) >= 2:                                  # this sample wrapped
-            found = True
-            assert all(p.label["field"] == 0 and "record" in p.label for p in desc)
-            assert all("seq" in p.label for p in desc)    # individual word tokens carry order
-            # words on the same line share one cell rect
-            line0 = [p for p in desc if round(p.cell[1], 1) == ys[0]]
-            assert len({p.cell for p in line0}) == 1
+        tokens, cells, _regions = placed(dc, seed=seed)
+        desc_cells = cells_where(cells, role="data", field="desc")
+        # check if any desc cell has tokens at >= 2 distinct vertical positions
+        for c in desc_cells:
+            if len(c.token_ids) < 2:
+                continue
+            ys = sorted({round(tokens[i].cell[1], 1) for i in c.token_ids})
+            if len(ys) >= 2:
+                found = True
+                # the wrapped cell is a role="data" cell with field="desc" with >1 token_ids
+                assert c.role == "data" and c.field == "desc" and len(c.token_ids) > 1
+                # group tokens by per-line render rect; assert >= 2 distinct rects (actually wrapped)
+                by_rect = defaultdict(list)
+                for i in c.token_ids:
+                    by_rect[tokens[i].cell].append(i)
+                assert len(by_rect) >= 2  # wrapped onto >= 2 lines
+                # each line group references exactly one rect, and within a line the
+                # tokens carry seq 0,1,2,... in reading order (seq resets per line)
+                for line_ids in by_rect.values():
+                    assert len({tokens[i].cell for i in line_ids}) == 1
+                    assert [tokens[i].seq for i in line_ids] == list(range(len(line_ids)))
+                break
+        if found:
             break
     assert found, "expected at least one wrapped sample at max_width=110"
 
 
 def test_wrapped_words_stay_within_their_column():
-    # max_width wide enough that every individual service_desc word fits the column (so a
-    # phrase wraps across lines but no single word overflows — a word cannot be split).
+    # max_width wide enough that every individual service_desc word fits the column
     from tablelab.render import render
     dc = _capped_class(max_width=240.0)
     for seed in range(10):
-        placed = layout(dc, random.Random(seed))
-        _img, boxes = render(placed, dc)
-        for p, b in zip(placed, boxes):
-            if p.label and p.label.get("field") == 0 and "record" in p.label:
-                assert b[0] >= p.cell[0] - 1 and b[2] <= p.cell[2] + 1, (p.text, p.cell, b)
+        p_tokens = layout(dc, random.Random(seed))
+        _img, boxes = render(p_tokens, dc)
+        tokens, cells, _regions = placed(dc, seed=seed)
+        desc_cells = cells_where(cells, role="data", field="desc")
+        for c in desc_cells:
+            cx0, _cy0, cx1, _cy1 = c.bbox
+            for i in c.token_ids:
+                b = boxes[i]
+                assert b[0] >= cx0 - 1 and b[2] <= cx1 + 1, (p_tokens[i].text, c.bbox, b)
 
 
 def _short_page_wrap_class(max_lines):
@@ -142,22 +164,22 @@ def test_eob_description_wraps_within_max_lines():
     from tablelab import classes as classlib
     from tablelab.render import render
     dc = classlib.get("eob")
-    desc_field = next(i for i, f in enumerate(dc.tables[0].fields) if f.name == "description")
+    desc_field_name = next(f.name for f in dc.tables[0].fields if f.name == "description")
+    max_lines = next(f.max_lines for f in dc.tables[0].fields if f.name == "description")
     saw_wrap = False
     for seed in range(40):
-        placed = layout(dc, random.Random(seed))
-        # group description tokens by (region, record); each group's distinct line-tops <= max_lines
-        groups: dict[tuple, set] = {}
-        for p in placed:
-            if p.label and p.label.get("field") == desc_field and "record" in p.label:
-                key = (p.label.get("region"), p.label["record"])
-                groups.setdefault(key, set()).add(round(p.cell[1], 1))
-        for tops in groups.values():
-            assert len(tops) <= dc.tables[0].fields[desc_field].max_lines
-            if len(tops) >= 2:
-                saw_wrap = True
+        tokens, cells, _regions = placed(dc, seed=seed)
+        # group description data cells by (region_index, row_index)
+        desc_cells = cells_where(cells, role="data", field=desc_field_name)
+        for c in desc_cells:
+            if len(c.token_ids) > 1:
+                ys = {round(tokens[i].cell[1], 1) for i in c.token_ids}
+                assert len(ys) <= max_lines
+                if len(ys) >= 2:
+                    saw_wrap = True
         # every box stays in page
-        _img, boxes = render(placed, dc)
+        p_tokens = layout(dc, random.Random(seed))
+        _img, boxes = render(p_tokens, dc)
         W, H = dc.layout.page
         for (x0, y0, x1, y1) in boxes:
             assert 0 <= x0 <= x1 <= W and 0 <= y0 <= y1 <= H
