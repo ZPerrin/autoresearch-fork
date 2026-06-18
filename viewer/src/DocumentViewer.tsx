@@ -290,14 +290,14 @@ export default function DocumentViewer({ samples, task: _task, selectedTokenIdx,
     return <p className="empty-note">No samples to display.</p>
   }
 
-  const { tokens, cells, image } = sample
+  const { words, cells, image } = sample
   const regions = sample.regions ?? []
 
-  // Build token → owning cell map
-  const cellByToken = new Map<number, Cell>()
+  // Build word → owning cell map
+  const cellByWord = new Map<number, Cell>()
   for (const cell of (cells ?? [])) {
-    for (const tokenId of cell.token_ids) {
-      cellByToken.set(tokenId, cell)
+    for (const wordId of cell.word_ids) {
+      cellByWord.set(wordId, cell)
     }
   }
 
@@ -409,14 +409,14 @@ export default function DocumentViewer({ samples, task: _task, selectedTokenIdx,
                 </text>
               </g>
             ))}
-            {tokens.map((tok, i) => {
+            {words.map((word, i) => {
               const sel = i === selectedTokenIdx
-              const role = cellByToken.get(i)?.role
+              const role = cellByWord.get(i)?.role
               const { fill, stroke } = tokenColors(role, sel)
-              const x = tok.x0 * width
-              const y = tok.y0 * height
-              const w = (tok.x1 - tok.x0) * width
-              const h = (tok.y1 - tok.y0) * height
+              const x = word.x0 * width
+              const y = word.y0 * height
+              const w = (word.x1 - word.x0) * width
+              const h = (word.y1 - word.y0) * height
 
               return (
                 <g key={i}>

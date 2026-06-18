@@ -239,12 +239,12 @@ export default function MetaPanel({ source, task: _task, selectedTokenIdx, sampl
 
       {/* Token detail */}
       <section className="meta-section token-detail">
-        <div className="meta-section-title">Selected token</div>
+        <div className="meta-section-title">Selected word</div>
         {selectedTokenIdx == null ? (
           <p className="empty-note">Click a box in the document to inspect it.</p>
         ) : (() => {
-          const token = sample?.tokens[selectedTokenIdx]
-          const cell = sample?.cells.find(c => c.token_ids.includes(selectedTokenIdx))
+          const token = sample?.words[selectedTokenIdx]
+          const cell = sample?.cells.find(c => c.word_ids.includes(selectedTokenIdx))
           const region = cell != null ? sample?.regions?.[cell.region_index] : undefined
           return (
             <>

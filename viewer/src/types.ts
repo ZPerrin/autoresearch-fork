@@ -1,10 +1,10 @@
-// ---- Artifact schema types (mirrors runs/ and datasets/ JSON contract v3) ----
+// ---- Artifact schema types (mirrors runs/ and datasets/ JSON contract v4) ----
 
 // ---- Shared ----
 
 export type LabelValue = string | number | boolean | null
 
-export interface Token {
+export interface Word {
   x0: number
   y0: number
   x1: number
@@ -23,7 +23,7 @@ export interface Cell {
   bbox: [number, number, number, number]    // normalized [0,1]
   role: CellRole
   field: string | null
-  token_ids: number[]
+  word_ids: number[]
 }
 
 export interface Region {
@@ -38,7 +38,7 @@ export interface Sample {
   image: string        // URL like /datasets/<id>/images/0.png
   width: number        // page pixel width
   height: number       // page pixel height
-  tokens: Token[]
+  words: Word[]
   cells: Cell[]
   regions?: Region[]
 }
