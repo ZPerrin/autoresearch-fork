@@ -26,7 +26,7 @@ uv run python -m tablelab.cli inspect eob-demo
 ```
 
 `build` flags:
-- structure: `--rows MIN MAX`, `--instances MIN MAX` (stacked instances, `region`-tagged), `--multi-token` (per-word tokens), `--header` (field-name header row), `--background N` (class-aware non-table tokens in reserved slots).
+- structure: `--rows MIN MAX`, `--instances MIN MAX` (stacked instances, `region`-tagged), `--header` (field-name header row), `--background N` (class-aware non-table words in reserved slots). Every cell emits one `Word` per whitespace word (atomic, always — no flag).
 - spanning cells / grouped headers are **class-defined** (no CLI flag): `FieldSpec.group` (contiguous fields → a header banner band) and `TableSpec.section`/`totals` (`SpanRowSpec` of colspan `SpanCell`s → a section heading / TOTALS row per instance). The `eob` class showcases all three.
 - spacing: `--page W H`, `--row-gap PX`, `--instance-gap PX`, `--section-gap PX`, `--globals-per-row N` (pack label:value pairs across a global row).
 - jitter: `--jitter ROW_H COL_W OFFSET BASELINE` (per-axis magnitudes, 0 = off; bounded/zero-sum).
@@ -48,14 +48,14 @@ columns) and `receipt` are single tables.
 ## Modules (`src/tablelab/`)
 
 - `device.py` — `get_device()` (cuda → mps → cpu).
-- `artifacts.py` — the schema-v2 contract: datasets + runs (`read`/`write`/`validate`, manifests).
+- `artifacts.py` — the schema-v4 contract (`Region`/`Cell`/`Word`): datasets + runs (`read`/`write`/`validate`, manifests).
 - `specs.py` — compositional spec types: `FieldSpec`/`LayoutSpec`/`StructureSpec`/`JitterSpec`/`RenderSpec`/`SpanCell`/`SpanRowSpec`/`DocumentClass` + `fork()`.
 - `fields.py` — value-sampler registry keyed by semantic type + per-type default column weights.
 - `classes.py` — `DocumentClass` registry + built-in `invoice`/`eob`/`receipt`.
-- `layout.py` — `PlacedToken` IR + `layout()`: capacity planner, content-aware columns, gaps, jitter.
-- `jitter.py` — bounded/zero-sum jitter helpers (column edges, row height, token offset).
+- `layout.py` — `PlacedWord` IR + `layout()`: capacity planner, content-aware columns, gaps, jitter.
+- `jitter.py` — bounded/zero-sum jitter helpers (column edges, row height, word offset).
 - `metrics.py` — `text_width()`: estimate rendered text width from the render font (for column sizing).
-- `render.py` — `render()`: draw placed tokens (per-token font size) → PNG + glyph boxes.
+- `render.py` — `render()`: draw placed words (per-word font size) → PNG + glyph boxes.
 - `build.py` — `build_dataset()` orchestrator (compose → layout → render → contract).
 - `cli.py` — `argparse` + `tqdm`: `build` / `list` / `inspect`.
 - _(planned)_ `model.py`, `metric.py`, `train.py`.
