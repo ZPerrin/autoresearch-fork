@@ -50,7 +50,7 @@ global↔table association — because the document class *defines* them. So:
 
 ## Why it stays Textract-shaped
 
-The structural schema mirrors Textract (`Region`/`Cell`/`Token` ≈ `LAYOUT`/`CELL`/`WORD`) on purpose:
+The structural schema mirrors Textract (`Region`/`Cell`/`Word` ≈ `LAYOUT`/`CELL`/`WORD`) on purpose:
 the **real labeled + Textract data flows into the same representation** as synthetic. That enables
 the research setup we actually want — pretrain/train on dense synthetic, evaluate and transfer on
 real — with one schema and one set of projections serving both.
