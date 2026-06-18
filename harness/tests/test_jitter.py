@@ -30,7 +30,7 @@ def _tokens(dc, seed, n):
 def test_jitter_off_is_byte_identical_to_golden():
     dc = fork(classlib.get("invoice"), jitter=JitterSpec())
     golden = json.loads(GOLDEN.read_text())
-    assert _tokens(dc, 7, 3) == [s["tokens"] for s in golden]
+    assert _tokens(dc, 7, 3) == [s["words"] for s in golden]
 
 
 def test_jitter_keeps_every_box_in_page():

@@ -17,14 +17,14 @@ def _gen(cls_name: str, seed: int, n: int) -> list[dict]:
     for _ in range(n):
         placed, cells, regions = layout_with_regions(dc, rng)
         _img, boxes = render(placed, dc)
-        tokens = [{"x0": round(b[0] / W, 4), "y0": round(b[1] / H, 4),
-                   "x1": round(b[2] / W, 4), "y1": round(b[3] / H, 4), "text": p.text}
-                  for p, b in zip(placed, boxes)]
+        words = [{"x0": round(b[0] / W, 4), "y0": round(b[1] / H, 4),
+                  "x1": round(b[2] / W, 4), "y1": round(b[3] / H, 4), "text": p.text}
+                 for p, b in zip(placed, boxes)]
         out.append({
-            "tokens": tokens,
+            "words": words,
             "cells": [{"region_index": c.region_index, "row_index": c.row_index,
                        "column_index": c.column_index, "span": list(c.span),
-                       "role": c.role, "field": c.field, "token_ids": c.token_ids}
+                       "role": c.role, "field": c.field, "word_ids": c.word_ids}
                       for c in cells],
             "regions": [{"type": r.type, "name": r.name, "index": r.index} for r in regions],
         })

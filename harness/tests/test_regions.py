@@ -55,11 +55,11 @@ def test_single_instance_class_has_one_region():
 
 
 def test_sample_regions_round_trip(tmp_path):
-    from tablelab.artifacts import (Sample, Token, Region, DatasetManifest,
+    from tablelab.artifacts import (Sample, Word, Region, DatasetManifest,
                                     write_dataset, read_dataset)
     sample = Sample(
         id=0,
-        tokens=[Token(x0=0.1, y0=0.1, x1=0.2, y1=0.2, text="x")],
+        words=[Word(x0=0.1, y0=0.1, x1=0.2, y1=0.2, text="x")],
         width=100, height=100, image="/datasets/x/images/0.png",
         regions=[Region(type="table", name="claim_line", index=0,
                         bbox=[0.05, 0.05, 0.9, 0.5])])
@@ -77,7 +77,7 @@ def test_sample_regions_round_trip(tmp_path):
 
 def test_sample_regions_default_none():
     from tablelab.artifacts import Sample
-    assert Sample(id=0, tokens=[]).regions is None
+    assert Sample(id=0, words=[]).regions is None
 
 
 def test_build_dataset_writes_normalized_regions(tmp_path):

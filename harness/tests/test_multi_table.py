@@ -83,12 +83,14 @@ def test_instances_compose_with_header_and_region():
     assert hdr_region_indices == table_region_indices
 
 
-def test_instances_compose_with_multi_token():
-    _tokens, cells, regions = placed(_instanced(2, 2, multi_token=True), seed=7)
-    # multi-word data cells exist; each belongs to a table region
-    multi_data_cells = [c for c in cells_where(cells, role="data") if len(c.token_ids) > 1]
+def test_instances_compose_with_word_split():
+    # Word-level tokens are now universal: multi-word data values (invoice
+    # descriptions) split across stacked instances without any flag.
+    _tokens, cells, regions = placed(_instanced(2, 2), seed=7)
+
+    multi_data_cells = [c for c in cells_where(cells, role="data") if len(c.word_ids) > 1]
     table_region_indices = {i for i, r in enumerate(regions) if r.type == "table"}
-    # at least some multi-token data cells have a region_index in a table region
+    # at least some multi-word data cells have a region_index in a table region
     # (split header words are in group_header/header cells, not data)
     assert multi_data_cells
     assert all(c.region_index in table_region_indices for c in multi_data_cells)

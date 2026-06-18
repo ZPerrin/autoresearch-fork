@@ -101,16 +101,16 @@ def test_wrapped_cell_emits_stacked_line_tokens():
         desc_cells = cells_where(cells, role="data", field="desc")
         # check if any desc cell has tokens at >= 2 distinct vertical positions
         for c in desc_cells:
-            if len(c.token_ids) < 2:
+            if len(c.word_ids) < 2:
                 continue
-            ys = sorted({round(tokens[i].cell[1], 1) for i in c.token_ids})
+            ys = sorted({round(tokens[i].cell[1], 1) for i in c.word_ids})
             if len(ys) >= 2:
                 found = True
-                # the wrapped cell is a role="data" cell with field="desc" with >1 token_ids
-                assert c.role == "data" and c.field == "desc" and len(c.token_ids) > 1
+                # the wrapped cell is a role="data" cell with field="desc" with >1 word_ids
+                assert c.role == "data" and c.field == "desc" and len(c.word_ids) > 1
                 # group tokens by per-line render rect; assert >= 2 distinct rects (actually wrapped)
                 by_rect = defaultdict(list)
-                for i in c.token_ids:
+                for i in c.word_ids:
                     by_rect[tokens[i].cell].append(i)
                 assert len(by_rect) >= 2  # wrapped onto >= 2 lines
                 # each line group references exactly one rect, and within a line the
@@ -135,7 +135,7 @@ def test_wrapped_words_stay_within_their_column():
         desc_cells = cells_where(cells, role="data", field="desc")
         for c in desc_cells:
             cx0, _cy0, cx1, _cy1 = c.bbox
-            for i in c.token_ids:
+            for i in c.word_ids:
                 b = boxes[i]
                 assert b[0] >= cx0 - 1 and b[2] <= cx1 + 1, (p_tokens[i].text, c.bbox, b)
 
@@ -172,8 +172,8 @@ def test_eob_description_wraps_within_max_lines():
         # group description data cells by (region_index, row_index)
         desc_cells = cells_where(cells, role="data", field=desc_field_name)
         for c in desc_cells:
-            if len(c.token_ids) > 1:
-                ys = {round(tokens[i].cell[1], 1) for i in c.token_ids}
+            if len(c.word_ids) > 1:
+                ys = {round(tokens[i].cell[1], 1) for i in c.word_ids}
                 assert len(ys) <= max_lines
                 if len(ys) >= 2:
                     saw_wrap = True

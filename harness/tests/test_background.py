@@ -9,7 +9,7 @@ from tablelab.specs import DocumentClass, fork
 from tablelab.layout import layout
 from tablelab.render import render
 
-from _cells import placed, bg_token_ids, cells_where
+from _cells import placed, bg_word_ids, cells_where
 
 
 def _invoice(**structure):
@@ -24,17 +24,17 @@ def _overlaps(a, b):
 def test_background_off_is_default():
     tokens, cells, _regions = placed(classlib.get("invoice"), seed=7)
     # no background: every token is claimed by some cell
-    assert bg_token_ids(tokens, cells) == []
+    assert bg_word_ids(tokens, cells) == []
 
 
 def test_background_adds_n_null_label_tokens_below_table():
     dc = _invoice(background=5)
     tokens, cells, _regions = placed(dc, seed=7)
-    bg_ids = bg_token_ids(tokens, cells)
+    bg_ids = bg_word_ids(tokens, cells)
     assert len(bg_ids) == 5
 
     # background sits at or below the bottom of the lowest table row
-    claimed_ids = {i for c in cells for i in c.token_ids}
+    claimed_ids = {i for c in cells for i in c.word_ids}
     table_bottom = max(tokens[i].cell[3] for i in claimed_ids)
     assert all(tokens[i].cell[1] >= table_bottom for i in bg_ids)
 
@@ -48,19 +48,19 @@ def test_background_adds_n_null_label_tokens_below_table():
 def test_background_renders_and_round_trips_null_label():
     dc = _invoice(background=4)
     tokens, cells, _regions = placed(dc, seed=7)
-    # use layout()+render() for the render check (render takes PlacedToken list)
+    # use layout()+render() for the render check (render takes PlacedWord list)
     p_tokens = layout(dc, random.Random(7))
     _img, boxes = render(p_tokens, dc)
     assert all(b[2] > b[0] and b[3] > b[1] for b in boxes)  # every box set
     # 4 background tokens are present (referenced by no cell)
-    assert len(bg_token_ids(tokens, cells)) == 4
+    assert len(bg_word_ids(tokens, cells)) == 4
 
 
 def test_background_composes_with_header():
     dc = _invoice(background=3, header=True)
     tokens, cells, _regions = placed(dc, seed=7)
     # 3 background tokens
-    assert len(bg_token_ids(tokens, cells)) == 3
+    assert len(bg_word_ids(tokens, cells)) == 3
     # at least one header cell exists
     assert cells_where(cells, role="header")
 
@@ -68,7 +68,7 @@ def test_background_composes_with_header():
 def test_reserved_background_slots_do_not_overlap_content_or_each_other():
     dc = _invoice(background=8, header=True)
     tokens, cells, _regions = placed(dc, seed=7)
-    bg_ids = bg_token_ids(tokens, cells)
+    bg_ids = bg_word_ids(tokens, cells)
     structured_ids = [i for i in range(len(tokens)) if i not in set(bg_ids)]
 
     bg_rects = [tokens[i].cell for i in bg_ids]

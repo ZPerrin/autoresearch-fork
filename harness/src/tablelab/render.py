@@ -3,7 +3,7 @@ from __future__ import annotations
 from PIL import Image, ImageDraw, ImageFont
 
 from .specs import DocumentClass
-from .layout import PlacedToken
+from .layout import PlacedWord
 
 Box = tuple[float, float, float, float]
 
@@ -15,9 +15,9 @@ def _font(size: int):
         return ImageFont.load_default()
 
 
-def render(placed: list[PlacedToken], dc: DocumentClass) -> tuple[Image.Image, list[Box]]:
-    """Draw placed tokens onto a white page; return the image and per-token
-    glyph-extent boxes (page pixels), parallel to ``placed``. Tokens sharing a
+def render(placed: list[PlacedWord], dc: DocumentClass) -> tuple[Image.Image, list[Box]]:
+    """Draw placed words onto a white page; return the image and per-word
+    glyph-extent boxes (page pixels), parallel to ``placed``. Words sharing a
     cell rect are laid out left-to-right as one phrase; their boxes are still
     returned in the input order so the caller's 1:1 zip holds."""
     W, H = dc.layout.page
@@ -26,7 +26,7 @@ def render(placed: list[PlacedToken], dc: DocumentClass) -> tuple[Image.Image, l
     draw = ImageDraw.Draw(img)
     boxes: list[Box] = [(0.0, 0.0, 0.0, 0.0)] * len(placed)
 
-    # Group token indices by their cell rect; order within a rect by the token's
+    # Group word indices by their cell rect; order within a rect by the word's
     # within-rect reading order (`seq`), since `placed` has been shuffled.
     groups: dict[tuple, list[int]] = {}
     for i, p in enumerate(placed):
@@ -38,10 +38,10 @@ def render(placed: list[PlacedToken], dc: DocumentClass) -> tuple[Image.Image, l
         cx0, cy0, cx1, cy1 = placed[idxs[0]].cell
         row_h = cy1 - cy0
         align = placed[idxs[0]].align
-        font = _font(placed[idxs[0]].font_size)  # per-token size (autoscale shrinks table cells)
+        font = _font(placed[idxs[0]].font_size)  # per-word size (autoscale shrinks table cells)
 
         if len(idxs) == 1:
-            # Legacy single-token path — keeps output byte-identical when multi_token is off.
+            # Single-word cell: anchor the lone word to its cell edge by alignment.
             p = placed[idxs[0]]
             tb = draw.textbbox((0, 0), p.text, font=font)
             tw, th = tb[2] - tb[0], tb[3] - tb[1]

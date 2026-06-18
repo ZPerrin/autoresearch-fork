@@ -14,11 +14,11 @@ def cells_where(cells, **kw):
 
 
 def text_of(tokens, cell):
-    """The cell's words joined in token_ids order."""
-    return " ".join(tokens[i].text for i in cell.token_ids)
+    """The cell's words joined in word_ids order."""
+    return " ".join(tokens[i].text for i in cell.word_ids)
 
 
-def bg_token_ids(tokens, cells):
+def bg_word_ids(tokens, cells):
     """Token indices that belong to no cell (background tokens)."""
-    claimed = {i for c in cells for i in c.token_ids}
+    claimed = {i for c in cells for i in c.word_ids}
     return [i for i in range(len(tokens)) if i not in claimed]

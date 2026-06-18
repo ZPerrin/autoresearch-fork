@@ -15,7 +15,7 @@ from _cells import placed, cells_where, text_of
 F = FieldSpec
 
 
-def _grouped_class(page=(800, 800), multi_token=False, **over):
+def _grouped_class(page=(800, 800), **over):
     """A small grouped + section + totals table: cols [G1 G1 _ G2], a full-span
     category section row, and a TOTALS label (span 2) + two amount cells."""
     fields = (F("a", "code", "left", group="G1"),
@@ -30,7 +30,7 @@ def _grouped_class(page=(800, 800), multi_token=False, **over):
                             SpanCell(span=1, type="amount", align="right"))))
     return DocumentClass(
         name="t", tables=(table,),
-        structure=StructureSpec(header=True, multi_token=multi_token),
+        structure=StructureSpec(header=True),
         layout=LayoutSpec(page=page, margin=(20, 20)), **over)
 
 
@@ -113,32 +113,24 @@ def test_totals_label_spans_left_values_under_numeric_columns():
     label_cell = next(c for c in summary_cells if text_of(tokens, c) == "TOTALS")
     assert label_cell.span[0] == 2
     # value cells: column_index 2 and 3
-    value_cells = [c for c in summary_cells if c != label_cell and c.token_ids]
+    value_cells = [c for c in summary_cells if c != label_cell and c.word_ids]
     assert sorted(c.column_index for c in value_cells) == [2, 3]
 
 
-# ---- multi_token banner split ----
+# ---- grouped-header banners always split into words ----
 
-def test_multi_token_splits_banner_label():
-    fields = (F("a", "code", "left", group="Patient Responsibility"),
-              F("b", "code", "left", group="Patient Responsibility"))
-    dc = DocumentClass(
-        name="t",
-        tables=(TableSpec(name="x", fields=fields, rows=(1, 1), instances=(1, 1)),),
-        structure=StructureSpec(header=True, multi_token=True),
-        layout=LayoutSpec(page=(800, 400), margin=(20, 20)))
+def test_banner_label_splits_into_words():
+    # No flag: the eob class emits word-level tokens, so a multi-word banner
+    # ("Patient Responsibility") is two words sharing one cell rect, in seq order.
+    dc = classlib.get("eob")
     tokens, cells, _regions = placed(dc)
-    banner_cells = cells_where(cells, role="group_header")
-    # One banner cell for "Patient Responsibility" with two token_ids
-    assert len(banner_cells) == 1
-    bc = banner_cells[0]
-    words = [tokens[i].text for i in bc.token_ids]
+    bc = next(c for c in cells_where(cells, role="group_header")
+              if text_of(tokens, c) == "Patient Responsibility")
+    words = [tokens[i].text for i in bc.word_ids]
     assert words == ["Patient", "Responsibility"]
-    # all tokens in the banner cell share the same cell rect
-    rects = {tokens[i].cell for i in bc.token_ids}
+    rects = {tokens[i].cell for i in bc.word_ids}
     assert len(rects) == 1
-    # seq values are 0, 1
-    seqs = [tokens[i].seq for i in bc.token_ids]
+    seqs = [tokens[i].seq for i in bc.word_ids]
     assert seqs == [0, 1]
 
 

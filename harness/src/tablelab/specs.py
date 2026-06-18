@@ -55,20 +55,20 @@ class LayoutSpec:
 
 @dataclass(frozen=True)
 class StructureSpec:
-    """Named home for structural-realism knobs (header row, background tokens,
-    multi-token cells, multiple tables, jitter). Each follow-on spec adds fields here.
+    """Named home for structural-realism knobs (header row, background words,
+    multiple tables, jitter). Each follow-on spec adds fields here.
     See docs/specs/2026-06-13-synth-toolkit-backbone-design.md.
 
-    multi_token: split multi-word cell values into per-word tokens that share one
-        record/field and carry a within-cell order index (seq).
-    header: emit a top header row of field-name tokens (label {"field": c, "header": True}).
-        With FieldSpec.group set, a grouped-header banner band is emitted above the leaf
-        header row (see docs/specs/2026-06-14-spanning-cells-grouped-headers-design.md).
-    background: scatter N non-table tokens (label = None) in the footer band below the table.
+    Cells always emit one Word per whitespace word (the atomic observable); there is
+    no opt-in splitting flag — see docs/specs/2026-06-17-atomic-word-tokens-design.md.
+
+    header: emit a top header row of field-name words. With FieldSpec.group set, a
+        grouped-header banner band is emitted above the leaf header row
+        (see docs/specs/2026-06-14-spanning-cells-grouped-headers-design.md).
+    background: scatter N non-table words in the footer band below the table.
 
     Spanning data rows (section/totals) live on TableSpec; grouped-header membership lives
     on FieldSpec.group."""
-    multi_token: bool = False
     header: bool = False
     background: int = 0
 

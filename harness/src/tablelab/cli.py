@@ -20,8 +20,6 @@ def _build(args):
     if args.instances:
         tables = tuple(replace(t, instances=(args.instances[0], args.instances[1])) for t in tables)
     S = dc.structure
-    if args.multi_token:
-        S = replace(S, multi_token=True)
     if args.header:
         S = replace(S, header=True)
     if args.background:
@@ -73,12 +71,12 @@ def _inspect(args):
     fields = [f["name"] for t in tables for f in t.get("fields", [])]
     glds = [f["name"] for f in spec.get("globals", [])]
     page = spec.get("layout", {}).get("page")
-    ntok = sum(len(s.tokens) for s in samples)
+    ntok = sum(len(s.words) for s in samples)
     print(f"id:       {m.dataset_id}")
     print(f"class:    {m.config.get('class', '?')}")
     print(f"task:     {m.task}")
     print(f"samples:  {m.count}")
-    print(f"tokens:   {ntok} ({ntok / max(m.count, 1):.1f}/sample)")
+    print(f"words:    {ntok} ({ntok / max(m.count, 1):.1f}/sample)")
     print(f"tables:   {[t.get('name') for t in tables]}")
     print(f"fields:   {fields}")
     print(f"globals:  {glds}")
@@ -101,12 +99,10 @@ def main(argv=None):
                    help="number of instances per table (adds a region label)")
     b.add_argument("--page", type=int, nargs=2, metavar=("W", "H"),
                    help="override page size")
-    b.add_argument("--multi-token", action="store_true",
-                   help="split multi-word cells into per-word tokens (shared record/field + seq)")
     b.add_argument("--header", action="store_true",
-                   help="emit a top header row of field-name tokens")
+                   help="emit a top header row of field-name words")
     b.add_argument("--background", type=int, default=0, metavar="N",
-                   help="scatter N non-table tokens (label null) below the table")
+                   help="scatter N non-table words (belong to no cell) below the table")
     b.add_argument("--row-gap", type=int, metavar="PX", help="gap between data rows")
     b.add_argument("--instance-gap", type=int, metavar="PX", help="gap between table instances")
     b.add_argument("--section-gap", type=int, metavar="PX", help="gap between sections")

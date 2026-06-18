@@ -3,11 +3,11 @@ import json
 from dataclasses import dataclass, field as dc_field, asdict
 from pathlib import Path
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 @dataclass
-class Token:
+class Word:
     x0: float; y0: float; x1: float; y1: float
     text: str | None = None
 
@@ -21,7 +21,7 @@ class Cell:
     bbox: list[float]                      # normalized [0,1] (x0, y0, x1, y1)
     role: str                              # header|group_header|data|section|summary|key|value
     field: str | None = None               # template slot name (FieldSpec.name); None for span/group rows
-    token_ids: list[int] = dc_field(default_factory=list)
+    word_ids: list[int] = dc_field(default_factory=list)
 
 
 @dataclass
@@ -35,7 +35,7 @@ class Region:
 @dataclass
 class Sample:
     id: int
-    tokens: list[Token]
+    words: list[Word]
     image: str | None = None
     width: int | None = None
     height: int | None = None
@@ -86,15 +86,15 @@ class IndexEntry:
                    r.description, r.dataset_id, r.metrics)
 
 
-def _token_from_dict(d: dict) -> Token:
-    return Token(**d)
+def _word_from_dict(d: dict) -> Word:
+    return Word(**d)
 
 
 def _sample_from_dict(d: dict) -> Sample:
     raw_regions = d.get("regions")
     regions = [Region(**r) for r in raw_regions] if raw_regions is not None else None
     cells = [Cell(**c) for c in d.get("cells", [])]
-    return Sample(id=d["id"], tokens=[_token_from_dict(t) for t in d["tokens"]],
+    return Sample(id=d["id"], words=[_word_from_dict(w) for w in d["words"]],
                   image=d.get("image"), width=d.get("width"), height=d.get("height"),
                   cells=cells, regions=regions)
 

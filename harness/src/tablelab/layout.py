@@ -120,7 +120,7 @@ def _resolve_column_edges(fields, usable: float, mx: float, pad: int, header: bo
 
 
 @dataclass
-class PlacedToken:
+class PlacedWord:
     text: str
     cell: tuple[float, float, float, float]   # render rect in page px (x0, y0, x1, y1)
     align: str = "left"
@@ -139,7 +139,7 @@ class PlacedCell:
     bbox: tuple[float, float, float, float]    # cell rect in page px
     role: str
     field: str | None
-    tokens: list[PlacedToken] = dc_field(default_factory=list)   # transient refs; resolved to ids on return
+    tokens: list[PlacedWord] = dc_field(default_factory=list)   # transient refs; resolved to ids on return
 
 
 @dataclass
@@ -211,28 +211,28 @@ def _group_runs(fields) -> list[tuple[str, int, int]]:
     return runs
 
 
-def _emit_tokens(placed: list[PlacedToken], text: str,
-                 rect: tuple[float, float, float, float],
-                 align: str, font_size: int, multi: bool) -> list[PlacedToken]:
-    """Append one token for `text`, or one per word when `multi`. Empty text appends
-    nothing. Returns the appended tokens (in reading order) for cell membership."""
-    new: list[PlacedToken] = []
+def _emit_words(placed: list[PlacedWord], text: str,
+                rect: tuple[float, float, float, float],
+                align: str, font_size: int) -> list[PlacedWord]:
+    """Append one PlacedWord per whitespace-split word in `text` (empty text appends
+    nothing). Each word carries its within-cell reading order (seq). Returns the
+    appended words (in reading order) for cell membership."""
+    new: list[PlacedWord] = []
     if not text:
         return new
-    words = text.split() if multi else [text]
-    for k, word in enumerate(words):
-        tok = PlacedToken(text=word, cell=rect, align=align, font_size=font_size, seq=k)
-        placed.append(tok)
-        new.append(tok)
+    for k, word in enumerate(text.split()):
+        w = PlacedWord(text=word, cell=rect, align=align, font_size=font_size, seq=k)
+        placed.append(w)
+        new.append(w)
     return new
 
 
-def _emit_span_row(placed: list[PlacedToken], cells: list[PlacedCell], spans, edges,
+def _emit_span_row(placed: list[PlacedWord], cells: list[PlacedCell], spans, edges,
                    y: float, row_h: float, region_index: int, row_index: int, role: str,
-                   font: int, multi: bool, rng: random.Random) -> None:
+                   font: int, rng: random.Random) -> None:
     """Emit one spanning row (section or totals). Each SpanCell covers a contiguous
     column range from the running column index; text cells are literal, type cells are
-    sampled left-to-right, empty cells still produce a cell (no tokens)."""
+    sampled left-to-right, empty cells still produce a cell (no words)."""
     c = 0
     for sc in spans:
         c0, c1 = c, c + sc.span - 1
@@ -243,7 +243,7 @@ def _emit_span_row(placed: list[PlacedToken], cells: list[PlacedCell], spans, ed
             value = sample(sc.type, rng)
         else:
             value = ""
-        toks = _emit_tokens(placed, value, rect, sc.align, font, multi)
+        toks = _emit_words(placed, value, rect, sc.align, font)
         cells.append(PlacedCell(region_index=region_index, row_index=row_index,
                                 column_index=c0, span=(c1 - c0 + 1, 1), bbox=rect,
                                 role=role, field=None, tokens=toks))
@@ -535,23 +535,22 @@ def validate_layout_capacity(dc: DocumentClass) -> None:
         raise _capacity_error(dc, _available_height(dc), _fixed_height(dc))
 
 
-def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[PlacedToken], list[Cell], list[PlacedRegion]]:
-    """Place one document's tokens, cells, and typed regions (logical, no Pillow).
+def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[PlacedWord], list[Cell], list[PlacedRegion]]:
+    """Place one document's words, cells, and typed regions (logical, no Pillow).
     Global/singleton fields (dc.globals) are laid out first as key/value cells in a
     'form' region; then each table instance is drawn and tagged with a 'table' region
-    (instance-ordinal indexed per table name). Header rows (structure.header),
-    multi-token split (structure.multi_token) and background tokens
-    (structure.background) apply as before; background tokens belong to no cell.
-    Returns (tokens, cells, regions) with cell token_ids resolved after the shuffle."""
+    (instance-ordinal indexed per table name). Every cell emits one Word per
+    whitespace word (uniformly); header rows (structure.header) and background words
+    (structure.background) apply as before; background words belong to no cell.
+    Returns (words, cells, regions) with cell word_ids resolved after the shuffle."""
     dc = _resolve_row_h(dc)
     L = dc.layout
     W, _ = L.page
     mx, my = L.margin
-    multi = dc.structure.multi_token
     header = dc.structure.header
     J = dc.jitter
     shape = _choose_shape(dc, rng)
-    placed: list[PlacedToken] = []
+    placed: list[PlacedWord] = []
     cells: list[PlacedCell] = []
     regions: list[PlacedRegion] = []
     y = float(my)
@@ -569,14 +568,14 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
             px0 = mx + col * pair_w
             gw = pair_w * 0.35
             label_rect = (px0, y, px0 + gw, y + L.row_h)
-            toks = _emit_tokens(placed, _header_text(f.name) + ":", label_rect,
-                                "left", dc.render.font_size, multi)
+            toks = _emit_words(placed, _header_text(f.name) + ":", label_rect,
+                               "left", dc.render.font_size)
             cells.append(PlacedCell(region_index=form_index, row_index=i // gpr,
                                     column_index=2 * col, span=(1, 1), bbox=label_rect,
                                     role="key", field=f.name, tokens=toks))
             value_rect = (px0 + gw, y, px0 + pair_w, y + L.row_h)
-            toks = _emit_tokens(placed, sample(f.type, rng), value_rect,
-                                "left", dc.render.font_size, multi)
+            toks = _emit_words(placed, sample(f.type, rng), value_rect,
+                               "left", dc.render.font_size)
             cells.append(PlacedCell(region_index=form_index, row_index=i // gpr,
                                     column_index=2 * col + 1, span=(1, 1), bbox=value_rect,
                                     role="value", field=f.name, tokens=toks))
@@ -606,7 +605,7 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
             if header and any(f.group for f in table.fields):
                 for name, c0, c1 in _group_runs(table.fields):
                     rect = (edges[c0], y, edges[c1 + 1], y + L.row_h)
-                    toks = _emit_tokens(placed, name, rect, "left", cell_font, multi)
+                    toks = _emit_words(placed, name, rect, "left", cell_font)
                     cells.append(PlacedCell(region_index=region_index, row_index=row_idx,
                                             column_index=c0, span=(c1 - c0 + 1, 1), bbox=rect,
                                             role="group_header", field=None, tokens=toks))
@@ -616,8 +615,8 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
                 for c in range(C):
                     f = table.fields[c]
                     rect = (edges[c], y, edges[c + 1], y + L.row_h)
-                    toks = _emit_tokens(placed, _header_text(f.name), rect, f.align,
-                                        cell_font, multi)
+                    toks = _emit_words(placed, _header_text(f.name), rect, f.align,
+                                       cell_font)
                     cells.append(PlacedCell(region_index=region_index, row_index=row_idx,
                                             column_index=c, span=(1, 1), bbox=rect,
                                             role="header", field=f.name, tokens=toks))
@@ -625,7 +624,7 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
                 row_idx += 1
             if table.section is not None:
                 _emit_span_row(placed, cells, table.section.cells, edges, y, L.row_h,
-                               region_index, row_idx, "section", cell_font, multi, rng)
+                               region_index, row_idx, "section", cell_font, rng)
                 y += L.row_h
                 row_idx += 1
             line_h = _line_h(dc)
@@ -650,7 +649,7 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
                     value = grid[r][c]
                     x0, x1 = row_edges[c], row_edges[c + 1]
                     cell_bbox = (x0, y, x1, y + cell_h)
-                    toks: list[PlacedToken] = []
+                    toks: list[PlacedWord] = []
                     if value and f.max_width is not None:
                         col_text_w = (x1 - x0) - 2 * L.pad
                         lines = _wrap(value.split(), col_text_w, cell_font)
@@ -660,12 +659,12 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
                             ly0 = top + k * line_h
                             line_rect = (x0, ly0, x1, ly0 + line_h)
                             for wi, w in enumerate(words):
-                                tok = PlacedToken(text=w, cell=line_rect, align=f.align,
-                                                  font_size=cell_font, seq=wi)
+                                tok = PlacedWord(text=w, cell=line_rect, align=f.align,
+                                                 font_size=cell_font, seq=wi)
                                 placed.append(tok)
                                 toks.append(tok)
                     elif value:
-                        toks = _emit_tokens(placed, value, cell_bbox, f.align, cell_font, multi)
+                        toks = _emit_words(placed, value, cell_bbox, f.align, cell_font)
                     cells.append(PlacedCell(region_index=region_index, row_index=row_idx,
                                             column_index=c, span=(1, 1), bbox=cell_bbox,
                                             role="data", field=f.name, tokens=toks))
@@ -675,7 +674,7 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
                 row_idx += 1
             if table.totals is not None:
                 _emit_span_row(placed, cells, table.totals.cells, edges, y, L.row_h,
-                               region_index, row_idx, "summary", cell_font, multi, rng)
+                               region_index, row_idx, "summary", cell_font, rng)
                 y += L.row_h
                 row_idx += 1
             idx = name_counts.get(table.name, 0)
@@ -692,8 +691,8 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
             row, col = divmod(i, columns)
             x0 = mx + col * slot_w
             rect = (x0, y + row * L.row_h, x0 + slot_w, y + (row + 1) * L.row_h)
-            placed.append(PlacedToken(text=background_token(dc.background_terms, rng),
-                                      cell=rect, align="left", font_size=dc.render.font_size))
+            placed.append(PlacedWord(text=background_token(dc.background_terms, rng),
+                                     cell=rect, align="left", font_size=dc.render.font_size))
 
     if J.offset > 0 or J.baseline > 0:
         for p in placed:
@@ -705,12 +704,12 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
         Cell(region_index=c.region_index, row_index=c.row_index,
              column_index=c.column_index, span=list(c.span), bbox=list(c.bbox),
              role=c.role, field=c.field,
-             token_ids=[index_of[id(t)] for t in c.tokens])
+             word_ids=[index_of[id(t)] for t in c.tokens])
         for c in cells
     ]
     return placed, out_cells, regions
 
 
-def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedToken]:
-    """Tokens only (back-compat for render/golden helpers)."""
+def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedWord]:
+    """Words only (back-compat for render/golden helpers)."""
     return layout_with_regions(dc, rng)[0]

@@ -43,15 +43,15 @@ def test_header_row_emits_field_name_tokens_above_data():
     assert all(c.bbox[1] >= my + row_h for c in data_cells)
 
 
-def test_header_with_multi_token_splits_header_text():
-    dc = _invoice(header=True, multi_token=True)
+def test_header_splits_multiword_header_text():
+    dc = _invoice(header=True)
     tokens, cells, _regions = placed(dc, seed=7)
-    # "Unit Price" (field 2) → one header cell with two token_ids
+    # "Unit Price" (field 2) → one header cell with two word_ids
     unit_hdr = next(c for c in cells_where(cells, role="header") if c.column_index == 2)
-    words = [tokens[i].text for i in unit_hdr.token_ids]
+    words = [tokens[i].text for i in unit_hdr.word_ids]
     assert words == ["Unit", "Price"]
     # all tokens share the same cell rect
-    rects = {tokens[i].cell for i in unit_hdr.token_ids}
+    rects = {tokens[i].cell for i in unit_hdr.word_ids}
     assert len(rects) == 1
 
 
@@ -63,7 +63,7 @@ def test_header_renders_boxes_above_data():
     _img, boxes = render(p_tokens, dc)
     header_cells = cells_where(cells, role="header")
     data_cells = cells_where(cells, role="data")
-    hb = [boxes[i] for c in header_cells for i in c.token_ids]
-    db = [boxes[i] for c in data_cells for i in c.token_ids]
+    hb = [boxes[i] for c in header_cells for i in c.word_ids]
+    db = [boxes[i] for c in data_cells for i in c.word_ids]
     assert all(b[2] > b[0] for b in boxes)          # every box set
     assert max(b[3] for b in hb) <= min(b[1] for b in db) + 1  # headers above data

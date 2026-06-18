@@ -27,7 +27,7 @@ def _full_eob(**layout_overrides):
         tables=tables,
         layout=replace(dc.layout, **layout_overrides),
         structure=replace(
-            dc.structure, header=True, multi_token=True, background=4
+            dc.structure, header=True, background=4
         ),
     )
 
@@ -232,8 +232,8 @@ def test_default_invoice_validates():
 
 
 def test_validate_boxes_accepts_page_boundaries():
-    placed = [layout_module.PlacedToken("first", (0, 0, 1, 1)),
-              layout_module.PlacedToken("second", (0, 0, 1, 1))]
+    placed = [layout_module.PlacedWord("first", (0, 0, 1, 1)),
+              layout_module.PlacedWord("second", (0, 0, 1, 1))]
     _validate_boxes(
         [(0, 0, 1000, 500), (4, 5, 4, 5)], placed, "boundary", 7, 1000, 500
     )
@@ -251,7 +251,7 @@ def test_validate_boxes_accepts_page_boundaries():
 )
 def test_validate_boxes_rejects_invalid_geometry(boxes, bad_index):
     placed = [
-        layout_module.PlacedToken(f"token-{index}", (0, 0, 1, 1))
+        layout_module.PlacedWord(f"token-{index}", (0, 0, 1, 1))
         for index in range(len(boxes))
     ]
     with pytest.raises(

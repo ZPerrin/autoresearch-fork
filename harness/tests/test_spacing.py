@@ -47,11 +47,11 @@ def test_row_gap_increases_row_pitch():
     _tokens_spaced, cells_spaced, _regions2 = placed(
         fork(dc, layout=replace(dc.layout, row_gap=30)), seed=1)
 
-    # Only data cells with a single token line (not wrapped multi-token rows) for
+    # Only data cells with a single word line (not wrapped multi-word rows) for
     # a clean inter-row pitch comparison.
     def row_ys(cells):
         data = cells_where(cells, role="data")
-        # exclude wrapped cells (multiple vertical positions among token_ids)
+        # exclude wrapped cells (multiple vertical positions among word_ids)
         # for simplicity use cell bbox[1] (top of data row) deduped
         return sorted({round(c.bbox[1], 1) for c in data})
 
@@ -92,7 +92,7 @@ def test_content_aware_columns_prevent_overflow():
     col_cells = _content_sized_cells(cells)
     for c in col_cells:
         cx0, _cy0, cx1, _cy1 = c.bbox
-        for i in c.token_ids:
+        for i in c.word_ids:
             b = boxes[i]
             assert b[0] >= cx0 - 1 and b[2] <= cx1 + 1, (p_tokens[i].text, c.bbox, b)
 
@@ -108,13 +108,13 @@ def test_eob_rich_columns_fit_at_template_width_with_header():
         col_cells = _content_sized_cells(cells)
         for c in col_cells:
             cx0, _cy0, cx1, _cy1 = c.bbox
-            for i in c.token_ids:
+            for i in c.word_ids:
                 b = boxes[i]
                 assert b[0] >= cx0 - 1 and b[2] <= cx1 + 1, (p_tokens[i].text, c.bbox, b)
 
 
 def test_fill_below_one_leaves_cells_empty():
-    # A field with fill=0.0 is never populated, so it emits data cells with no token_ids.
+    # A field with fill=0.0 is never populated, so it emits data cells with no word_ids.
     sparse = DocumentClass(name="t", tables=(
         TableSpec(name="x", fields=(
             FieldSpec("a", "amount", "right", fill=0.0),
@@ -124,12 +124,12 @@ def test_fill_below_one_leaves_cells_empty():
     _tokens, cells, _regions = placed(sparse, seed=0)
     a_cells = cells_where(cells, role="data", field="a")
     b_cells = cells_where(cells, role="data", field="b")
-    # fill=0.0 column: all cells are empty (no token_ids)
+    # fill=0.0 column: all cells are empty (no word_ids)
     assert a_cells  # cells exist but are empty (sparse)
-    assert all(len(c.token_ids) == 0 for c in a_cells)
+    assert all(len(c.word_ids) == 0 for c in a_cells)
     # fill=1.0 column: all cells are populated
     assert len(b_cells) == 3
-    assert all(len(c.token_ids) > 0 for c in b_cells)
+    assert all(len(c.word_ids) > 0 for c in b_cells)
 
 
 def _field_overflow_count(dc, seeds):
@@ -141,7 +141,7 @@ def _field_overflow_count(dc, seeds):
         col_cells = _content_sized_cells(cells)
         for c in col_cells:
             cx0, _cy0, cx1, _cy1 = c.bbox
-            for i in c.token_ids:
+            for i in c.word_ids:
                 b = boxes[i]
                 if b[0] < cx0 - 1 or b[2] > cx1 + 1:
                     n += 1
