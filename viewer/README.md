@@ -1,8 +1,8 @@
 # viewer
 
 Local Vite + React + TypeScript review app for the autoresearch harness. Two-pane layout:
-**left** = the document page image with the token-box overlay; **right** = source picker
-(datasets / runs), metadata, and selected-token detail.
+**left** = the document page image with an interactive structure overlay; **right** = source
+picker (datasets / runs), metadata, and selected-element detail.
 
 ## Run
 
@@ -14,8 +14,22 @@ npm run build     # type-check + production build
 
 A Vite dev-server middleware serves the repo-root `runs/` and `datasets/` at `/runs` and
 `/datasets` (JSON + PNG images) — there is **no backend**. The app reads only the static artifact
-contract (schema v2): `runs/index.json`, `runs/<id>/{run,samples}.json`, and
+contract (schema v4): `runs/index.json`, `runs/<id>/{run,samples}.json`, and
 `datasets/<id>/{manifest,samples}.json` + `images/`.
 
-Box coloring: teal = prediction matches label, red = mismatch, neutral = ground truth (no
-prediction). See `../AGENTS.md` for conventions and `../docs/specs/` for the design.
+## Overlay
+
+The overlay is a set of mutually-exclusive **view modes** (one lens at a time), tier-colored
+(primary green / alt blue / tertiary purple) and switched from the top sub-nav:
+
+- **Words** — every word box.
+- **Composed** — header / section / summary cells, drawn as their member word boxes.
+- **Cells** — full cell outlines.
+- **Key/Val** — key & value cells.
+- **Regions** — table / form container bounds.
+
+Click any box to select it (neon-pink); the right pane shows full detail for the selected
+word / cell / region. Hold **Alt** while hovering to read normalized `[0,1]` coordinates; pan by
+drag and zoom at the pointer (see the in-app **Controls** popover for the full list).
+
+See `../AGENTS.md` for conventions and `../docs/specs/` for the design.

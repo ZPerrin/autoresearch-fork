@@ -17,10 +17,10 @@ spatial-only upward.
 ## Layout
 
 - `harness/` — Python module: dataset builder, model, training, artifacts (`src/tablelab/`)
-- `viewer/` — Vite/React review app (overlays predictions on the page image)
+- `viewer/` — Vite/React review app (overlays document structure on the page image)
 - `runs/` — git-tracked experiment ledger (JSON only, no binaries)
 - `datasets/` — curated synthetic datasets (images + samples), **local & gitignored**
-- `docs/` — specs and plans
+- `docs/` — specs, plans, exploratory design specs, and the charter
 - `reference/` — upstream LM files (karpathy/autoresearch) parked for reference
 
 ## What we're building
@@ -28,12 +28,15 @@ spatial-only upward.
 Authoritative design & roadmap:
 [docs/specs/2026-06-13-design-and-roadmap.md](docs/specs/2026-06-13-design-and-roadmap.md).
 
-The harness is in place — env, contract v2, multimodal dataset builder, split-pane viewer. The
-**active milestone is the synthetic data toolkit**: its backbone is built — a compositional API
-(`FieldSpec`/`LayoutSpec`/`StructureSpec`/`RenderSpec`/`DocumentClass`) and a `build`/`list`/
-`inspect` CLI to declare document classes and curate/fork datasets. Next we climb **structural
-realism** (multi-token cells first), then document-class breadth, before the model loop. Specs
-live in `docs/specs/`; each milestone gets its own.
+The harness is in place — env, the schema-v4 contract (Region/Cell/Word), the multimodal dataset
+builder, and the split-pane viewer. The **active milestone is the synthetic data toolkit**: its
+backbone — a compositional API (`FieldSpec`/`LayoutSpec`/`StructureSpec`/`RenderSpec`/`DocumentClass`)
+and a `build`/`list`/`inspect` CLI to declare document classes and curate/fork datasets — and
+**structural realism** (atomic words, headers, multi-table/globals, realistic spacing + jitter,
+sparse cells, spanning cells + grouped headers, section/TOTALS rows) are both done. Next is
+**document-class breadth** (invoice/receipt variants, purchase order, bank statement, key-value
+form); visual realism stays deferred. The model loop comes after. Specs live in `docs/specs/`; each
+milestone gets its own.
 
 ## How to work in this repo
 
@@ -50,11 +53,11 @@ just need to train and evaluate.
 
 ## Status
 
-Harness built: env ✓, contract v2 ✓, multimodal dataset builder ✓, split-pane viewer ✓,
-synth-toolkit backbone ✓ (compositional API + `build`/`list`/`inspect` CLI). **Active: the
-synthetic data toolkit** — next is structural realism (multi-token cells → … → spanning cells) →
-document-class breadth; visual realism deferred. The model loop comes after. Upstream LM files
-(`train.py`, `prepare.py`, `program.md`) are parked in `reference/`.
+Harness built: env ✓, schema-v4 contract ✓ (Region/Cell/Word), multimodal dataset builder ✓,
+split-pane viewer ✓, synth-toolkit backbone ✓ (compositional API + `build`/`list`/`inspect` CLI),
+structural realism ✓. **Active: the synthetic data toolkit** — next is document-class breadth;
+visual realism deferred. The model loop comes after. Upstream LM files (`train.py`, `prepare.py`,
+`program.md`) are parked in `reference/`.
 
 ## License
 
