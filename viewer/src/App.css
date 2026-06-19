@@ -353,12 +353,34 @@
 }
 
 .doc-overlay rect {
+  pointer-events: none;
+}
+
+.doc-overlay .ov-hit {
   pointer-events: all;
   cursor: pointer;
 }
 
-.doc-viewport.is-panning .doc-overlay rect {
+.doc-viewport.is-panning .doc-overlay .ov-hit {
   cursor: grabbing;
+}
+
+.coord-hud {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  z-index: 6;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(20, 24, 28, 0.82);
+  color: #f1f5f9;
+  font: 0.78rem ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.coord-hud.hidden {
+  display: none;
 }
 
 /* ---- Viewer toolbar ---- */
@@ -421,6 +443,28 @@
   min-width: 36px;
 }
 
+.overlay-toggles {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.overlay-toggles button {
+  min-width: 0;
+  padding-inline: 8px;
+}
+
+.overlay-toggles button.is-active {
+  background: #378ADD;
+  border-color: #2f78c2;
+  color: #fff;
+}
+
+.overlay-toggles button.is-active:hover:not(:disabled) {
+  background: #2f78c2;
+}
+
 .viewer-help {
   position: relative;
   flex-shrink: 0;
@@ -476,6 +520,12 @@
   gap: 5px;
 }
 
+.legend-hint {
+  font-size: 0.79rem;
+  color: #999;
+  font-style: italic;
+}
+
 .legend-swatch {
   display: inline-block;
   width: 13px;
@@ -485,8 +535,6 @@
   border-style: solid;
   flex-shrink: 0;
 }
-
-.swatch-selected { background: rgba(255,180,0,0.28);   border-color: #F59E0B; }
 
 /* ---- Utility ---- */
 .mono {

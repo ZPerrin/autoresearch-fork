@@ -1,10 +1,56 @@
-import type { ActiveSource, LabelValue, Sample } from './types'
+import type { ReactNode } from 'react'
+import type { ActiveSource, Cell, LabelValue, Region, Sample, Selection } from './types'
 
 interface Props {
   source: ActiveSource | null
   task?: string
-  selectedTokenIdx: number | null
+  selection: Selection | null
   sample: Sample | null
+}
+
+function Row({ k, v }: { k: string; v: ReactNode }) {
+  return (
+    <div className="meta-row">
+      <span className="meta-key">{k}</span>
+      <span className="meta-val mono">{v}</span>
+    </div>
+  )
+}
+
+function formatBox(b: [number, number, number, number]): string {
+  return `(${b[0].toFixed(3)}, ${b[1].toFixed(3)}) → (${b[2].toFixed(3)}, ${b[3].toFixed(3)})`
+}
+
+function RegionBody({ region }: { region: Region }) {
+  return (
+    <>
+      <div className="meta-subsection-title">Region</div>
+      <Row k="type" v={region.type} />
+      {region.name != null && <Row k="name" v={region.name} />}
+      <Row k="index" v={region.index} />
+      <Row k="bbox" v={<span style={{ fontSize: '0.78rem' }}>{formatBox(region.bbox)}</span>} />
+    </>
+  )
+}
+
+function CellBody({ cell, sample }: { cell: Cell; sample: Sample }) {
+  const region = sample.regions?.[cell.region_index]
+  const texts = cell.word_ids
+    .map(id => sample.words[id]?.text)
+    .filter((t): t is string => t != null && t !== '')
+  return (
+    <>
+      <div className="meta-subsection-title">Cell</div>
+      <Row k="role" v={cell.role} />
+      {cell.field != null && <Row k="field" v={cell.field} />}
+      <Row k="row" v={cell.row_index} />
+      <Row k="col" v={cell.column_index} />
+      <Row k="span" v={`${cell.span[0]}×${cell.span[1]}`} />
+      <Row k="bbox" v={<span style={{ fontSize: '0.78rem' }}>{formatBox(cell.bbox)}</span>} />
+      {texts.length > 0 && <Row k="words" v={`"${texts.join(' ')}"`} />}
+      {region != null && <RegionBody region={region} />}
+    </>
+  )
 }
 
 const KEY_METRICS = ['exact', 'record_acc', 'field_acc', 'baseline_majority_exact', 'baseline_geosort_exact']
@@ -55,7 +101,7 @@ function Sparkline({ curve }: { curve: { step: number; val_exact: number }[] }) 
   )
 }
 
-export default function MetaPanel({ source, task: _task, selectedTokenIdx, sample }: Props) {
+export default function MetaPanel({ source, task: _task, selection, sample }: Props) {
 
   return (
     <div className="meta-panel">
@@ -237,81 +283,62 @@ export default function MetaPanel({ source, task: _task, selectedTokenIdx, sampl
         </section>
       )}
 
-      {/* Token detail */}
+      {/* Selection detail — word / cell / region */}
       <section className="meta-section token-detail">
-        <div className="meta-section-title">Selected word</div>
-        {selectedTokenIdx == null ? (
-          <p className="empty-note">Click a box in the document to inspect it.</p>
-        ) : (() => {
-          const token = sample?.words[selectedTokenIdx]
-          const cell = sample?.cells.find(c => c.word_ids.includes(selectedTokenIdx))
-          const region = cell != null ? sample?.regions?.[cell.region_index] : undefined
+        {(() => {
+          if (selection == null || sample == null) {
+            return (
+              <>
+                <div className="meta-section-title">Selection</div>
+                <p className="empty-note">Click a box in the document to inspect it.</p>
+              </>
+            )
+          }
+
+          if (selection.kind === 'word') {
+            const token = sample.words[selection.index]
+            const cell = sample.cells.find(c => c.word_ids.includes(selection.index))
+            return (
+              <>
+                <div className="meta-section-title">Selected word</div>
+                {token?.text != null && <Row k="text" v={`"${token.text}"`} />}
+                {token && (
+                  <Row k="coords" v={
+                    <span style={{ fontSize: '0.78rem' }}>
+                      {formatBox([token.x0, token.y0, token.x1, token.y1])}
+                    </span>
+                  } />
+                )}
+                {cell == null
+                  ? <Row k="cell" v="background / non-answer" />
+                  : <CellBody cell={cell} sample={sample} />}
+              </>
+            )
+          }
+
+          if (selection.kind === 'cell') {
+            const cell = sample.cells[selection.index]
+            return (
+              <>
+                <div className="meta-section-title">Selected cell</div>
+                {cell == null
+                  ? <p className="empty-note">Cell not found.</p>
+                  : <CellBody cell={cell} sample={sample} />}
+              </>
+            )
+          }
+
+          const region = sample.regions?.[selection.index]
+          const cellCount = sample.cells.filter(c => c.region_index === selection.index).length
           return (
             <>
-              {token?.text != null && (
-                <div className="meta-row">
-                  <span className="meta-key">text</span>
-                  <span className="meta-val mono">"{token.text}"</span>
-                </div>
-              )}
-              {token && (
-                <div className="meta-row coords-row">
-                  <span className="meta-key">coords</span>
-                  <span className="meta-val mono" style={{ fontSize: '0.78rem' }}>
-                    ({token.x0.toFixed(3)}, {token.y0.toFixed(3)}) →
-                    ({token.x1.toFixed(3)}, {token.y1.toFixed(3)})
-                  </span>
-                </div>
-              )}
-              {cell == null ? (
-                <div className="meta-row">
-                  <span className="meta-key">cell</span>
-                  <span className="meta-val mono">background / non-answer</span>
-                </div>
+              <div className="meta-section-title">Selected region</div>
+              {region == null ? (
+                <p className="empty-note">Region not found.</p>
               ) : (
                 <>
-                  <div className="meta-subsection-title">Cell</div>
-                  <div className="meta-row">
-                    <span className="meta-key">role</span>
-                    <span className="meta-val mono">{cell.role}</span>
-                  </div>
-                  {cell.field != null && (
-                    <div className="meta-row">
-                      <span className="meta-key">field</span>
-                      <span className="meta-val mono">{cell.field}</span>
-                    </div>
-                  )}
-                  <div className="meta-row">
-                    <span className="meta-key">row</span>
-                    <span className="meta-val mono">{cell.row_index}</span>
-                  </div>
-                  <div className="meta-row">
-                    <span className="meta-key">col</span>
-                    <span className="meta-val mono">{cell.column_index}</span>
-                  </div>
-                  <div className="meta-row">
-                    <span className="meta-key">span</span>
-                    <span className="meta-val mono">{cell.span[0]}×{cell.span[1]}</span>
-                  </div>
-                  {region != null && (
-                    <>
-                      <div className="meta-subsection-title">Region</div>
-                      <div className="meta-row">
-                        <span className="meta-key">type</span>
-                        <span className="meta-val mono">{region.type}</span>
-                      </div>
-                      {region.name != null && (
-                        <div className="meta-row">
-                          <span className="meta-key">name</span>
-                          <span className="meta-val mono">{region.name}</span>
-                        </div>
-                      )}
-                      <div className="meta-row">
-                        <span className="meta-key">index</span>
-                        <span className="meta-val mono">{region.index}</span>
-                      </div>
-                    </>
-                  )}
+                  <RegionBody region={region} />
+                  <Row k="cells" v={cellCount} />
                 </>
               )}
             </>

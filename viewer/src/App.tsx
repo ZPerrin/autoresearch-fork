@@ -7,6 +7,7 @@ import type {
   SamplesFile,
   RunDetail,
   ActiveSource,
+  Selection,
 } from './types'
 import SourceSelector from './SourceSelector'
 import DocumentViewer from './DocumentViewer'
@@ -29,8 +30,8 @@ export default function App() {
   const [activeKind, setActiveKind]       = useState<'dataset' | 'run' | null>(null)
   const [activeId, setActiveId]           = useState<string | null>(null)
 
-  // Selected token index
-  const [selectedTokenIdx, setSelectedTokenIdx] = useState<number | null>(null)
+  // Current selection (word / cell / region) in the active sample
+  const [selection, setSelection] = useState<Selection | null>(null)
   // Active sample index (kept in sync with DocumentViewer)
   const [sampleIdx, setSampleIdx] = useState(0)
 
@@ -68,7 +69,7 @@ export default function App() {
     setActiveId(id)
     setSourceLoading(true)
     setSourceError(null)
-    setSelectedTokenIdx(null)
+    setSelection(null)
     setSampleIdx(0)
     setActiveSource(null)
 
@@ -97,7 +98,7 @@ export default function App() {
     setActiveId(id)
     setSourceLoading(true)
     setSourceError(null)
-    setSelectedTokenIdx(null)
+    setSelection(null)
     setSampleIdx(0)
     setActiveSource(null)
 
@@ -147,8 +148,8 @@ export default function App() {
             <DocumentViewer
               samples={samples}
               task={task}
-              selectedTokenIdx={selectedTokenIdx}
-              onSelectToken={setSelectedTokenIdx}
+              selection={selection}
+              onSelect={setSelection}
               onSampleChange={setSampleIdx}
             />
           )}
@@ -171,7 +172,7 @@ export default function App() {
           <MetaPanel
             source={activeSource}
             task={task}
-            selectedTokenIdx={selectedTokenIdx}
+            selection={selection}
             sample={activeSample}
           />
         </div>

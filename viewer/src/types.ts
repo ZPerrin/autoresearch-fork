@@ -49,6 +49,13 @@ export interface SamplesFile {
   samples: Sample[]
 }
 
+// What the viewer currently has selected — a word, a cell, or a region, by index
+// into the active sample's respective array.
+export type Selection =
+  | { kind: 'word'; index: number }
+  | { kind: 'cell'; index: number }
+  | { kind: 'region'; index: number }
+
 // ---- Runs ----
 
 export interface RunSummary {

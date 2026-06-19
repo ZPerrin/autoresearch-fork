@@ -1,28 +1,81 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { Cell, Sample } from './types'
+import type { Sample, Selection } from './types'
 import ViewerHelp from './ViewerHelp'
 
-const COLOR_SELECTED = { fill: 'rgba(255,180,0,0.28)',   stroke: '#F59E0B' }
 const MIN_ZOOM = 0.25
 const MAX_ZOOM = 4
 const ZOOM_STEP = 1.2
 const PAN_DRAG_THRESHOLD = 4
 const PAN_VISIBLE_MARGIN = 48
 
-const ROLE_COLOR: Record<string, { fill: string; stroke: string }> = {
-  data:         { fill: 'rgba(55,138,221,0.10)',  stroke: '#378ADD' },
-  header:       { fill: 'rgba(124,92,196,0.16)',  stroke: '#7C5CC4' },
-  group_header: { fill: 'rgba(124,92,196,0.22)',  stroke: '#5B3FA0' },
-  section:      { fill: 'rgba(217,119,6,0.16)',   stroke: '#D97706' },
-  summary:      { fill: 'rgba(29,158,117,0.16)',  stroke: '#1D9E75' },
-  key:          { fill: 'rgba(100,116,139,0.14)', stroke: '#64748B' },
-  value:        { fill: 'rgba(55,138,221,0.10)',  stroke: '#378ADD' },
-}
-const COLOR_BACKGROUND = { fill: 'rgba(148,163,184,0.08)', stroke: '#94A3B8' }
+// One mode is shown at a time (mutually exclusive lenses), so colors are a small
+// reused tier set rather than a unique hue per role: within a mode the first
+// category is primary, the next alt, the next tertiary.
+const TIER = { primary: '#16A34A', alt: '#2563EB', tertiary: '#9333EA' } as const
+const COLOR_SELECTED = '#FF1493'   // neon pink — bespoke selected-word indication
 
-function tokenColors(role: string | undefined, selected: boolean) {
-  if (selected) return COLOR_SELECTED
-  return role ? (ROLE_COLOR[role] ?? COLOR_BACKGROUND) : COLOR_BACKGROUND
+type ViewMode = 'none' | 'words' | 'composed' | 'cells' | 'keyvalue' | 'regions'
+
+const MODES: [ViewMode, string][] = [
+  ['none', 'Off'],
+  ['words', 'Words'],
+  ['composed', 'Composed'],
+  ['cells', 'Cells'],
+  ['keyvalue', 'Key/Val'],
+  ['regions', 'Regions'],
+]
+
+// Per-mode legend, also the source of truth for which roles a mode draws.
+const LEGEND: Record<ViewMode, [string, string][]> = {
+  none: [],
+  words: [['word', TIER.primary]],
+  composed: [['header', TIER.primary], ['section', TIER.alt], ['summary', TIER.tertiary]],
+  cells: [['cell', TIER.primary]],
+  keyvalue: [['key', TIER.primary], ['value', TIER.alt]],
+  regions: [['region', TIER.primary]],
+}
+
+// Tier color for a cell's role in the "composed" lens, or null if not shown there.
+function composedColor(role: string): string | null {
+  if (role === 'header' || role === 'group_header') return TIER.primary
+  if (role === 'section') return TIER.alt
+  if (role === 'summary') return TIER.tertiary
+  return null
+}
+
+// Tier color for a cell's role in the "key/value" lens, or null if not shown there.
+function keyValueColor(role: string): string | null {
+  if (role === 'key') return TIER.primary
+  if (role === 'value') return TIER.alt
+  return null
+}
+
+// A single thin overlay box from a normalized [x0,y0,x1,y1] bbox. Interactive
+// boxes capture clicks via the `ov-hit` class; `fillTint` adds the pink wash used
+// for a selected word.
+function OverlayBox({ bbox, pw, ph, color, width, dashed = false, fillTint = false, onClick }: {
+  bbox: [number, number, number, number]; pw: number; ph: number;
+  color: string; width: number; dashed?: boolean; fillTint?: boolean; onClick?: () => void
+}) {
+  return (
+    <rect
+      x={bbox[0] * pw}
+      y={bbox[1] * ph}
+      width={(bbox[2] - bbox[0]) * pw}
+      height={(bbox[3] - bbox[1]) * ph}
+      fill={fillTint ? 'rgba(255,20,147,0.14)' : 'none'}
+      stroke={color}
+      strokeWidth={width}
+      strokeDasharray={dashed ? '8 6' : undefined}
+      rx={2}
+      className={onClick ? 'ov-hit' : undefined}
+      onClick={onClick}
+    />
+  )
+}
+
+function sameSelection(a: Selection | null, b: Selection | null): boolean {
+  return a != null && b != null && a.kind === b.kind && a.index === b.index
 }
 
 function clampZoom(zoom: number): number {
@@ -36,19 +89,21 @@ function distanceSquared(x: number, y: number): number {
 interface Props {
   samples: Sample[]
   task?: string
-  selectedTokenIdx: number | null
-  onSelectToken: (idx: number | null) => void
+  selection: Selection | null
+  onSelect: (selection: Selection | null) => void
   onSampleChange?: (idx: number) => void
 }
 
-export default function DocumentViewer({ samples, task: _task, selectedTokenIdx, onSelectToken, onSampleChange }: Props) {
+export default function DocumentViewer({ samples, task: _task, selection, onSelect, onSampleChange }: Props) {
   const [sampleIdx, setSampleIdx] = useState(0)
   const [imgError, setImgError] = useState(false)
   const viewportRef = useRef<HTMLDivElement>(null)
+  const hudRef = useRef<HTMLDivElement>(null)
   const [fitScale, setFitScale] = useState(1)
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
+  const [mode, setMode] = useState<ViewMode>('none')
   const zoomRef = useRef(1)
   const panRef = useRef({ x: 0, y: 0 })
   const dragRef = useRef<{
@@ -134,8 +189,8 @@ export default function DocumentViewer({ samples, task: _task, selectedTokenIdx,
       onSampleChange?.(next)
       return next
     })
-    onSelectToken(null)
-  }, [onSelectToken, onSampleChange])
+    onSelect(null)
+  }, [onSelect, onSampleChange])
 
   const nextSample = useCallback(() => {
     setSampleIdx(index => {
@@ -143,8 +198,8 @@ export default function DocumentViewer({ samples, task: _task, selectedTokenIdx,
       onSampleChange?.(next)
       return next
     })
-    onSelectToken(null)
-  }, [onSelectToken, onSampleChange, samples.length])
+    onSelect(null)
+  }, [onSelect, onSampleChange, samples.length])
 
   useLayoutEffect(() => {
     const viewport = viewportRef.current
@@ -192,6 +247,52 @@ export default function DocumentViewer({ samples, task: _task, selectedTokenIdx,
     viewport.addEventListener('wheel', handleWheel, { passive: false })
     return () => viewport.removeEventListener('wheel', handleWheel)
   }, [setZoomAround])
+
+  useEffect(() => {
+    const viewport = viewportRef.current
+    if (viewport == null) return
+
+    const surfaceRect = () =>
+      viewport.querySelector('.doc-surface')?.getBoundingClientRect()
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const hud = hudRef.current
+      const rect = surfaceRect()
+      if (hud == null || rect == null || rect.width <= 0 || rect.height <= 0) return
+      const nx = (event.clientX - rect.left) / rect.width
+      const ny = (event.clientY - rect.top) / rect.height
+      if (nx < 0 || nx > 1 || ny < 0 || ny > 1) {
+        hud.classList.add('hidden')   // pointer off the page
+        return
+      }
+      hud.classList.remove('hidden')
+      hud.textContent = `${nx.toFixed(3)}, ${ny.toFixed(3)}`
+    }
+
+    const stopTracking = () => {
+      viewport.removeEventListener('pointermove', handlePointerMove)
+      hudRef.current?.classList.add('hidden')
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Alt') return
+      viewport.addEventListener('pointermove', handlePointerMove)
+    }
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (event.key !== 'Alt') return
+      stopTracking()
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+    window.addEventListener('blur', stopTracking)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+      window.removeEventListener('blur', stopTracking)
+      stopTracking()
+    }
+  }, [])
 
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 || !event.isPrimary) return
@@ -247,13 +348,22 @@ export default function DocumentViewer({ samples, task: _task, selectedTokenIdx,
     finishPointerDrag(event)
   }, [finishPointerDrag])
 
-  const handleTokenClick = useCallback((idx: number, selected: boolean) => {
+  const changeMode = useCallback((next: ViewMode) => {
+    setMode(next)
+    onSelect(null)   // a selection from one lens doesn't carry to another
+  }, [onSelect])
+
+  // Click anything to select it. Re-clicking the same word clears it; cells/regions
+  // (which a click may reach via any member word) just stay selected — clear them by
+  // switching mode. A drag (pan) sets suppressClickRef so the trailing click is ignored.
+  const handleSelect = useCallback((next: Selection) => {
     if (suppressClickRef.current) {
       suppressClickRef.current = false
       return
     }
-    onSelectToken(selected ? null : idx)
-  }, [onSelectToken])
+    const toggleOff = next.kind === 'word' && sameSelection(selection, next)
+    onSelect(toggleOff ? null : next)
+  }, [onSelect, selection])
 
   const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement
@@ -292,14 +402,7 @@ export default function DocumentViewer({ samples, task: _task, selectedTokenIdx,
 
   const { words, cells, image } = sample
   const regions = sample.regions ?? []
-
-  // Build word → owning cell map
-  const cellByWord = new Map<number, Cell>()
-  for (const cell of (cells ?? [])) {
-    for (const wordId of cell.word_ids) {
-      cellByWord.set(wordId, cell)
-    }
-  }
+  const allCells = cells ?? []
 
   const showImage = image && !imgError
 
@@ -323,6 +426,19 @@ export default function DocumentViewer({ samples, task: _task, selectedTokenIdx,
           >
             Next →
           </button>
+        </div>
+        <div className="overlay-toggles" role="radiogroup" aria-label="Overlay view mode">
+          {MODES.map(([m, label]) => (
+            <button
+              key={m}
+              className={mode === m ? 'is-active' : ''}
+              role="radio"
+              aria-checked={mode === m}
+              onClick={() => changeMode(m)}
+            >
+              {label}
+            </button>
+          ))}
         </div>
         <div className="zoom-controls" aria-label="Document zoom controls">
           <button
@@ -384,75 +500,86 @@ export default function DocumentViewer({ samples, task: _task, selectedTokenIdx,
             preserveAspectRatio="xMidYMid meet"
             xmlns="http://www.w3.org/2000/svg"
           >
-            {regions.map((rg, i) => (
-              <g key={`region-${i}`}>
-                <rect
-                  x={rg.bbox[0] * width}
-                  y={rg.bbox[1] * height}
-                  width={(rg.bbox[2] - rg.bbox[0]) * width}
-                  height={(rg.bbox[3] - rg.bbox[1]) * height}
-                  fill="none"
-                  stroke="#9333EA"
-                  strokeWidth={2}
-                  strokeDasharray="8 6"
-                  rx={4}
-                  pointerEvents="none"
-                />
-                <text
-                  x={rg.bbox[0] * width + 4}
-                  y={rg.bbox[1] * height - 3}
-                  fontSize={10}
-                  fill="#9333EA"
-                  pointerEvents="none"
-                >
-                  {`${rg.type}:${rg.name ?? ''}#${rg.index}`}
-                </text>
-              </g>
-            ))}
-            {words.map((word, i) => {
-              const sel = i === selectedTokenIdx
-              const role = cellByWord.get(i)?.role
-              const { fill, stroke } = tokenColors(role, sel)
-              const x = word.x0 * width
-              const y = word.y0 * height
-              const w = (word.x1 - word.x0) * width
-              const h = (word.y1 - word.y0) * height
-
+            {/* Regions lens — region container outlines (cell-outline style). */}
+            {mode === 'regions' && regions.map((rg, i) => {
+              const sel = selection?.kind === 'region' && selection.index === i
               return (
-                <g key={i}>
-                  <rect
-                    x={x} y={y} width={w} height={h}
-                    fill={fill}
-                    stroke={stroke}
-                    strokeWidth={sel ? 2.5 : 1.5}
-                    rx={3}
-                    onClick={() => handleTokenClick(i, sel)}
-                  />
-                </g>
+                <OverlayBox key={`region-${i}`} bbox={rg.bbox} pw={width} ph={height}
+                  color={sel ? COLOR_SELECTED : TIER.primary} width={sel ? 2 : 1.5}
+                  dashed onClick={() => handleSelect({ kind: 'region', index: i })} />
+              )
+            })}
+            {/* Cells lens — the only lens that draws full cell outlines. */}
+            {mode === 'cells' && allCells.map((cell, i) => {
+              const sel = selection?.kind === 'cell' && selection.index === i
+              return (
+                <OverlayBox key={`cell-${i}`} bbox={cell.bbox} pw={width} ph={height}
+                  color={sel ? COLOR_SELECTED : TIER.primary} width={sel ? 2 : 1.25}
+                  onClick={() => handleSelect({ kind: 'cell', index: i })} />
+              )
+            })}
+            {/* Composed lens — header/section/summary drawn as their member word
+                boxes (tight, word-level), tier-colored; click selects the cell. */}
+            {mode === 'composed' && allCells.map((cell, ci) => {
+              const color = composedColor(cell.role)
+              if (color == null) return null
+              const sel = selection?.kind === 'cell' && selection.index === ci
+              return cell.word_ids.map(wid => {
+                const w = words[wid]
+                return w == null ? null : (
+                  <OverlayBox key={`composed-${ci}-${wid}`}
+                    bbox={[w.x0, w.y0, w.x1, w.y1]} pw={width} ph={height}
+                    color={sel ? COLOR_SELECTED : color} width={sel ? 2 : 1.25}
+                    onClick={() => handleSelect({ kind: 'cell', index: ci })} />
+                )
+              })
+            })}
+            {/* Key/Value lens — key & value drawn as their member word boxes. */}
+            {mode === 'keyvalue' && allCells.map((cell, ci) => {
+              const color = keyValueColor(cell.role)
+              if (color == null) return null
+              const sel = selection?.kind === 'cell' && selection.index === ci
+              return cell.word_ids.map(wid => {
+                const w = words[wid]
+                return w == null ? null : (
+                  <OverlayBox key={`kv-${ci}-${wid}`}
+                    bbox={[w.x0, w.y0, w.x1, w.y1]} pw={width} ph={height}
+                    color={sel ? COLOR_SELECTED : color} width={sel ? 2 : 1.25}
+                    onClick={() => handleSelect({ kind: 'cell', index: ci })} />
+                )
+              })
+            })}
+            {/* Words lens — every word; selected gets the pink fill. */}
+            {mode === 'words' && words.map((word, i) => {
+              const sel = selection?.kind === 'word' && selection.index === i
+              return (
+                <OverlayBox
+                  key={i}
+                  bbox={[word.x0, word.y0, word.x1, word.y1]}
+                  pw={width} ph={height}
+                  color={sel ? COLOR_SELECTED : TIER.primary}
+                  width={sel ? 2 : 1}
+                  fillTint={sel}
+                  onClick={() => handleSelect({ kind: 'word', index: i })}
+                />
               )
             })}
           </svg>
         </div>
+        <div ref={hudRef} className="coord-hud hidden" aria-hidden="true" />
       </div>
 
-      {/* Legend — derived from ROLE_COLOR + COLOR_BACKGROUND constants above */}
+      {/* Legend — swaps with the active view mode (LEGEND map above) */}
       <div className="legend">
-        {([
-          ['data',         ROLE_COLOR.data],
-          ['header',       ROLE_COLOR.header],
-          ['group header', ROLE_COLOR.group_header],
-          ['section',      ROLE_COLOR.section],
-          ['summary',      ROLE_COLOR.summary],
-          ['key / value',  ROLE_COLOR.key],
-          ['background',   COLOR_BACKGROUND],
-        ] as [string, { fill: string; stroke: string }][]).map(([label, c]) => (
-          <span className="legend-item" key={label}>
-            <span className="legend-swatch" style={{ background: c.fill, border: `1.5px solid ${c.stroke}` }} /> {label}
-          </span>
-        ))}
-        <span className="legend-item">
-          <span className="legend-swatch swatch-selected" /> selected
-        </span>
+        {mode === 'none' ? (
+          <span className="legend-hint">Pick a view mode to overlay structure.</span>
+        ) : (
+          [...LEGEND[mode], ['selected', COLOR_SELECTED] as [string, string]].map(([label, color]) => (
+            <span className="legend-item" key={label}>
+              <span className="legend-swatch" style={{ background: color, borderColor: 'rgba(10,14,22,0.55)' }} /> {label}
+            </span>
+          ))
+        )}
       </div>
     </div>
   )

@@ -8,6 +8,7 @@ const CONTROLS = [
   ['-', 'Zoom out'],
   ['[ / Left', 'Previous sample'],
   ['] / Right', 'Next sample'],
+  ['Alt + hover', 'Show normalized coords'],
 ] as const
 
 export default function ViewerHelp() {
