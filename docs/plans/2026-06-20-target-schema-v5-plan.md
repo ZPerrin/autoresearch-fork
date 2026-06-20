@@ -1,6 +1,6 @@
 ---
 kind: plan
-status: scaffolding
+status: implemented
 updated: 2026-06-20
 ---
 
