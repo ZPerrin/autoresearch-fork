@@ -35,7 +35,7 @@ Deferred-but-unimplemented specs are kept (optionally banner-marked) until actio
 - Frontmatter on every managed doc:
   ```yaml
   ---
-  kind: charter | roadmap | index | conventions | reference | spec | plan | design
+  kind: charter | roadmap | index | conventions | guide | readme | reference | spec | plan | design
   status: living | hardened | superseded | scaffolding | ideation
   updated: YYYY-MM-DD
   ---

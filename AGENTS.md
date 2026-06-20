@@ -1,58 +1,53 @@
+---
+kind: guide
+status: living
+updated: 2026-06-19
+---
+
 # AGENTS.md — operating guide for autoresearch (fork)
 
 How to work in this repo, for agents and humans. (Claude Code loads this via `@AGENTS.md` in
-`CLAUDE.md`; Codex loads it natively.) Keep it lean and current. What this project *is* and *why*:
-[docs/architecture/charter.md](docs/architecture/charter.md). Where it's headed:
-[docs/architecture/roadmap.md](docs/architecture/roadmap.md).
+`CLAUDE.md`; Codex loads it natively.) Keep it lean and current. What this project *is* and *why* →
+[charter](docs/architecture/charter.md). Where it's headed → [roadmap](docs/architecture/roadmap.md).
 
-## Bearings (start here each session)
+## Getting Oriented
 
-Before starting a task, get oriented: read [docs/architecture/index.md](docs/architecture/index.md)
-(the map of what exists) and [docs/architecture/roadmap.md](docs/architecture/roadmap.md) (current
-focus), and skim `git log --oneline -15` for recent activity. Pull deeper docs on demand from the index.
+Before starting a task:
 
-## Layout
+- **Read** [index](docs/architecture/index.md) — the map of what exists; pull deeper docs from it on demand.
+- **Check** [roadmap](docs/architecture/roadmap.md) `## Now` — the current focus.
+- **Skim** `git log --oneline -15` — recent activity (git is the activity log; we keep no written one).
 
-- [`harness/`](harness/) — Python package `src/tablelab/`: dataset builder, model, training, artifact contract.
-  `uv` + device-aware torch + Pillow.
-- `datasets/` — curated synthetic data `<id>/{manifest.json, samples.json, images/}`. **Local & gitignored.**
-- [`runs/`](runs/) — experiment ledger: `index.json` + `<run>/…`. **Git-tracked, binary-free**; references a
-  dataset by `dataset_id`.
-- [`viewer/`](viewer/) — Vite/React split-pane review app (page image + interactive structure overlay). No backend.
-- [`docs/`](docs/) — [`architecture/`](docs/architecture/) (durable core: charter, roadmap, index, conventions), [`design/`](docs/design/) (ideation),
-  [`specs/`](docs/specs/) + [`plans/`](docs/plans/) (transient scaffolding). [`reference/`](reference/) — upstream LM files (parked).
+### Repository Map
+
+- [`harness/`](harness/) — Python package `src/tablelab/`: dataset builder, model, training, contract. `uv` + device-aware torch + Pillow.
+- `datasets/` — curated synthetic data `<id>/{manifest, samples, images}`. **Local & gitignored.**
+- [`runs/`](runs/) — experiment ledger: `index.json` + `<run>/…`. **Git-tracked, binary-free.**
+- [`viewer/`](viewer/) — Vite/React split-pane review app (page image + structure overlay). No backend.
+- [`docs/`](docs/) — [`architecture/`](docs/architecture/) (durable: charter/roadmap/index/conventions), [`design/`](docs/design/) (ideation), [`specs/`](docs/specs/) + [`plans/`](docs/plans/) (scaffolding). [`reference/`](reference/) — parked upstream LM files.
 - [`scripts/`](scripts/) — repo tooling (e.g. [`doc-lint.py`](scripts/doc-lint.py)).
 
-## Commands
+## Agentic Guidelines
 
-Python (run from `harness/`):
-- `cd harness && uv sync` — install (device-aware torch: MPS on Apple silicon, CUDA on NVIDIA, CPU).
+- **From scratch, together.** Favor implementing internals over wiring off-the-shelf models; explain the *why* — this is pedagogy as much as delivery.
+- **Lean.** Small diffs, reviewable changes, tight docs. Brainstorm/design before non-trivial features.
+- **PR-style review.** Propose changes as diffs + a one-line rationale; the human accepts/redirects.
+- **Docs are routing, not a log.** One home per fact; maintain the durable layer with `/wrap` (per-session) and `/refine-docs` (holistic). The system is defined in [conventions](docs/architecture/conventions.md).
+- **Append-only lab notebook.** `master` = infra + current-best (deliberate promotions); `exp/<line>` = one line of inquiry, every run a commit; keep failures as a `status` label, never `git reset`. Run ids `{date}-{device}-{shorthash}`.
+- **Contract is the seam.** `schema_version = 4` in `artifacts.py`; see the Contract entry in [index](docs/architecture/index.md).
+
+## Agentic Validation
+
+**Verify by running — no TDD.** Exercise a change and show the result; don't claim done without it.
+
+Python — from [`harness/`](harness/):
+- `uv sync` — install (device-aware torch: MPS / CUDA / CPU).
 - `uv run python -c "from tablelab.device import get_device; print(get_device())"` — device check.
-- `uv run python -m tablelab.cli build --class <name> --n <count> --out ../datasets/<id>` — build a dataset.
-- `uv run python -m tablelab.cli list` / `inspect <id>` — list local datasets / inspect one.
+- `uv run python -m tablelab.cli build --class <name> --n <count> --out ../datasets/<id>` — build a dataset (smoke-tests the generator).
+- `uv run python -m tablelab.cli list` / `inspect <id>` — list / inspect local datasets.
 
 Viewer:
-- `npm --prefix viewer install`, then `npm --prefix viewer run dev` → http://localhost:5173. Build:
-  `npm --prefix viewer run build`.
+- `npm --prefix viewer install`, then `npm --prefix viewer run dev` → http://localhost:5173. Build: `npm --prefix viewer run build`.
 
-## How we work
-
-- **Docs.** One home per fact, split by volatility. The taxonomy, the design→spec→plan→distill funnel,
-  nomenclature, and the writing ethos live in
-  [docs/architecture/conventions.md](docs/architecture/conventions.md). Git is the activity log — we
-  don't hand-maintain a running log. `/wrap` (per-session) and `/refine-docs` (holistic) keep the
-  durable docs sharp; both stage changes for review, never auto-commit.
-- **Branches & git.** `master` = infra + current-best (deliberate promotions only). `exp/<line>` = one
-  line of inquiry; **every run is a commit** — git is an append-only lab notebook, failures kept as a
-  `status` label, never `git reset` to discard. Run ids: `{date}-{device}-{shorthash}`.
-- **Contract is the seam** (`schema_version = 4`, in `artifacts.py`) — see the Contract entry in
-  [docs/architecture/index.md](docs/architecture/index.md).
-- **No TDD** — implement and verify by running. **PR-style review** — propose changes as diffs + a
-  one-line rationale; the human accepts/redirects. **Lean** — small diffs, reviewable changes, tight docs.
-
-## Collaborator
-
-Zeb: ~15y SAS, 7y applied ML, finishing a UMN CS grad program; going deeper into DL theory/PyTorch.
-Real problem = generalizable table/record extraction from OCR/Textract output (bbox + text). Works
-across an M4 MacBook (MPS) and a Windows 3080 Ti (CUDA). Prefers building from scratch together; values
-clean structure and lean docs.
+Docs:
+- `python3 scripts/doc-lint.py` — link hygiene (broken links + unlinked nav paths). Run before staging doc changes.
