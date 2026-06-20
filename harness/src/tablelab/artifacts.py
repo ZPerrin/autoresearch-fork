@@ -3,7 +3,7 @@ import json
 from dataclasses import dataclass, field as dc_field, asdict
 from pathlib import Path
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 @dataclass
@@ -33,6 +33,21 @@ class Region:
 
 
 @dataclass
+class Field:
+    value: str                             # rendered string (cell's words joined in order); "" if absent
+    word_ids: list[int] = dc_field(default_factory=list)  # grounding tokens; [] if absent
+    cell: int | None = None                # index into Sample.cells; the empty cell if absent
+
+
+@dataclass
+class Node:
+    """A target/prediction subtree: singleton ``fields`` and repeating ``field_groups``
+    (each a list of record Nodes). The document root and every record are both Nodes."""
+    fields: dict[str, Field] = dc_field(default_factory=dict)
+    field_groups: dict[str, list["Node"]] = dc_field(default_factory=dict)
+
+
+@dataclass
 class Sample:
     id: int
     words: list[Word]
@@ -41,6 +56,8 @@ class Sample:
     height: int | None = None
     cells: list[Cell] = dc_field(default_factory=list)
     regions: list[Region] | None = None
+    targets: dict[str, Node] = dc_field(default_factory=dict)
+    predictions: dict[str, Node] = dc_field(default_factory=dict)
 
 
 @dataclass
@@ -90,13 +107,27 @@ def _word_from_dict(d: dict) -> Word:
     return Word(**d)
 
 
+def _field_from_dict(d: dict) -> Field:
+    return Field(value=d["value"], word_ids=d.get("word_ids", []), cell=d.get("cell"))
+
+
+def _node_from_dict(d: dict) -> Node:
+    return Node(
+        fields={k: _field_from_dict(v) for k, v in d.get("fields", {}).items()},
+        field_groups={k: [_node_from_dict(n) for n in v]
+                      for k, v in d.get("field_groups", {}).items()},
+    )
+
+
 def _sample_from_dict(d: dict) -> Sample:
     raw_regions = d.get("regions")
     regions = [Region(**r) for r in raw_regions] if raw_regions is not None else None
     cells = [Cell(**c) for c in d.get("cells", [])]
+    targets = {k: _node_from_dict(v) for k, v in d.get("targets", {}).items()}
+    predictions = {k: _node_from_dict(v) for k, v in d.get("predictions", {}).items()}
     return Sample(id=d["id"], words=[_word_from_dict(w) for w in d["words"]],
                   image=d.get("image"), width=d.get("width"), height=d.get("height"),
-                  cells=cells, regions=regions)
+                  cells=cells, regions=regions, targets=targets, predictions=predictions)
 
 
 def _write_samples(path: Path, samples: list[Sample], extra: dict | None = None) -> None:
