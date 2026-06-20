@@ -69,3 +69,21 @@ def test_invoice_completeness_every_word_in_one_leaf():
             seen.extend(f.word_ids)
     assert sorted(seen) == list(range(len(words)))
     assert len(seen) == len(set(seen))  # exactly once
+
+
+def test_build_dataset_writes_grounded_targets(tmp_path):
+    from tablelab.build import build_dataset
+    from tablelab.artifacts import read_dataset
+    ds = build_dataset(tmp_path, "tg-eob", classlib.get("eob"), seed=7, n=2)
+    manifest, samples = read_dataset(ds)
+    assert manifest.task == "extraction"
+    for s in samples:
+        root = s.targets["extraction"]
+        assert set(root.fields) == {"member_name", "member_id", "provider", "claim_number"}
+        assert root.field_groups["claim_line"]
+        # grounding survives normalize + round-trip
+        for rec in root.field_groups["claim_line"]:
+            for f in rec.fields.values():
+                assert all(0 <= wid < len(s.words) for wid in f.word_ids)
+                assert f.cell is not None and 0 <= f.cell < len(s.cells)
+                assert f.value == " ".join(s.words[i].text for i in f.word_ids)
