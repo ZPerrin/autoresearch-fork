@@ -1,9 +1,14 @@
+---
+kind: charter
+status: living
+updated: 2026-06-19
+---
+
 # Charter — what this project is solving for
 
 > **Canonical and stable.** Unlike `docs/specs/` and `docs/plans/` (dated, transient records of
 > individual features), this document states the durable *why*. Change it rarely and deliberately.
-> Operating mechanics live in `AGENTS.md`; the roadmap lives in
-> `docs/specs/2026-06-13-design-and-roadmap.md`.
+> Operating mechanics live in `AGENTS.md`; the roadmap lives in [roadmap.md](roadmap.md).
 
 ## The goal
 
