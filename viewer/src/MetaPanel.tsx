@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, type ReactNode } from 'react'
 import type { ActiveSource, Cell, LabelValue, Region, Sample, Selection, TargetPath } from './types'
 import { buildDiff, pathEqual, pathKey, type DiffLeaf, type DiffNode, type LeafStatus } from './diff'
 
@@ -179,7 +179,10 @@ function TargetsTree({ node, base, showDiff, selection, onSelect, registerRow }:
 export default function MetaPanel({ source, task: _task, selection, sample, onSelectTarget }: Props) {
 
   const rowRefs = useRef(new Map<string, HTMLDivElement | null>())
-  const registerRow = (key: string, el: HTMLDivElement | null) => { rowRefs.current.set(key, el) }
+  // Stable identity so leaf rows don't re-run their ref callbacks on every parent render.
+  const registerRow = useCallback((key: string, el: HTMLDivElement | null) => {
+    rowRefs.current.set(key, el)
+  }, [])
 
   useEffect(() => {
     if (selection?.kind !== 'target') return
