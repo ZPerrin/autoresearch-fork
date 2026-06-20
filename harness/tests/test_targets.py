@@ -57,8 +57,7 @@ def test_grounding_invariants_eob():
         assert f.cell is not None and 0 <= f.cell < len(cells)
         assert f.value == " ".join(words[i].text for i in f.word_ids)
         assert set(f.word_ids) == set(cells[f.cell].word_ids)
-        if not f.word_ids:
-            assert f.value == ""
+        assert (f.value == "") == (not f.word_ids)
 
 
 def test_invoice_completeness_every_word_in_one_leaf():

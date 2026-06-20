@@ -566,7 +566,6 @@ def layout_with_targets(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
     (instance-ordinal indexed per table name). Every cell emits one Word per
     whitespace word (uniformly); header rows (structure.header) and background words
     (structure.background) apply as before; background words belong to no cell.
-    Returns (words, cells, regions) with cell word_ids resolved after the shuffle.
     Also authors the extraction target as records are placed: dc.globals -> root
     fields; each table -> a field_group of one record per data row (flattened across
     instances). Returns (words, cells, regions, {"extraction": root})."""
