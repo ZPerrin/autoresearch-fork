@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { Sample, Selection } from './types'
+import type { Sample, Selection, TargetPath } from './types'
+import { buildDiff, flattenLeaves, pathEqual, type FlatLeaf, type LeafStatus } from './diff'
 import ViewerHelp from './ViewerHelp'
 
 const MIN_ZOOM = 0.25
@@ -14,7 +15,12 @@ const PAN_VISIBLE_MARGIN = 48
 const TIER = { primary: '#16A34A', alt: '#2563EB', tertiary: '#9333EA' } as const
 const COLOR_SELECTED = '#FF1493'   // neon pink — bespoke selected-word indication
 
-type ViewMode = 'none' | 'words' | 'composed' | 'cells' | 'keyvalue' | 'regions'
+// Diff palette for the targets lens — mirrors MetaPanel's STATUS_COLOR.
+const DIFF_COLOR: Record<LeafStatus, string> = {
+  match: TIER.primary, mismatch: '#DC2626', missing: '#DC2626', spurious: '#D97706',
+}
+
+type ViewMode = 'none' | 'words' | 'composed' | 'cells' | 'keyvalue' | 'regions' | 'targets'
 
 const MODES: [ViewMode, string][] = [
   ['none', 'Off'],
@@ -23,6 +29,7 @@ const MODES: [ViewMode, string][] = [
   ['cells', 'Cells'],
   ['keyvalue', 'Key/Val'],
   ['regions', 'Regions'],
+  ['targets', 'Targets'],
 ]
 
 // Per-mode legend, also the source of truth for which roles a mode draws.
@@ -33,6 +40,7 @@ const LEGEND: Record<ViewMode, [string, string][]> = {
   cells: [['cell', TIER.primary]],
   keyvalue: [['key', TIER.primary], ['value', TIER.alt]],
   regions: [['region', TIER.primary]],
+  targets: [['target', TIER.primary]],
 }
 
 // Tier color for a cell's role in the "composed" lens, or null if not shown there.
@@ -75,7 +83,9 @@ function OverlayBox({ bbox, pw, ph, color, width, dashed = false, fillTint = fal
 }
 
 function sameSelection(a: Selection | null, b: Selection | null): boolean {
-  return a != null && b != null && a.kind === b.kind && a.index === b.index
+  if (a == null || b == null || a.kind !== b.kind) return false
+  if (a.kind === 'target' && b.kind === 'target') return pathEqual(a.path, b.path)
+  return 'index' in a && 'index' in b && a.index === b.index
 }
 
 function clampZoom(zoom: number): number {
@@ -92,9 +102,13 @@ interface Props {
   selection: Selection | null
   onSelect: (selection: Selection | null) => void
   onSampleChange?: (idx: number) => void
+  mode: ViewMode
+  onModeChange: (mode: ViewMode) => void
 }
 
-export default function DocumentViewer({ samples, task: _task, selection, onSelect, onSampleChange }: Props) {
+export default function DocumentViewer({
+  samples, task: _task, selection, onSelect, onSampleChange, mode, onModeChange,
+}: Props) {
   const [sampleIdx, setSampleIdx] = useState(0)
   const [imgError, setImgError] = useState(false)
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -103,7 +117,6 @@ export default function DocumentViewer({ samples, task: _task, selection, onSele
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
-  const [mode, setMode] = useState<ViewMode>('none')
   const zoomRef = useRef(1)
   const panRef = useRef({ x: 0, y: 0 })
   const dragRef = useRef<{
@@ -349,9 +362,8 @@ export default function DocumentViewer({ samples, task: _task, selection, onSele
   }, [finishPointerDrag])
 
   const changeMode = useCallback((next: ViewMode) => {
-    setMode(next)
-    onSelect(null)   // a selection from one lens doesn't carry to another
-  }, [onSelect])
+    onModeChange(next)   // parent owns mode + clears selection on a toolbar switch
+  }, [onModeChange])
 
   // Click anything to select it. Re-clicking the same word clears it; cells/regions
   // (which a click may reach via any member word) just stay selected — clear them by
@@ -404,7 +416,13 @@ export default function DocumentViewer({ samples, task: _task, selection, onSele
   const regions = sample.regions ?? []
   const allCells = cells ?? []
 
+  const { diff, showDiff } = buildDiff(sample)
+  const targetLeaves: FlatLeaf[] = mode === 'targets' ? flattenLeaves(diff) : []
+
   const showImage = image && !imgError
+
+  // Suppress unused variable warning for _task — kept for API compatibility
+  void _task
 
   return (
     <div className="doc-viewer" tabIndex={0} aria-label="Document viewer" onKeyDown={handleKeyDown}>
@@ -564,6 +582,29 @@ export default function DocumentViewer({ samples, task: _task, selection, onSele
                 />
               )
             })}
+            {/* Targets lens — each leaf grounded by its member-word boxes (or a faint
+                placeholder at its empty cell), diff-colored when predictions exist. */}
+            {mode === 'targets' && targetLeaves.map(leaf => {
+              const sel = selection?.kind === 'target' && pathEqual(selection.path, leaf.path)
+              const color = sel ? COLOR_SELECTED : (showDiff ? DIFF_COLOR[leaf.status] : TIER.primary)
+              const key = leaf.path.join('-')
+              const onClick = () => handleSelect({ kind: 'target', path: leaf.path as TargetPath })
+              if (leaf.field.word_ids.length > 0) {
+                return leaf.field.word_ids.map(wid => {
+                  const w = words[wid]
+                  return w == null ? null : (
+                    <OverlayBox key={`tgt-${key}-${wid}`} bbox={[w.x0, w.y0, w.x1, w.y1]}
+                      pw={width} ph={height} color={color} width={sel ? 2 : 1.25} onClick={onClick} />
+                  )
+                })
+              }
+              // absent leaf: faint dashed placeholder at the empty cell, if any
+              const c = leaf.field.cell != null ? allCells[leaf.field.cell] : undefined
+              return c == null ? null : (
+                <OverlayBox key={`tgt-${key}-empty`} bbox={c.bbox} pw={width} ph={height}
+                  color={sel ? COLOR_SELECTED : '#bbb'} width={1} dashed onClick={onClick} />
+              )
+            })}
           </svg>
         </div>
         <div ref={hudRef} className="coord-hud hidden" aria-hidden="true" />
@@ -574,7 +615,10 @@ export default function DocumentViewer({ samples, task: _task, selection, onSele
         {mode === 'none' ? (
           <span className="legend-hint">Pick a view mode to overlay structure.</span>
         ) : (
-          [...LEGEND[mode], ['selected', COLOR_SELECTED] as [string, string]].map(([label, color]) => (
+          (mode === 'targets' && showDiff
+            ? [['match', DIFF_COLOR.match], ['missing/mismatch', DIFF_COLOR.missing], ['spurious', DIFF_COLOR.spurious]] as [string, string][]
+            : [...LEGEND[mode], ['selected', COLOR_SELECTED] as [string, string]]
+          ).map(([label, color]) => (
             <span className="legend-item" key={label}>
               <span className="legend-swatch" style={{ background: color, borderColor: 'rgba(10,14,22,0.55)' }} /> {label}
             </span>
