@@ -1,0 +1,18 @@
+{
+  "schema_version": 5,
+  "run_id": "eob-diff-mock-1",
+  "commit": "0000000",
+  "branch": "",
+  "device": "cpu",
+  "config": {
+    "task": "extraction",
+    "seed": 1,
+    "generator": "mock-run"
+  },
+  "metrics": {},
+  "dataset_id": "eob-diff",
+  "curve": [],
+  "wall_seconds": 0.0,
+  "status": "mock",
+  "description": "mock predictions over eob-diff (seed 1)"
+}

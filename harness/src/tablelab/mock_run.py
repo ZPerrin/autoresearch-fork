@@ -6,7 +6,6 @@ from __future__ import annotations
 import copy
 import random
 from dataclasses import replace
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator
 
@@ -32,9 +31,8 @@ def _all_word_ids(node: Node) -> set[int]:
 
 def swap_grounding(node: Node, rng: random.Random) -> Node:
     """Point one grounded root leaf at a different leaf's word_ids (value/grounding mismatch).
-    Only picks from leaves that are genuinely grounded (non-empty value, not the spurious
-    sentinel "?") so the swap is the sole broken leaf in the perturbed prediction."""
-    keys = [k for k, f in node.fields.items() if f.word_ids and f.value and f.value != "?"]
+    Picks only genuinely grounded leaves so the swap is the sole broken leaf in the prediction."""
+    keys = [k for k, f in node.fields.items() if f.word_ids and f.value]
     others = [list(_all_word_ids(node) - set(node.fields[k].word_ids)) for k in keys]
     candidates = [(k, o) for k, o in zip(keys, others) if o]
     if not candidates:
@@ -57,11 +55,16 @@ def drop_record(node: Node, rng: random.Random) -> Node:
 
 
 def add_spurious_field(node: Node, rng: random.Random) -> Node:
-    """Add a root leaf absent from the target (a spurious field). Uses empty word_ids so it
-    doesn't pollute the grounding pool or the bad-leaf count in tests; its key being absent
-    from the target is what makes the diff mark it spurious."""
+    """Add a root leaf absent from the target (a spurious field). Borrows an existing grounded
+    leaf's value/word_ids/cell so the spurious field stays grounding-valid and draws a real
+    (amber) box in the viewer lens — spec §8 wants every perturbation legible in *both* panes.
+    Its key being absent from the target is what makes the diff mark it spurious."""
+    grounded = [f for f in _leaves(node) if f.word_ids]
+    if not grounded:
+        return node
+    src = grounded[rng.randrange(len(grounded))]
     name = f"_spurious_{rng.randrange(1000)}"
-    node.fields[name] = Field(value="?", word_ids=[], cell=None)
+    node.fields[name] = replace(src, word_ids=list(src.word_ids))
     return node
 
 

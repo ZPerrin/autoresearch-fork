@@ -16,6 +16,16 @@
         "baseline_majority_exact": 0.08,
         "baseline_geosort_exact": 0.86
       }
+    },
+    {
+      "run_id": "eob-diff-mock-1",
+      "commit": "0000000",
+      "branch": "",
+      "device": "cpu",
+      "status": "mock",
+      "description": "mock predictions over eob-diff (seed 1)",
+      "dataset_id": "eob-diff",
+      "metrics": {}
     }
   ]
 }
