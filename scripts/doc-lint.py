@@ -45,6 +45,12 @@ def managed() -> list[pathlib.Path]:
 
 
 def main() -> int:
+    # Windows consoles default to cp1252; force UTF-8 so the ✓ and the em-dashes
+    # in findings print instead of raising UnicodeEncodeError on a clean run.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
     findings: list[str] = []
     for md in managed():
         rel = md.relative_to(ROOT)
