@@ -46,19 +46,25 @@ def test_drop_field_removes_a_leaf_present_in_target():
     assert set(p_rec).issubset(set(t_rec)) and len(p_rec) == len(t_rec) - 1
 
 
-def test_perturb_applies_all_four_and_keeps_grounding(tmp_path):
-    root = _eob_root()
-    words = [w for w in _words_for("eob")]
-    pred = mr.perturb(root, random.Random(0))
-    # exactly one leaf is the deliberately-broken (swapped) one; every *other*
-    # grounded leaf still satisfies value == join(words[word_ids]).
-    bad = 0
-    for leaf in mr._leaves(pred):
-        if not leaf.word_ids:
-            continue
-        if leaf.value != " ".join(words[i].text for i in leaf.word_ids):
-            bad += 1
-    assert bad == 1
+def test_perturb_breaks_exactly_one_real_target_leaf_across_seeds():
+    # The swap must land on a real target leaf, never the spurious injection — otherwise a run
+    # silently loses its `mismatch` case. Sweep seeds because the bad interaction is seed-dependent.
+    target = _eob_root()
+    words = _words_for("eob")
+
+    def grounds_ok(f):
+        return f.value == " ".join(words[i].text for i in f.word_ids)
+
+    for seed in range(50):
+        pred = mr.perturb(target, random.Random(seed))
+        # exactly one grounded leaf is the deliberately-broken (swapped) one
+        bad = [f for f in mr._leaves(pred) if f.word_ids and not grounds_ok(f)]
+        assert len(bad) == 1, f"seed {seed}: expected 1 broken leaf, got {len(bad)}"
+        # and it is a real target root field, not a `_spurious_` injection
+        broken = [k for k, f in pred.fields.items() if f.word_ids and not grounds_ok(f)]
+        assert broken == [b for b in broken if not b.startswith("_spurious_")], \
+            f"seed {seed}: break landed on a spurious field: {broken}"
+        assert len(broken) == 1 and broken[0] in target.fields
 
 
 def _words_for(dc_name, seed=7):

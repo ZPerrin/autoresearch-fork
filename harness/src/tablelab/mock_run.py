@@ -31,8 +31,10 @@ def _all_word_ids(node: Node) -> set[int]:
 
 def swap_grounding(node: Node, rng: random.Random) -> Node:
     """Point one grounded root leaf at a different leaf's word_ids (value/grounding mismatch).
-    Picks only genuinely grounded leaves so the swap is the sole broken leaf in the prediction."""
-    keys = [k for k, f in node.fields.items() if f.word_ids and f.value]
+    Picks only genuinely grounded *target* leaves (never a `_spurious_` injection) so the swap
+    breaks a real leaf and is the sole grounding-invalid leaf in the prediction."""
+    keys = [k for k, f in node.fields.items()
+            if f.word_ids and f.value and not k.startswith("_spurious_")]
     others = [list(_all_word_ids(node) - set(node.fields[k].word_ids)) for k in keys]
     candidates = [(k, o) for k, o in zip(keys, others) if o]
     if not candidates:
@@ -81,12 +83,14 @@ def drop_field(node: Node, rng: random.Random) -> Node:
 
 
 def perturb(node: Node, rng: random.Random) -> Node:
-    """Apply all four perturbations to a deep copy and return it as a prediction Node."""
+    """Apply all four perturbations to a deep copy and return it as a prediction Node. Order
+    matters: the spurious field copies a *valid* leaf before any break exists, and the swap runs
+    last (and skips `_spurious_` keys) so the only grounding-invalid leaf is one real target leaf."""
     pred = copy.deepcopy(node)
-    drop_field(pred, rng)        # missing leaf
-    add_spurious_field(pred, rng)  # spurious leaf
-    drop_record(pred, rng)       # short record list
-    swap_grounding(pred, rng)    # value/grounding mismatch (do last; leaves a verifiable single break)
+    drop_field(pred, rng)          # missing leaf
+    add_spurious_field(pred, rng)  # spurious leaf (copies a still-valid leaf)
+    drop_record(pred, rng)         # short record list
+    swap_grounding(pred, rng)      # value/grounding mismatch — last; never targets the spurious copy
     return pred
 
 
