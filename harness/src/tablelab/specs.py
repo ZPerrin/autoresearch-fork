@@ -57,14 +57,12 @@ class LayoutSpec:
 class StructureSpec:
     """Named home for structural-realism knobs (header row, background words,
     multiple tables, jitter). Each follow-on spec adds fields here.
-    See docs/specs/2026-06-13-synth-toolkit-backbone-design.md.
 
     Cells always emit one Word per whitespace word (the atomic observable); there is
-    no opt-in splitting flag — see docs/specs/2026-06-17-atomic-word-tokens-design.md.
+    no opt-in splitting flag.
 
     header: emit a top header row of field-name words. With FieldSpec.group set, a
-        grouped-header banner band is emitted above the leaf header row
-        (see docs/specs/2026-06-14-spanning-cells-grouped-headers-design.md).
+        grouped-header banner band is emitted above the leaf header row.
     background: scatter N non-table words in the footer band below the table.
 
     Spanning data rows (section/totals) live on TableSpec; grouped-header membership lives
@@ -85,7 +83,7 @@ class JitterSpec:
     """Per-axis random perturbation magnitudes (fractions, 0 = off). Each axis is
     independent so a dataset can isolate one nuisance variable for modeling ablations.
     All bounded/zero-sum: jitter never grows a section's total extent or pushes a token
-    out of its cell (see docs/specs/2026-06-14-realistic-spacing-jitter-design.md)."""
+    out of its cell."""
     row_h: float = 0.0    # per-row height variance, borrowed zero-sum from row_gap budget
     col_w: float = 0.0    # per-column width variance, zero-sum across the row
     offset: float = 0.0   # per-token x/y wobble, bounded inside the cell pad

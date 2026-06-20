@@ -1,10 +1,12 @@
 # Region / Cell / Token schema — nomenclature + structure cleanup — design
 
-- Status: **proposed**. Parent: `docs/specs/2026-06-13-design-and-roadmap.md`. Canonical *why*:
-  `docs/CHARTER.md`.
+- Status: **shipped** — the v4 contract ([artifacts.py](../../harness/src/tablelab/artifacts.py));
+  kept as the contract's design reference (incl. the deferred non-tabular generalization, below).
+  Canonical *why*: [charter.md](../architecture/charter.md); map: [index.md](../architecture/index.md).
 - Date: 2026-06-15
-- Precedes: the **labels / task-projection** milestone (`derive_*` functions, record/global rollup).
-  This spec deliberately fixes the *representation* first so labels land on a clean foundation.
+- Superseded follow-on: the labels layer landed as **materialized targets**, not `derive_*` projections
+  — see the [target-schema spec](2026-06-20-target-schema-design.md). This spec fixed the
+  *representation* first so that layer had a clean foundation.
 
 ## Motivation
 

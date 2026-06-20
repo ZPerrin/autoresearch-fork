@@ -1,8 +1,12 @@
 # v0 — "the loop closes"
 
-> ⚠️ **Predates schema v4.** This spec assumes per-token `label = {record, field}`; the contract has
-> since moved to atomic, label-free words with structure on `Cell`s. Refresh it (derive labels from
-> cells) when the M0 model loop is scheduled. Current state: [../architecture/index.md](../architecture/index.md).
+> ⚠️ **Superseded in part — read for the M0 *shape*, not its contract.** Predates both the v4
+> Region/Cell/Word schema *and* the materialized-target reframe: the target is now **materialized**,
+> not derived (per-token `label = {record, field}` is gone), and the M0 proof now requires geometric
+> variation + invariance, not "beat majority on clean." Live direction:
+> [roadmap.md](../architecture/roadmap.md), [index.md](../architecture/index.md), and the
+> [target-schema spec](2026-06-20-target-schema-design.md). Kept for its still-useful model sketch,
+> geosort baselines, and H1/H2/H3 hypotheses.
 
 - Status: **deferred milestone — the model loop.** Current direction lives in
   [architecture/](../architecture/) (see [roadmap.md](../architecture/roadmap.md) and
