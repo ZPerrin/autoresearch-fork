@@ -4,13 +4,26 @@ status: living
 updated: 2026-06-19
 ---
 
-# AGENTS.md — operating guide for autoresearch (fork)
+# autoresearch (fork) — a from-scratch lab for multimodal document extraction
 
-How to work in this repo, for agents and humans. (Claude Code loads this via `@AGENTS.md` in
-`CLAUDE.md`; Codex loads it natively.) Keep it lean and current. What this project *is* and *why* →
-[charter](docs/architecture/charter.md). Where it's headed → [roadmap](docs/architecture/roadmap.md).
+A learning-first research harness for building, training, and evaluating models that extract
+structured information from documents — words, their bounding boxes, and the page image, the
+modalities you get out of OCR/Textract. The aim is twofold: learn the theory by implementing it
+from scratch, and make headway on generalizable extraction from semi-structured documents
+(EOBs, invoices, receipts). Real labeled data is scarce, so we prove ideas on **synthetic** data
+we curate ourselves.
+
+Forked from karpathy's [autoresearch](https://github.com/karpathy/autoresearch) (a single-GPU
+[nanochat](https://github.com/karpathy/nanochat)). We keep its *machinery* — a single-file model
+and a fast train → evaluate → keep/discard loop against a frozen metric — but repoint it from
+text language modeling onto **multimodal document extraction**: spatial (boxes), semantic (text),
+and visual (page image). The data carries all three; models climb a modality ladder from
+spatial-only upward.
 
 ## Getting Oriented
+
+What this project *is* and *why* →
+[charter](docs/architecture/charter.md). Where it's headed → [roadmap](docs/architecture/roadmap.md).
 
 Before starting a task:
 
