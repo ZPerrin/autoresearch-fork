@@ -8,6 +8,7 @@ import type {
   RunDetail,
   ActiveSource,
   Selection,
+  TargetPath,
 } from './types'
 import SourceSelector from './SourceSelector'
 import DocumentViewer from './DocumentViewer'
@@ -15,6 +16,8 @@ import MetaPanel from './MetaPanel'
 import './App.css'
 
 const DEFAULT_DATASET = 'grid-invoice-v1'
+
+type ViewMode = 'none' | 'words' | 'composed' | 'cells' | 'keyvalue' | 'regions' | 'targets'
 
 export default function App() {
   // Index state
@@ -30,10 +33,12 @@ export default function App() {
   const [activeKind, setActiveKind]       = useState<'dataset' | 'run' | null>(null)
   const [activeId, setActiveId]           = useState<string | null>(null)
 
-  // Current selection (word / cell / region) in the active sample
+  // Current selection (word / cell / region / target) in the active sample
   const [selection, setSelection] = useState<Selection | null>(null)
   // Active sample index (kept in sync with DocumentViewer)
   const [sampleIdx, setSampleIdx] = useState(0)
+  // Overlay mode — owned here so tree clicks can switch to the targets lens
+  const [mode, setMode] = useState<ViewMode>('none')
 
   // Load both indices on mount
   useEffect(() => {
@@ -122,6 +127,16 @@ export default function App() {
       })
   }
 
+  function handleModeChange(next: ViewMode) {
+    setMode(next)
+    setSelection(null)   // a selection from one lens doesn't carry to another
+  }
+
+  function selectTarget(path: TargetPath) {
+    setMode('targets')                       // ensure the leaf's box is visible
+    setSelection({ kind: 'target', path })   // (no clear — this is a cross-pane focus)
+  }
+
   const samples = activeSource?.samples.samples ?? []
   const activeSample = samples[Math.min(sampleIdx, samples.length - 1)] ?? null
   const task = activeSource?.kind === 'run'
@@ -151,6 +166,8 @@ export default function App() {
               selection={selection}
               onSelect={setSelection}
               onSampleChange={setSampleIdx}
+              mode={mode}
+              onModeChange={handleModeChange}
             />
           )}
         </div>
@@ -174,6 +191,7 @@ export default function App() {
             task={task}
             selection={selection}
             sample={activeSample}
+            onSelectTarget={selectTarget}
           />
         </div>
       </div>
