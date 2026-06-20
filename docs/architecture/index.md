@@ -1,7 +1,7 @@
 ---
 kind: index
 status: living
-updated: 2026-06-19
+updated: 2026-06-20
 ---
 
 # Project index
@@ -36,8 +36,10 @@ Vite/React split-pane review app (no backend; dev middleware serves `/runs` + `/
 Code: [viewer/src/](../../viewer/src/).
 
 ## Model loop
-_updated: 2026-06-19_
+_updated: 2026-06-20_
 
-Not started — the earliest milestone (M0, spatial). The training target must be *derived from cells*
-(`(record, field)` per word), not read from per-word labels (which no longer exist); any pre-v4 design
-needs that refresh before M0.
+Not started — the spine's M0 (spatial). The training target is now **materialized** per document, not
+derived: a grounded `fields` / `field_groups` structure (contract v5, designed in the
+[target-schema spec](../specs/2026-06-20-target-schema-design.md)). M0 is a from-scratch, box-only model
+that produces that target and beats the geosort baseline on geometrically-varied data (skew / perspective
+/ aspect), proven by prediction invariance under transform. Sequencing → [roadmap.md](roadmap.md).
