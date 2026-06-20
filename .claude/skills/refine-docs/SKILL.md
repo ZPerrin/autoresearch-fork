@@ -22,8 +22,8 @@ periodically to realign every doc to
    sentence, no fluff.
 6. Apply the brevity gate; verify every surviving line helps a future agent choose a better next
    action. If no durable update is justified, make no edit.
-7. Enforce links — run `python3 scripts/doc-lint.py` and fix what it flags (broken links +
-   navigation-list paths that should be links). Stage changes; do not commit.
+7. Enforce links — run `python3 scripts/doc-lint.py` and fix what it flags (broken or code-styled
+   links + nav-list paths that should be links). Stage changes; do not commit.
 
 ## Output
 

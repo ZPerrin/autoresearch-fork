@@ -20,12 +20,12 @@ Before starting a task:
 
 ### Repository Map
 
-- [`harness/`](harness/) — Python package `src/tablelab/`: dataset builder, model, training, contract. `uv` + device-aware torch + Pillow.
+- [harness/](harness/) — Python package `src/tablelab/`: dataset builder, model, training, contract. `uv` + device-aware torch + Pillow.
 - `datasets/` — curated synthetic data `<id>/{manifest, samples, images}`. **Local & gitignored.**
-- [`runs/`](runs/) — experiment ledger: `index.json` + `<run>/…`. **Git-tracked, binary-free.**
-- [`viewer/`](viewer/) — Vite/React split-pane review app (page image + structure overlay). No backend.
-- [`docs/`](docs/) — [`architecture/`](docs/architecture/) (durable: charter/roadmap/index/conventions), [`design/`](docs/design/) (ideation), [`specs/`](docs/specs/) + [`plans/`](docs/plans/) (scaffolding). [`reference/`](reference/) — parked upstream LM files.
-- [`scripts/`](scripts/) — repo tooling (e.g. [`doc-lint.py`](scripts/doc-lint.py)).
+- [runs/](runs/) — experiment ledger: `index.json` + `<run>/…`. **Git-tracked, binary-free.**
+- [viewer/](viewer/) — Vite/React split-pane review app (page image + structure overlay). No backend.
+- [docs/](docs/) — [architecture/](docs/architecture/) (durable: charter/roadmap/index/conventions), [design/](docs/design/) (ideation), [specs/](docs/specs/) + [plans/](docs/plans/) (scaffolding). [reference/](reference/) — parked upstream LM files.
+- [scripts/](scripts/) — repo tooling (e.g. [doc-lint.py](scripts/doc-lint.py)).
 
 ## Agentic Guidelines
 
@@ -40,7 +40,7 @@ Before starting a task:
 
 **Verify by running — no TDD.** Exercise a change and show the result; don't claim done without it.
 
-Python — from [`harness/`](harness/):
+Python — from [harness/](harness/):
 - `uv sync` — install (device-aware torch: MPS / CUDA / CPU).
 - `uv run python -c "from tablelab.device import get_device; print(get_device())"` — device check.
 - `uv run python -m tablelab.cli build --class <name> --n <count> --out ../datasets/<id>` — build a dataset (smoke-tests the generator).

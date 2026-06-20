@@ -29,12 +29,12 @@ Durable design lives in [docs/architecture/](docs/architecture/): the
 
 The repo at a glance:
 
-- [`harness/`](harness/) — dataset builder, model, training, artifacts (`src/tablelab/`)
-- [`viewer/`](viewer/) — Vite/React review app (overlays document structure on the page image)
-- [`runs/`](runs/) — git-tracked experiment ledger (JSON only, no binaries)
+- [harness/](harness/) — dataset builder, model, training, artifacts (`src/tablelab/`)
+- [viewer/](viewer/) — Vite/React review app (overlays document structure on the page image)
+- [runs/](runs/) — git-tracked experiment ledger (JSON only, no binaries)
 - `datasets/` — curated synthetic datasets (images + samples), **local & gitignored**
-- [`docs/`](docs/) — [`architecture/`](docs/architecture/) (durable), [`design/`](docs/design/) (ideation), [`specs/`](docs/specs/) + [`plans/`](docs/plans/) (scaffolding)
-- [`reference/`](reference/) — upstream LM files (karpathy/autoresearch), parked
+- [docs/](docs/) — [architecture/](docs/architecture/) (durable), [design/](docs/design/) (ideation), [specs/](docs/specs/) + [plans/](docs/plans/) (scaffolding)
+- [reference/](reference/) — upstream LM files (karpathy/autoresearch), parked
 
 ## Runtimes
 
