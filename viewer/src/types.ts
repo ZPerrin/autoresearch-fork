@@ -1,4 +1,4 @@
-// ---- Artifact schema types (mirrors runs/ and datasets/ JSON contract v4) ----
+// ---- Artifact schema types (mirrors runs/ and datasets/ JSON contract v5) ----
 
 // ---- Shared ----
 
@@ -33,6 +33,23 @@ export interface Region {
   bbox: [number, number, number, number]    // normalized [0,1]
 }
 
+// ---- Targets / predictions (contract v5) ----
+
+export interface Field {
+  value: string
+  word_ids: number[]
+  cell: number | null
+}
+
+export interface Node {
+  fields: Record<string, Field>
+  field_groups: Record<string, Node[]>
+}
+
+// A path from the document root to one leaf, e.g.
+// ['field_groups','claim_line',2,'fields','amount_owed'].
+export type TargetPath = (string | number)[]
+
 export interface Sample {
   id: number
   image: string        // URL like /datasets/<id>/images/0.png
@@ -41,6 +58,8 @@ export interface Sample {
   words: Word[]
   cells: Cell[]
   regions?: Region[]
+  targets?: Record<string, Node>
+  predictions?: Record<string, Node>
 }
 
 export interface SamplesFile {
@@ -55,6 +74,7 @@ export type Selection =
   | { kind: 'word'; index: number }
   | { kind: 'cell'; index: number }
   | { kind: 'region'; index: number }
+  | { kind: 'target'; path: TargetPath }
 
 // ---- Runs ----
 
