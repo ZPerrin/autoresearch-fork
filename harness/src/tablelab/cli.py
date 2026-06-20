@@ -7,6 +7,8 @@ from . import classes as classlib
 from .specs import fork, JitterSpec
 from .build import build_dataset
 from .artifacts import read_dataset
+from .mock_run import mock_run as run_mock
+from .artifacts import write_run
 
 
 def _build(args):
@@ -83,6 +85,17 @@ def _inspect(args):
     print(f"page:     {page}")
 
 
+def _mock_run(args):
+    ds = Path(args.dataset_dir) / args.dataset
+    if args.run_id:
+        run_id = args.run_id
+    else:
+        run_id = f"{ds.name}-mock-{args.seed}"
+    record, samples = run_mock(ds, run_id=run_id, seed=args.seed)
+    out = write_run(Path(args.runs_dir), record, samples)
+    print(f"wrote mock run {run_id} ({len(samples)} samples) -> {out}")
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="tablelab.cli")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -122,6 +135,14 @@ def main(argv=None):
     ins.add_argument("id")
     ins.add_argument("--datasets-dir", default="../datasets")
     ins.set_defaults(fn=_inspect)
+
+    mk = sub.add_parser("mock-run", help="inject mock predictions over a dataset into a run")
+    mk.add_argument("--dataset", required=True, help="dataset id under --dataset-dir")
+    mk.add_argument("--dataset-dir", default="../datasets")
+    mk.add_argument("--runs-dir", default="../runs")
+    mk.add_argument("--run-id", default=None, help="run id (default: <dataset>-mock-<seed>)")
+    mk.add_argument("--seed", type=int, default=1)
+    mk.set_defaults(fn=_mock_run)
 
     args = p.parse_args(argv)
     args.fn(args)
