@@ -370,7 +370,151 @@
         "name": "line_item",
         "index": 0
       }
-    ]
+    ],
+    "targets": {
+      "extraction": {
+        "fields": {},
+        "field_groups": {
+          "line_item": [
+            {
+              "fields": {
+                "description": {
+                  "value": "Stapler",
+                  "word_ids": [
+                    11
+                  ],
+                  "cell": 0
+                },
+                "quantity": {
+                  "value": "13",
+                  "word_ids": [
+                    15
+                  ],
+                  "cell": 1
+                },
+                "unit_price": {
+                  "value": "$619.09",
+                  "word_ids": [
+                    7
+                  ],
+                  "cell": 2
+                },
+                "amount": {
+                  "value": "$70.67",
+                  "word_ids": [
+                    17
+                  ],
+                  "cell": 3
+                }
+              },
+              "field_groups": {}
+            },
+            {
+              "fields": {
+                "description": {
+                  "value": "MRI scan",
+                  "word_ids": [
+                    1,
+                    0
+                  ],
+                  "cell": 4
+                },
+                "quantity": {
+                  "value": "4",
+                  "word_ids": [
+                    12
+                  ],
+                  "cell": 5
+                },
+                "unit_price": {
+                  "value": "$348.67",
+                  "word_ids": [
+                    16
+                  ],
+                  "cell": 6
+                },
+                "amount": {
+                  "value": "$56.98",
+                  "word_ids": [
+                    8
+                  ],
+                  "cell": 7
+                }
+              },
+              "field_groups": {}
+            },
+            {
+              "fields": {
+                "description": {
+                  "value": "Blood test",
+                  "word_ids": [
+                    14,
+                    5
+                  ],
+                  "cell": 8
+                },
+                "quantity": {
+                  "value": "7",
+                  "word_ids": [
+                    9
+                  ],
+                  "cell": 9
+                },
+                "unit_price": {
+                  "value": "$37.55",
+                  "word_ids": [
+                    2
+                  ],
+                  "cell": 10
+                },
+                "amount": {
+                  "value": "$413.10",
+                  "word_ids": [
+                    3
+                  ],
+                  "cell": 11
+                }
+              },
+              "field_groups": {}
+            },
+            {
+              "fields": {
+                "description": {
+                  "value": "USB-C cable",
+                  "word_ids": [
+                    13,
+                    4
+                  ],
+                  "cell": 12
+                },
+                "quantity": {
+                  "value": "8",
+                  "word_ids": [
+                    6
+                  ],
+                  "cell": 13
+                },
+                "unit_price": {
+                  "value": "$88.00",
+                  "word_ids": [
+                    10
+                  ],
+                  "cell": 14
+                },
+                "amount": {
+                  "value": "$404.44",
+                  "word_ids": [
+                    18
+                  ],
+                  "cell": 15
+                }
+              },
+              "field_groups": {}
+            }
+          ]
+        }
+      }
+    }
   },
   {
     "words": [
@@ -927,7 +1071,219 @@
         "name": "line_item",
         "index": 0
       }
-    ]
+    ],
+    "targets": {
+      "extraction": {
+        "fields": {},
+        "field_groups": {
+          "line_item": [
+            {
+              "fields": {
+                "description": {
+                  "value": "Monitor stand",
+                  "word_ids": [
+                    13,
+                    11
+                  ],
+                  "cell": 0
+                },
+                "quantity": {
+                  "value": "4",
+                  "word_ids": [
+                    22
+                  ],
+                  "cell": 1
+                },
+                "unit_price": {
+                  "value": "$553.36",
+                  "word_ids": [
+                    21
+                  ],
+                  "cell": 2
+                },
+                "amount": {
+                  "value": "$607.69",
+                  "word_ids": [
+                    16
+                  ],
+                  "cell": 3
+                }
+              },
+              "field_groups": {}
+            },
+            {
+              "fields": {
+                "description": {
+                  "value": "Lab panel",
+                  "word_ids": [
+                    18,
+                    14
+                  ],
+                  "cell": 4
+                },
+                "quantity": {
+                  "value": "4",
+                  "word_ids": [
+                    6
+                  ],
+                  "cell": 5
+                },
+                "unit_price": {
+                  "value": "$521.26",
+                  "word_ids": [
+                    10
+                  ],
+                  "cell": 6
+                },
+                "amount": {
+                  "value": "$61.52",
+                  "word_ids": [
+                    24
+                  ],
+                  "cell": 7
+                }
+              },
+              "field_groups": {}
+            },
+            {
+              "fields": {
+                "description": {
+                  "value": "Desk lamp",
+                  "word_ids": [
+                    27,
+                    1
+                  ],
+                  "cell": 8
+                },
+                "quantity": {
+                  "value": "20",
+                  "word_ids": [
+                    7
+                  ],
+                  "cell": 9
+                },
+                "unit_price": {
+                  "value": "$197.25",
+                  "word_ids": [
+                    19
+                  ],
+                  "cell": 10
+                },
+                "amount": {
+                  "value": "$647.02",
+                  "word_ids": [
+                    25
+                  ],
+                  "cell": 11
+                }
+              },
+              "field_groups": {}
+            },
+            {
+              "fields": {
+                "description": {
+                  "value": "Consultation",
+                  "word_ids": [
+                    15
+                  ],
+                  "cell": 12
+                },
+                "quantity": {
+                  "value": "11",
+                  "word_ids": [
+                    20
+                  ],
+                  "cell": 13
+                },
+                "unit_price": {
+                  "value": "$443.39",
+                  "word_ids": [
+                    12
+                  ],
+                  "cell": 14
+                },
+                "amount": {
+                  "value": "$877.42",
+                  "word_ids": [
+                    8
+                  ],
+                  "cell": 15
+                }
+              },
+              "field_groups": {}
+            },
+            {
+              "fields": {
+                "description": {
+                  "value": "Lab panel",
+                  "word_ids": [
+                    23,
+                    4
+                  ],
+                  "cell": 16
+                },
+                "quantity": {
+                  "value": "10",
+                  "word_ids": [
+                    3
+                  ],
+                  "cell": 17
+                },
+                "unit_price": {
+                  "value": "$237.51",
+                  "word_ids": [
+                    5
+                  ],
+                  "cell": 18
+                },
+                "amount": {
+                  "value": "$172.42",
+                  "word_ids": [
+                    26
+                  ],
+                  "cell": 19
+                }
+              },
+              "field_groups": {}
+            },
+            {
+              "fields": {
+                "description": {
+                  "value": "Ballpoint pens",
+                  "word_ids": [
+                    9,
+                    2
+                  ],
+                  "cell": 20
+                },
+                "quantity": {
+                  "value": "3",
+                  "word_ids": [
+                    0
+                  ],
+                  "cell": 21
+                },
+                "unit_price": {
+                  "value": "$546.55",
+                  "word_ids": [
+                    17
+                  ],
+                  "cell": 22
+                },
+                "amount": {
+                  "value": "$499.89",
+                  "word_ids": [
+                    28
+                  ],
+                  "cell": 23
+                }
+              },
+              "field_groups": {}
+            }
+          ]
+        }
+      }
+    }
   },
   {
     "words": [
@@ -1124,6 +1480,83 @@
         "name": "line_item",
         "index": 0
       }
-    ]
+    ],
+    "targets": {
+      "extraction": {
+        "fields": {},
+        "field_groups": {
+          "line_item": [
+            {
+              "fields": {
+                "description": {
+                  "value": "USB-C cable",
+                  "word_ids": [
+                    4,
+                    2
+                  ],
+                  "cell": 0
+                },
+                "quantity": {
+                  "value": "9",
+                  "word_ids": [
+                    5
+                  ],
+                  "cell": 1
+                },
+                "unit_price": {
+                  "value": "$451.45",
+                  "word_ids": [
+                    3
+                  ],
+                  "cell": 2
+                },
+                "amount": {
+                  "value": "$631.62",
+                  "word_ids": [
+                    8
+                  ],
+                  "cell": 3
+                }
+              },
+              "field_groups": {}
+            },
+            {
+              "fields": {
+                "description": {
+                  "value": "Desk lamp",
+                  "word_ids": [
+                    6,
+                    7
+                  ],
+                  "cell": 4
+                },
+                "quantity": {
+                  "value": "24",
+                  "word_ids": [
+                    9
+                  ],
+                  "cell": 5
+                },
+                "unit_price": {
+                  "value": "$667.01",
+                  "word_ids": [
+                    1
+                  ],
+                  "cell": 6
+                },
+                "amount": {
+                  "value": "$615.48",
+                  "word_ids": [
+                    0
+                  ],
+                  "cell": 7
+                }
+              },
+              "field_groups": {}
+            }
+          ]
+        }
+      }
+    }
   }
 ]
