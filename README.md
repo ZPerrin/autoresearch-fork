@@ -16,12 +16,12 @@ spatial-only upward.
 
 ## Layout
 
-- `harness/` — Python module: dataset builder, model, training, artifacts (`src/tablelab/`)
-- `viewer/` — Vite/React review app (overlays document structure on the page image)
-- `runs/` — git-tracked experiment ledger (JSON only, no binaries)
+- [`harness/`](harness/) — Python module: dataset builder, model, training, artifacts (`src/tablelab/`)
+- [`viewer/`](viewer/) — Vite/React review app (overlays document structure on the page image)
+- [`runs/`](runs/) — git-tracked experiment ledger (JSON only, no binaries)
 - `datasets/` — curated synthetic datasets (images + samples), **local & gitignored**
-- `docs/` — `architecture/` (charter, roadmap, index, conventions), `design/` (ideation), `specs/` + `plans/` (scaffolding)
-- `reference/` — upstream LM files (karpathy/autoresearch) parked for reference
+- [`docs/`](docs/) — [`architecture/`](docs/architecture/) (charter, roadmap, index, conventions), [`design/`](docs/design/) (ideation), [`specs/`](docs/specs/) + [`plans/`](docs/plans/) (scaffolding)
+- [`reference/`](reference/) — upstream LM files (karpathy/autoresearch) parked for reference
 
 ## What we're building
 

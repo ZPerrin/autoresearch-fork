@@ -13,9 +13,9 @@ redefining it.
 ## Taxonomy — one home per fact, split by volatility
 
 - `docs/architecture/` — the durable core, the progressive-disclosure hub.
-  - `charter.md` — the WHY (mission, the bet, non-goals, end-state). Rarely changes.
-  - `roadmap.md` — long-horizon milestones + `## Now`/`## Next`. Changes on milestone events.
-  - `index.md` — README-for-agents: a functional map of what exists, linking to the deep docs.
+  - [`charter.md`](charter.md) — the WHY (mission, the bet, non-goals, end-state). Rarely changes.
+  - [`roadmap.md`](roadmap.md) — long-horizon milestones + `## Now`/`## Next`. Changes on milestone events.
+  - [`index.md`](index.md) — README-for-agents: a functional map of what exists, linking to the deep docs.
   - `conventions.md` — this file.
   - feature docs / diagrams / folders — added only when a result earns its own documentation.
 - `docs/design/` — ideation, not yet actionable. Pruned once it graduates to a spec or ships.
@@ -44,6 +44,9 @@ Deferred-but-unimplemented specs are kept (optionally banner-marked) until actio
 - `index.md` sections carry a `_updated: YYYY-MM-DD_` stamp directly under each heading.
 - `roadmap.md` uses stable headings `## Now`, `## Next`, `## Milestones`.
 - Dates ISO 8601 (`YYYY-MM-DD`). Links relative + wiki-style (resolve in IDEs and GitHub).
+- In navigation/structure lists (`- `path` — …`), a resolving path is a relative link, not a bare
+  code-span. Gitignored paths (e.g. `datasets/`, absent on GitHub) and inline conceptual mentions
+  stay code-spans.
 
 ## Writing ethos
 

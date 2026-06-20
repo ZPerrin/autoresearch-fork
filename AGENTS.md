@@ -13,14 +13,15 @@ focus), and skim `git log --oneline -15` for recent activity. Pull deeper docs o
 
 ## Layout
 
-- `harness/` — Python package `src/tablelab/`: dataset builder, model, training, artifact contract.
+- [`harness/`](harness/) — Python package `src/tablelab/`: dataset builder, model, training, artifact contract.
   `uv` + device-aware torch + Pillow.
 - `datasets/` — curated synthetic data `<id>/{manifest.json, samples.json, images/}`. **Local & gitignored.**
-- `runs/` — experiment ledger: `index.json` + `<run>/…`. **Git-tracked, binary-free**; references a
+- [`runs/`](runs/) — experiment ledger: `index.json` + `<run>/…`. **Git-tracked, binary-free**; references a
   dataset by `dataset_id`.
-- `viewer/` — Vite/React split-pane review app (page image + interactive structure overlay). No backend.
-- `docs/` — `architecture/` (durable core: charter, roadmap, index, conventions), `design/` (ideation),
-  `specs/` + `plans/` (transient scaffolding). `reference/` — upstream LM files (parked).
+- [`viewer/`](viewer/) — Vite/React split-pane review app (page image + interactive structure overlay). No backend.
+- [`docs/`](docs/) — [`architecture/`](docs/architecture/) (durable core: charter, roadmap, index, conventions), [`design/`](docs/design/) (ideation),
+  [`specs/`](docs/specs/) + [`plans/`](docs/plans/) (transient scaffolding). [`reference/`](reference/) — upstream LM files (parked).
+- [`scripts/`](scripts/) — repo tooling (e.g. [`doc-lint.py`](scripts/doc-lint.py)).
 
 ## Commands
 

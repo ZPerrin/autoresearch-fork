@@ -26,8 +26,9 @@ additive, compression as craft, no edit without durable signal. **Stage** change
 4. **Prune.** Delete implemented `docs/specs/` + `docs/plans/` files and any graduated `docs/design/`
    ideation — only after their durable essence is captured above.
 5. **Sync sparingly.** Update `charter.md` / `AGENTS.md` / `README.md` only if a durable fact changed.
-6. **Stage + review.** Enforce relative wiki-style links and verify they resolve; `git add` the doc
-   changes and present the diff. Do not commit — the human reviews and commits.
+6. **Stage + review.** Enforce links — run `python3 scripts/doc-lint.py` and fix what it flags (broken
+   links + navigation-list paths that should be links); `git add` the doc changes and present the diff.
+   Do not commit — the human reviews and commits.
 
 ## Output
 
