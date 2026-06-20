@@ -19,9 +19,12 @@ beating geosort there, not majority on clean.
 
 ## Now
 
-**Targets in the viewer.** The harness now emits v5 targets per document (see the Contract entry in
-[index.md](index.md)); render the grounded `fields` / `field_groups` tree in the review app and overlay
-`predictions` against `targets`. This is the remaining half of the materialized-targets milestone.
+**Targets in the viewer.** Build the
+[viewer targets + prediction-diff spec](../specs/2026-06-20-viewer-targets-diff-spec.md): render the
+grounded `fields` / `field_groups` tree in the right pane, ground each leaf on the page via a new lens,
+and stand up a first-pass (grounding-keyed) prediction diff fed by a `mock-run` generator. The harness
+already emits v5 targets (see the Contract entry in [index.md](index.md)); this is the remaining half of
+the materialized-targets milestone.
 
 ## Next
 
