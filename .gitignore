@@ -30,7 +30,10 @@ datasets/
 
 # IDE / editor / agent tooling
 .idea/
-.claude/
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+!.claude/skills/
 .codex/
 *.iml
 
