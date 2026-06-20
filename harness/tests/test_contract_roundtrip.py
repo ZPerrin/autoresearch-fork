@@ -26,6 +26,12 @@ def test_sample_with_cells_regions_and_targets_roundtrips(tmp_path: Path):
                 "amount": Field(value="$5.00", word_ids=[1], cell=1),
             })
         ]})},
+        predictions={"extraction": Node(field_groups={"line_item": [
+            Node(fields={
+                "description": Field(value="Acme", word_ids=[0], cell=0),
+                "amount": Field(value="$4.99", word_ids=[1], cell=1),
+            })
+        ]})},
     )
     manifest = DatasetManifest(dataset_id="x", generator_version=1, task="extraction",
                                modalities=["spatial"], count=1)
