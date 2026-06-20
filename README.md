@@ -20,23 +20,16 @@ spatial-only upward.
 - `viewer/` — Vite/React review app (overlays document structure on the page image)
 - `runs/` — git-tracked experiment ledger (JSON only, no binaries)
 - `datasets/` — curated synthetic datasets (images + samples), **local & gitignored**
-- `docs/` — specs, plans, exploratory design specs, and the charter
+- `docs/` — `architecture/` (charter, roadmap, index, conventions), `design/` (ideation), `specs/` + `plans/` (scaffolding)
 - `reference/` — upstream LM files (karpathy/autoresearch) parked for reference
 
 ## What we're building
 
-Authoritative design & roadmap:
-[docs/specs/2026-06-13-design-and-roadmap.md](docs/specs/2026-06-13-design-and-roadmap.md).
-
-The harness is in place — env, the schema-v4 contract (Region/Cell/Word), the multimodal dataset
-builder, and the split-pane viewer. The **active milestone is the synthetic data toolkit**: its
-backbone — a compositional API (`FieldSpec`/`LayoutSpec`/`StructureSpec`/`RenderSpec`/`DocumentClass`)
-and a `build`/`list`/`inspect` CLI to declare document classes and curate/fork datasets — and
-**structural realism** (atomic words, headers, multi-table/globals, realistic spacing + jitter,
-sparse cells, spanning cells + grouped headers, section/TOTALS rows) are both done. Next is
-**document-class breadth** (invoice/receipt variants, purchase order, bank statement, key-value
-form); visual realism stays deferred. The model loop comes after. Specs live in `docs/specs/`; each
-milestone gets its own.
+Durable design lives in [docs/architecture/](docs/architecture/): the
+[charter](docs/architecture/charter.md) (why), [roadmap](docs/architecture/roadmap.md) (milestones),
+[index](docs/architecture/index.md) (a map of what exists today), and
+[conventions](docs/architecture/conventions.md) (how the docs work). Start at the **index** for the
+harness — the schema-v4 contract, the synthetic dataset builder, and the viewer.
 
 ## How to work in this repo
 
@@ -50,14 +43,6 @@ branch model, the artifact contract, conventions). In short: git is an append-on
 Runs on both an Apple-silicon Mac (MPS) and an NVIDIA GPU (CUDA) — device-agnostic from line one
 (`cuda` → `mps` → `cpu`). Cross-machine result *comparability* is not a goal yet; both runtimes
 just need to train and evaluate.
-
-## Status
-
-Harness built: env ✓, schema-v4 contract ✓ (Region/Cell/Word), multimodal dataset builder ✓,
-split-pane viewer ✓, synth-toolkit backbone ✓ (compositional API + `build`/`list`/`inspect` CLI),
-structural realism ✓. **Active: the synthetic data toolkit** — next is document-class breadth;
-visual realism deferred. The model loop comes after. Upstream LM files (`train.py`, `prepare.py`,
-`program.md`) are parked in `reference/`.
 
 ## License
 
