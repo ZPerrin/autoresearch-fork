@@ -2,10 +2,10 @@
 
 ## Claude Code notes
 
-- `AGENTS.md` (imported above) is the source of truth for what this project is, its layout,
-  commands, and conventions. Read it first.
-- Authoritative design + roadmap: `docs/specs/2026-06-13-design-and-roadmap.md`. The **active
-  milestone is the synthetic data toolkit**; the ML model loop is deferred.
+- `AGENTS.md` (imported above) is the operating guide — layout, commands, conventions, and the
+  bearings protocol into `docs/architecture/`. Read it first; what the project *is* lives in the charter.
+- Durable direction lives in `docs/architecture/`: the charter (why), roadmap (milestones + now/next),
+  index (what exists today), conventions (how docs work). Get bearings there plus `git log`.
 - Use the available skills (superpowers et al.); brainstorm/design before building non-trivial
   features, and review work (run it) before claiming it's done.
 - Repo-local, portable project memory lives here + in `AGENTS.md`. Auto memory
