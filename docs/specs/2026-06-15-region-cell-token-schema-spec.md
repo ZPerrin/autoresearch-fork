@@ -4,8 +4,8 @@
   kept as the contract's design reference (incl. the deferred non-tabular generalization, below).
   Canonical *why*: [charter.md](../architecture/charter.md); map: [index.md](../architecture/index.md).
 - Date: 2026-06-15
-- Superseded follow-on: the labels layer landed as **materialized targets**, not `derive_*` projections
-  — see the [target-schema spec](2026-06-20-target-schema-spec.md). This spec fixed the
+- Superseded follow-on: the labels layer landed as **materialized targets** (contract v5), not `derive_*`
+  projections — see the Contract entry in [index.md](../architecture/index.md). This spec fixed the
   *representation* first so that layer had a clean foundation.
 
 ## Motivation

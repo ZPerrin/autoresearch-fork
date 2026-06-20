@@ -10,7 +10,7 @@ Long-horizon milestones over a fixed contract; recent activity is in git (`git l
 exists today → [index.md](index.md); the *why* → [charter.md](charter.md).
 
 The invariant: one **target** per document — materialized, grounded `fields` / `field_groups`
-([target-schema spec](../specs/2026-06-20-target-schema-spec.md)); every experiment reproduces or
+(contract v5; see the Contract entry in [index.md](index.md)); every experiment reproduces or
 projects it. Progress is movement along two axes — **modality** (spatial → +semantic → +visual →
 fusion) and **difficulty** (clean → realistic → geometric → visual → real) — and the toolkit's realism
 is the model's **adversary**: it exists to defeat the geosort baseline (sort y→record, x→field), which
@@ -19,8 +19,9 @@ beating geosort there, not majority on clean.
 
 ## Now
 
-**Materialized targets — contract v5.** Build the [target-schema spec](../specs/2026-06-20-target-schema-spec.md):
-emit grounded `fields` / `field_groups` per document; render the target tree in the viewer.
+**Targets in the viewer.** The harness now emits v5 targets per document (see the Contract entry in
+[index.md](index.md)); render the grounded `fields` / `field_groups` tree in the review app and overlay
+`predictions` against `targets`. This is the remaining half of the materialized-targets milestone.
 
 ## Next
 
@@ -33,9 +34,11 @@ The spine — the modality × difficulty progression:
 
 - [x] **Structured-truth generator** — compositional class specs → words + cells / regions; the realism
   dial (jitter, spans, sparse cells, multi-instance, wrapping) is largely built — the adversary is ready.
-- [ ] **Materialized targets — contract v5** — emit the grounded `fields` / `field_groups` target per
-  document; the viewer renders the target tree. *Done when: targets round-trip, every non-background
-  word lands in exactly one target leaf, and the eob target reconstructs its claims.*
+- [x] **Materialized targets — contract v5** — the grounded `fields` / `field_groups` target is authored
+  in the placement loop and emitted per document; observables/structure stay byte-identical (additive
+  seam). *Done: targets round-trip, every leaf grounds to its cell's words, and the eob target
+  reconstructs its claims incl. explicit-empty sparse fields.* Remaining tooling (not a spine rung) — the
+  viewer renders the target tree — is the current [## Now](#now).
 - [ ] **The loop closes — spatial (M0)** — a from-scratch, box-only model produces the structured
   target; static run artifacts; predictions overlaid on the page. *Done when: it beats geosort on
   geometrically-varied data (skew / perspective / aspect, so absolute position is not a sufficient cue),

@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from .specs import DocumentClass
 from .artifacts import Sample, Word, Cell, Region, DatasetManifest, write_dataset
-from .layout import layout_with_regions, validate_layout_capacity
+from .layout import layout_with_targets, validate_layout_capacity
 from .render import render
 
 GENERATOR_VERSION = 2
@@ -181,7 +181,7 @@ def build_dataset(datasets_dir: Path | str, dataset_id: str, doc_class: Document
             (staging_dir / "images").mkdir(parents=True)
             samples: list[Sample] = []
             for i in tqdm(range(n), desc=dataset_id):
-                placed, placed_cells, placed_regions = layout_with_regions(doc_class, rng)
+                placed, placed_cells, placed_regions, targets = layout_with_targets(doc_class, rng)
                 img, boxes = render(placed, doc_class)
                 _validate_boxes(boxes, placed, dataset_id, i, W, H)
                 img.save(staging_dir / "images" / f"{i}.png")
@@ -201,10 +201,10 @@ def build_dataset(datasets_dir: Path | str, dataset_id: str, doc_class: Document
                            for r in placed_regions]
                 samples.append(Sample(id=i, words=words, width=W, height=H,
                                       image=f"/datasets/{dataset_id}/images/{i}.png",
-                                      cells=cells, regions=regions))
+                                      cells=cells, regions=regions, targets=targets))
             manifest = DatasetManifest(
                 dataset_id=dataset_id, generator_version=GENERATOR_VERSION,
-                task="grid_record_field", modalities=["spatial", "semantic", "visual"],
+                task="extraction", modalities=["spatial", "semantic", "visual"],
                 count=n,
                 config={"class": doc_class.name, "seed": seed, "spec": asdict(doc_class)},
                 created=datetime.now(timezone.utc).isoformat(timespec="seconds"))
