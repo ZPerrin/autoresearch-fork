@@ -1,4 +1,3 @@
-/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import * as fs from 'fs'
@@ -78,10 +77,6 @@ function synthesizeDatasetsIndex(datasetsDir: string): { schema_version: number;
 export default defineConfig({
   // Honor the PORT env var (e.g. from preview/launch tooling); default to Vite's 5173.
   server: process.env.PORT ? { port: Number(process.env.PORT) } : undefined,
-  test: {
-    environment: 'node',
-    include: ['src/**/*.test.ts'],
-  },
   plugins: [
     react(),
     {
