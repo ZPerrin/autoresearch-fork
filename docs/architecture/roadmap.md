@@ -10,7 +10,7 @@ Long-horizon milestones over a fixed contract; recent activity is in git (`git l
 exists today → [index.md](index.md); the *why* → [charter.md](charter.md).
 
 The invariant: one **target** per document — materialized, grounded `fields` / `field_groups`
-([target-schema spec](../specs/2026-06-20-target-schema-design.md)); every experiment reproduces or
+([target-schema spec](../specs/2026-06-20-target-schema-spec.md)); every experiment reproduces or
 projects it. Progress is movement along two axes — **modality** (spatial → +semantic → +visual →
 fusion) and **difficulty** (clean → realistic → geometric → visual → real) — and the toolkit's realism
 is the model's **adversary**: it exists to defeat the geosort baseline (sort y→record, x→field), which
@@ -19,11 +19,13 @@ beating geosort there, not majority on clean.
 
 ## Now
 
-_Parked — set when we move from contract to model._
+**Materialized targets — contract v5.** Build the [target-schema spec](../specs/2026-06-20-target-schema-spec.md):
+emit grounded `fields` / `field_groups` per document; render the target tree in the viewer.
 
 ## Next
 
-_See `## Milestones`._
+**The loop closes — spatial (M0).** The from-scratch, box-only model that produces the target and beats
+geosort under geometric variation + invariance.
 
 ## Milestones
 
@@ -42,7 +44,7 @@ The spine — the modality × difficulty progression:
   loop is a clean ablation rig. *Done when: each added modality earns a measurable lift on a regime
   where the prior one plateaus.*
 - [ ] **Difficulty → real** — the remaining hard axes:
-  [visual realism](../design/visual-realism/physicalized-document-capture-design-spec.md) (the renderer
+  [visual realism](../design/visual-realism/physicalized-document-capture-design.md) (the renderer
   seam — fonts, scan noise, capture artifacts), then real Textract data, then transfer. *Done when: a
   synthetic-trained model holds up on real Textract output.*
 

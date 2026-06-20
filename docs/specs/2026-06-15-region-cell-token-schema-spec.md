@@ -5,7 +5,7 @@
   Canonical *why*: [charter.md](../architecture/charter.md); map: [index.md](../architecture/index.md).
 - Date: 2026-06-15
 - Superseded follow-on: the labels layer landed as **materialized targets**, not `derive_*` projections
-  — see the [target-schema spec](2026-06-20-target-schema-design.md). This spec fixed the
+  — see the [target-schema spec](2026-06-20-target-schema-spec.md). This spec fixed the
   *representation* first so that layer had a clean foundation.
 
 ## Motivation

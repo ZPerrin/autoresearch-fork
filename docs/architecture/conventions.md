@@ -25,7 +25,7 @@ redefining it.
 
 ## Lifecycle — the funnel
 
-`design/<idea>.md` → `specs/` + `plans/` → implemented + verified → the durable essence is distilled
+`design/<topic>-design.md` → `specs/…-spec.md` + `plans/…-plan.md` → implemented + verified → the durable essence is distilled
 (from the code, not the spec) into an `index.md` section (plus a hardened doc if it earns one) and, on
 milestone events, `roadmap.md`; the spec/plan is then pruned (git retains it).
 Deferred-but-unimplemented specs are kept (optionally banner-marked) until actioned.
@@ -44,6 +44,9 @@ Deferred-but-unimplemented specs are kept (optionally banner-marked) until actio
 - `index.md` sections carry a `_updated: YYYY-MM-DD_` stamp directly under each heading.
 - `roadmap.md` uses stable headings `## Now`, `## Next`, `## Milestones`.
 - Dates ISO 8601 (`YYYY-MM-DD`). Links relative + wiki-style (resolve in IDEs and GitHub).
+- **Scaffolding filenames** name the stage and mirror the directory: `docs/design/<topic>-design.md`,
+  `docs/specs/YYYY-MM-DD-<topic>-spec.md`, `docs/plans/YYYY-MM-DD-<topic>-plan.md` — specs/plans are
+  date-prefixed, and the suffix matches the `kind:` frontmatter.
 - **Links vs. code-spans.** A reference to a real repo path renders as a **plain relative link**
   (the path is the link text, no surrounding backticks); wrapping link text in a code-span makes it
   render as code, not a link. Reserve backtick code-spans for concepts/classes (`FieldSpec`) and for

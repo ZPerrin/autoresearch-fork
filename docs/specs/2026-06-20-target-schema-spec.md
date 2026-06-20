@@ -9,7 +9,7 @@ updated: 2026-06-20
 - Builds on the **v4** Region/Cell/Word contract ([artifacts.py](../../harness/src/tablelab/artifacts.py)).
   Canonical *why*: [charter.md](../architecture/charter.md); functional map: [index.md](../architecture/index.md).
 - **Fulfills and revises** the "labels / task projections" follow-on the v4 schema spec teed up
-  ([2026-06-15-region-cell-token-schema-design.md](2026-06-15-region-cell-token-schema-design.md), §"Out of scope").
+  ([2026-06-15-region-cell-token-schema-spec.md](2026-06-15-region-cell-token-schema-spec.md), §"Out of scope").
   That plan was `derive_*` projection functions; this spec replaces *derivation* with **materialized
   targets** — §1 says why.
 

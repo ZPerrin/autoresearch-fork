@@ -29,17 +29,18 @@ class exercises the full structural-realism surface. Code:
 [harness/src/tablelab/](../../harness/src/tablelab/).
 
 ## Viewer
-_updated: 2026-06-19_
+_updated: 2026-06-20_
 
-Vite/React split-pane review app (no backend; dev middleware serves `/runs` + `/datasets`): page image
-+ interactive structure-overlay lenses on the left, metadata + selected-element detail on the right.
-Code: [viewer/src/](../../viewer/src/).
+Vite/React split-pane review app (no backend; dev middleware serves `/runs` + `/datasets`). Left: the
+page image under a selectable **overlay lens** — raw / words / cells / regions / key-value / composed —
+with role-colored clickable words, role-outlined cells, and an Alt-hover normalized-coordinate HUD.
+Right: metadata + selected-element detail. Code: [viewer/src/](../../viewer/src/).
 
 ## Model loop
 _updated: 2026-06-20_
 
 Not started — the spine's M0 (spatial). The training target is now **materialized** per document, not
 derived: a grounded `fields` / `field_groups` structure (contract v5, designed in the
-[target-schema spec](../specs/2026-06-20-target-schema-design.md)). M0 is a from-scratch, box-only model
+[target-schema spec](../specs/2026-06-20-target-schema-spec.md)). M0 is a from-scratch, box-only model
 that produces that target and beats the geosort baseline on geometrically-varied data (skew / perspective
 / aspect), proven by prediction invariance under transform. Sequencing → [roadmap.md](roadmap.md).
