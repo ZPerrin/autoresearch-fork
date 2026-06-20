@@ -4,9 +4,10 @@
 > since moved to atomic, label-free words with structure on `Cell`s. Refresh it (derive labels from
 > cells) when the M0 model loop is scheduled. Current state: [../architecture/index.md](../architecture/index.md).
 
-- Status: **deferred milestone — the model loop.** Authoritative current design + roadmap is
-  [design-and-roadmap](2026-06-13-design-and-roadmap.md); the active milestone is the synthetic
-  data toolkit. This spec covers the *model-loop* milestone, to resume once the toolkit matures.
+- Status: **deferred milestone — the model loop.** Current direction lives in
+  [architecture/](../architecture/) (see [roadmap.md](../architecture/roadmap.md) and
+  [index.md](../architecture/index.md)). This spec covers the *model-loop* milestone, to resume once
+  the toolkit matures.
 - Date: 2026-06-13 (revised: multimodal data foundation + dataset/run split)
 - Scope: the model-loop milestone — train a from-scratch model on a dataset and close the loop
 
