@@ -1,5 +1,9 @@
 # v0 — "the loop closes"
 
+> ⚠️ **Predates schema v4.** This spec assumes per-token `label = {record, field}`; the contract has
+> since moved to atomic, label-free words with structure on `Cell`s. Refresh it (derive labels from
+> cells) when the M0 model loop is scheduled. Current state: [../architecture/index.md](../architecture/index.md).
+
 - Status: **deferred milestone — the model loop.** Authoritative current design + roadmap is
   [design-and-roadmap](2026-06-13-design-and-roadmap.md); the active milestone is the synthetic
   data toolkit. This spec covers the *model-loop* milestone, to resume once the toolkit matures.
