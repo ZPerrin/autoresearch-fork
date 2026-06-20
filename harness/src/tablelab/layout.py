@@ -2,7 +2,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field as dc_field, replace
 
-from .artifacts import Cell
+from .artifacts import Cell, Field, Node
 from .fields import sample, background_token, field_weight
 from .jitter import jitter_column_edges, jitter_row_height, jitter_offset
 from .metrics import text_width
@@ -148,6 +148,30 @@ class PlacedRegion:
     name: str | None
     index: int
     bbox: tuple[float, float, float, float]    # page px
+
+
+@dataclass
+class _TargetField:
+    value: str
+    tokens: list[PlacedWord]                    # transient refs; resolved to word_ids on return
+    cell: PlacedCell                            # transient ref; resolved to a cell index on return
+
+
+@dataclass
+class _TargetNode:
+    fields: dict[str, _TargetField] = dc_field(default_factory=dict)
+    field_groups: dict[str, list["_TargetNode"]] = dc_field(default_factory=dict)
+
+
+def _resolve_node(tn: "_TargetNode", index_of: dict, cell_index: dict) -> Node:
+    return Node(
+        fields={k: Field(value=f.value,
+                         word_ids=[index_of[id(t)] for t in f.tokens],
+                         cell=cell_index[id(f.cell)])
+                for k, f in tn.fields.items()},
+        field_groups={k: [_resolve_node(r, index_of, cell_index) for r in recs]
+                      for k, recs in tn.field_groups.items()},
+    )
 
 
 def _header_text(name: str) -> str:
@@ -535,14 +559,17 @@ def validate_layout_capacity(dc: DocumentClass) -> None:
         raise _capacity_error(dc, _available_height(dc), _fixed_height(dc))
 
 
-def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[PlacedWord], list[Cell], list[PlacedRegion]]:
+def layout_with_targets(dc: DocumentClass, rng: random.Random) -> tuple[list[PlacedWord], list[Cell], list[PlacedRegion], dict[str, Node]]:
     """Place one document's words, cells, and typed regions (logical, no Pillow).
     Global/singleton fields (dc.globals) are laid out first as key/value cells in a
     'form' region; then each table instance is drawn and tagged with a 'table' region
     (instance-ordinal indexed per table name). Every cell emits one Word per
     whitespace word (uniformly); header rows (structure.header) and background words
     (structure.background) apply as before; background words belong to no cell.
-    Returns (words, cells, regions) with cell word_ids resolved after the shuffle."""
+    Returns (words, cells, regions) with cell word_ids resolved after the shuffle.
+    Also authors the extraction target as records are placed: dc.globals -> root
+    fields; each table -> a field_group of one record per data row (flattened across
+    instances). Returns (words, cells, regions, {"extraction": root})."""
     dc = _resolve_row_h(dc)
     L = dc.layout
     W, _ = L.page
@@ -554,6 +581,9 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
     cells: list[PlacedCell] = []
     regions: list[PlacedRegion] = []
     y = float(my)
+    root = _TargetNode()
+    for t in dc.tables:                          # explicit-empty groups for tables with 0 instances
+        root.field_groups[t.name] = []
 
     if dc.globals:
         form_index = len(regions)
@@ -574,11 +604,13 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
                                     column_index=2 * col, span=(1, 1), bbox=label_rect,
                                     role="key", field=f.name, tokens=toks))
             value_rect = (px0 + gw, y, px0 + pair_w, y + L.row_h)
-            toks = _emit_words(placed, sample(f.type, rng), value_rect,
-                               "left", dc.render.font_size)
-            cells.append(PlacedCell(region_index=form_index, row_index=i // gpr,
-                                    column_index=2 * col + 1, span=(1, 1), bbox=value_rect,
-                                    role="value", field=f.name, tokens=toks))
+            gval = sample(f.type, rng)
+            toks = _emit_words(placed, gval, value_rect, "left", dc.render.font_size)
+            vcell = PlacedCell(region_index=form_index, row_index=i // gpr,
+                               column_index=2 * col + 1, span=(1, 1), bbox=value_rect,
+                               role="value", field=f.name, tokens=toks)
+            cells.append(vcell)
+            root.fields[f.name] = _TargetField(value=gval, tokens=toks, cell=vcell)
         y += L.row_h
         regions.append(PlacedRegion(type="form", name="globals", index=0,
                                     bbox=(mx, g_y0, W - mx, y)))
@@ -629,6 +661,7 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
                 row_idx += 1
             line_h = _line_h(dc)
             for r in range(rows):
+                record = _TargetNode()
                 row_edges = (jitter_column_edges(edges, J.col_w, rng)
                              if J.col_w > 0 else edges)
                 row_lines = 1
@@ -665,12 +698,15 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
                                 toks.append(tok)
                     elif value:
                         toks = _emit_words(placed, value, cell_bbox, f.align, cell_font)
-                    cells.append(PlacedCell(region_index=region_index, row_index=row_idx,
-                                            column_index=c, span=(1, 1), bbox=cell_bbox,
-                                            role="data", field=f.name, tokens=toks))
+                    dcell = PlacedCell(region_index=region_index, row_index=row_idx,
+                                       column_index=c, span=(1, 1), bbox=cell_bbox,
+                                       role="data", field=f.name, tokens=toks)
+                    cells.append(dcell)
+                    record.fields[f.name] = _TargetField(value=value, tokens=toks, cell=dcell)
                 y += cell_h
                 if r < rows - 1:
                     y += gap_after
+                root.field_groups[table.name].append(record)
                 row_idx += 1
             if table.totals is not None:
                 _emit_span_row(placed, cells, table.totals.cells, edges, y, L.row_h,
@@ -700,6 +736,7 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
 
     rng.shuffle(placed)
     index_of = {id(t): i for i, t in enumerate(placed)}
+    cell_index = {id(c): i for i, c in enumerate(cells)}
     out_cells = [
         Cell(region_index=c.region_index, row_index=c.row_index,
              column_index=c.column_index, span=list(c.span), bbox=list(c.bbox),
@@ -707,9 +744,15 @@ def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[Pla
              word_ids=[index_of[id(t)] for t in c.tokens])
         for c in cells
     ]
-    return placed, out_cells, regions
+    targets = {"extraction": _resolve_node(root, index_of, cell_index)}
+    return placed, out_cells, regions, targets
+
+
+def layout_with_regions(dc: DocumentClass, rng: random.Random) -> tuple[list[PlacedWord], list[Cell], list[PlacedRegion]]:
+    """Words, cells, regions (back-compat; drops targets). See layout_with_targets."""
+    return layout_with_targets(dc, rng)[:3]
 
 
 def layout(dc: DocumentClass, rng: random.Random) -> list[PlacedWord]:
     """Words only (back-compat for render/golden helpers)."""
-    return layout_with_regions(dc, rng)[0]
+    return layout_with_targets(dc, rng)[0]
