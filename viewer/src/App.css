@@ -562,3 +562,21 @@
   font-size: 0.85rem;
   font-style: italic;
 }
+
+/* ---- Targets tree (right pane) ---- */
+.targets-tree { display: flex; flex-direction: column; gap: 2px; }
+.target-leaf {
+  display: flex; align-items: center; gap: 6px; padding: 2px 4px;
+  border-radius: 4px; cursor: pointer; font-size: 0.8rem;
+}
+.target-leaf:hover { background: rgba(10, 14, 22, 0.05); }
+.target-leaf.is-selected { background: rgba(255, 20, 147, 0.14); }
+.target-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+.target-leaf-name { color: #555; flex: 0 0 auto; }
+.target-leaf-value { color: #111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.target-group { margin: 6px 0 2px; }
+.target-group-header { font-size: 0.78rem; color: #333; display: flex; gap: 6px; align-items: baseline; }
+.target-group-count { color: #999; }
+.target-group-delta { font-weight: 600; }
+.target-record { border-left: 2px solid rgba(10, 14, 22, 0.12); margin-left: 4px; padding-left: 8px; margin-top: 4px; }
+.target-record-label { font-size: 0.72rem; color: #aaa; }
