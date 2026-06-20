@@ -38,6 +38,6 @@ Code: [viewer/src/](../../viewer/src/).
 ## Model loop
 _updated: 2026-06-19_
 
-Not started. The v0 design ([specs/2026-06-13-v0-loop-closes-design.md](../specs/2026-06-13-v0-loop-closes-design.md))
-predates schema v4 and needs a refresh — derive `(record, field)` targets from cells rather than
-per-word labels — before M0.
+Not started — the earliest milestone (M0, spatial). The training target must be *derived from cells*
+(`(record, field)` per word), not read from per-word labels (which no longer exist); any pre-v4 design
+needs that refresh before M0.

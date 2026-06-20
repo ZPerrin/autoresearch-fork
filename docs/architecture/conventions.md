@@ -6,8 +6,9 @@ updated: 2026-06-19
 
 # Documentation conventions
 
-How docs work in this repo: the taxonomy, the lifecycle, the nomenclature, and the writing ethos. The
-skills (`/wrap`, `/refine-docs`) and the SessionStart hook reference this file; they do not redefine it.
+How docs work in this repo: the taxonomy, the lifecycle, the nomenclature, and the writing ethos.
+This is the canonical description; the tooling that maintains the docs references it rather than
+redefining it.
 
 ## Taxonomy — one home per fact, split by volatility
 
@@ -18,15 +19,15 @@ skills (`/wrap`, `/refine-docs`) and the SessionStart hook reference this file; 
   - `conventions.md` — this file.
   - feature docs / diagrams / folders — added only when a result earns its own documentation.
 - `docs/design/` — ideation, not yet actionable. Pruned once it graduates to a spec or ships.
-- `docs/specs/`, `docs/plans/` — superpowers-flow scaffolding. Pruned on `/wrap` once implemented.
+- `docs/specs/`, `docs/plans/` — superpowers-flow scaffolding. Pruned once implemented and distilled.
 - `AGENTS.md` — how we work (layout, commands, conventions, bearings protocol). Auto-loaded, portable.
 - Git history — the activity log. We do not hand-maintain a running log anywhere.
 
 ## Lifecycle — the funnel
 
-`design/<idea>.md` → `specs/` + `plans/` → implemented + verified → `/wrap` distills the durable
-essence (written from the code, not the spec) into an `index.md` section (plus a hardened doc if it
-earns one) and, on milestone events, `roadmap.md`. The spec/plan is then pruned; git retains it.
+`design/<idea>.md` → `specs/` + `plans/` → implemented + verified → the durable essence is distilled
+(from the code, not the spec) into an `index.md` section (plus a hardened doc if it earns one) and, on
+milestone events, `roadmap.md`; the spec/plan is then pruned (git retains it).
 Deferred-but-unimplemented specs are kept (optionally banner-marked) until actioned.
 
 ## Nomenclature
