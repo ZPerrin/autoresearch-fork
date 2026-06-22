@@ -7,10 +7,10 @@ updated: 2026-06-20
 # Viewer — target tree + prediction diff — design
 
 - Builds on **contract v5** (the materialized `targets` / `predictions` layer): see the Contract entry
-  in [index.md](../architecture/index.md), source [artifacts.py](../../harness/src/tablelab/artifacts.py).
-- Extends the **viewer** (split-pane review app): index entry in [index.md](../architecture/index.md),
+  in [harness/README.md](../../harness/README.md), source [artifacts.py](../../harness/src/tablelab/artifacts.py).
+- Extends the **viewer** (split-pane review app): overview in [viewer/README.md](../../viewer/README.md),
   code [viewer/src/](../../viewer/src/).
-- Roadmap home: the [## Now](../architecture/roadmap.md) — "Targets in the viewer".
+- Roadmap home: the [## Now](../config/roadmap.md) — "Targets in the viewer".
 
 ## 1. Why / scope
 

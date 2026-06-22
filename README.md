@@ -1,9 +1,3 @@
----
-kind: readme
-status: living
-updated: 2026-06-19
----
-
 # autoresearch (fork) — a from-scratch lab for multimodal document extraction
 
 A learning-first research harness for building, training, and evaluating models that extract
@@ -20,33 +14,43 @@ text language modeling onto **multimodal document extraction**: spatial (boxes),
 and visual (page image). The data carries all three; models climb a modality ladder from
 spatial-only upward.
 
-## What we're building
+## Overview
+_updated: 2026-06-21_
 
-Durable design lives in [docs/architecture/](docs/architecture/): the
-[charter](docs/architecture/charter.md) (why), [roadmap](docs/architecture/roadmap.md) (milestones),
-[index](docs/architecture/index.md) (a map of what exists today), and
-[conventions](docs/architecture/conventions.md) (how the docs work). Start at the **index**.
+The synthetic dataset builder and the materialized v5 contract (grounded `fields` / `field_groups`
+targets per document) are built; the viewer renders the structure and is gaining the target tree +
+prediction diff; the from-scratch model loop is next (spatial M0). Runs device-agnostic on Apple
+silicon (MPS), NVIDIA (CUDA), or CPU. The durable *why* is the [charter](docs/config/charter.md);
+where it's headed is the [roadmap](docs/config/roadmap.md).
 
-The repo at a glance:
+## Module Map
 
-- [harness/](harness/) — dataset builder, model, training, artifacts (`src/tablelab/`)
-- [viewer/](viewer/) — Vite/React review app (overlays document structure on the page image)
-- [runs/](runs/) — git-tracked experiment ledger (JSON only, no binaries)
-- `datasets/` — curated synthetic datasets (images + samples), **local & gitignored**
-- [docs/](docs/) — [architecture/](docs/architecture/) (durable), [design/](docs/design/) (ideation), [specs/](docs/specs/) + [plans/](docs/plans/) (scaffolding)
-- [reference/](reference/) — upstream LM files (karpathy/autoresearch), parked
+- [harness](harness/) - Python package `src/tablelab/`: dataset builder, model, training, the artifact contract. `uv` + device-aware torch.
+- [viewer](viewer/) - Vite/React split-pane review app (page image + structure overlay). No backend.
+- [runs](runs/) - git-tracked experiment ledger (`index.json` + per-run JSON, no binaries).
+- [docs](docs/) - durable design docs + how docs work ([docs/README.md](docs/README.md)).
+- `datasets/` - curated synthetic data `<id>/{manifest, samples, images}`. **Local & gitignored.**
+- [reference](reference/) - parked upstream LM files (karpathy/autoresearch).
 
-## Runtimes
+## Getting Started
 
-Runs on both an Apple-silicon Mac (MPS) and an NVIDIA GPU (CUDA) — device-agnostic from line one
-(`cuda` → `mps` → `cpu`). Cross-machine result *comparability* is not a goal yet; both runtimes just
-need to train and evaluate.
+Each module sets up independently:
 
-## Contributing
+```bash
+# harness (Python) — see harness/README.md
+cd harness && uv sync
 
-Working in the repo? [AGENTS.md](AGENTS.md) is the operating guide — orientation, guidelines, and
-validation routes, for agents and humans.
+# viewer (Node) — see viewer/README.md
+cd viewer && npm install && npm run dev   # http://localhost:5173
+```
 
-## License
+`uv` installs device-aware torch (MPS / CUDA / CPU). Build a first dataset with
+`uv run python -m tablelab.cli build --class eob --n 100 --out ../datasets/eob-demo`, then review it
+in the viewer.
 
-MIT
+## Documentation
+
+- [docs/README.md](docs/README.md) - how docs work in this repo (taxonomy, lifecycle, conventions)
+- [docs/config/charter.md](docs/config/charter.md) - why this project exists and the bet it makes
+- [docs/config/roadmap.md](docs/config/roadmap.md) - milestones and current focus
+- [AGENTS.md](AGENTS.md) - how we work; repo context for coding agents (`CLAUDE.md` symlinks to it)

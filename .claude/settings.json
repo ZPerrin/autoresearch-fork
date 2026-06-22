@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/session-bearings.sh"
+            "command": "python3 .claude/hooks/source-doc-context.py"
           }
         ]
       }

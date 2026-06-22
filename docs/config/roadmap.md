@@ -7,15 +7,16 @@ updated: 2026-06-20
 # Roadmap
 
 Long-horizon milestones over a fixed contract; recent activity is in git (`git log`), not here. What
-exists today → [index.md](index.md); the *why* → [charter.md](charter.md).
+exists today → the module READMEs (root [README.md](../../README.md) `## Module Map`); the *why* →
+[charter.md](charter.md).
 
 The invariant: one **target** per document — materialized, grounded `fields` / `field_groups`
-(contract v5; see the Contract entry in [index.md](index.md)); every experiment reproduces or
-projects it. Progress is movement along two axes — **modality** (spatial → +semantic → +visual →
-fusion) and **difficulty** (clean → realistic → geometric → visual → real) — and the toolkit's realism
-is the model's **adversary**: it exists to defeat the geosort baseline (sort y→record, x→field), which
-survives clean grids and local jitter, so the rung that truly breaks it is **geometric**. The bar is
-beating geosort there, not majority on clean.
+(contract v5; see the Contract entry in [harness/README.md](../../harness/README.md)); every experiment
+reproduces or projects it. Progress is movement along two axes — **modality** (spatial → +semantic →
++visual → fusion) and **difficulty** (clean → realistic → geometric → visual → real) — and the
+toolkit's realism is the model's **adversary**: it exists to defeat the geosort baseline (sort
+y→record, x→field), which survives clean grids and local jitter, so the rung that truly breaks it is
+**geometric**. The bar is beating geosort there, not majority on clean.
 
 ## Now
 
@@ -23,8 +24,8 @@ beating geosort there, not majority on clean.
 [viewer targets + prediction-diff spec](../specs/2026-06-20-viewer-targets-diff-spec.md): render the
 grounded `fields` / `field_groups` tree in the right pane, ground each leaf on the page via a new lens,
 and stand up a first-pass (grounding-keyed) prediction diff fed by a `mock-run` generator. The harness
-already emits v5 targets (see the Contract entry in [index.md](index.md)); this is the remaining half of
-the materialized-targets milestone.
+already emits v5 targets (see the Contract entry in [harness/README.md](../../harness/README.md)); this
+is the remaining half of the materialized-targets milestone.
 
 ## Next
 
