@@ -34,6 +34,7 @@ datasets/
 !.claude/settings.json
 !.claude/hooks/
 !.claude/skills/
+.claude/**/__pycache__/
 .codex/
 *.iml
 
