@@ -1,3 +1,8 @@
+---
+kind: readme
+status: living
+updated: 2026-07-01
+---
 # viewer
 
 Local Vite + React + TypeScript review app for the autoresearch harness. Two-pane layout:
@@ -5,7 +10,6 @@ Local Vite + React + TypeScript review app for the autoresearch harness. Two-pan
 picker (datasets / runs), metadata, and selected-element detail.
 
 ## Overview
-_updated: 2026-06-21_
 
 Split-pane review app, no backend — a Vite dev-server middleware serves the repo-root `runs/` and
 `datasets/` at `/runs` and `/datasets` (JSON + PNG), and the app reads only the static schema-v5

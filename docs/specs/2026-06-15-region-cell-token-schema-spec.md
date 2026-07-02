@@ -1,14 +1,14 @@
 ---
 kind: spec
 status: hardened
-updated: 2026-06-15
+updated: 2026-07-01
 ---
 
 # Region / Cell / Token schema — nomenclature + structure cleanup — design
 
 - Status: **shipped** — the v4 contract ([artifacts.py](../../harness/src/tablelab/artifacts.py));
   kept as the contract's design reference (incl. the deferred non-tabular generalization, below).
-  Canonical *why*: [charter.md](../config/charter.md); map: root [README.md](../../README.md) `## Module Map`.
+  Canonical *why*: root [README.md](../../README.md) `## Overview`; map: its `## Module Map`.
 - Date: 2026-06-15
 - Superseded follow-on: the labels layer landed as **materialized targets** (contract v5), not `derive_*`
   projections — see the Contract entry in [harness/README.md](../../harness/README.md). This spec fixed the

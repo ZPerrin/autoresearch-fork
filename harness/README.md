@@ -1,3 +1,8 @@
+---
+kind: readme
+status: living
+updated: 2026-07-01
+---
 # harness
 
 The Python side of the autoresearch document-extraction harness — the synthetic **dataset builder**,
@@ -5,7 +10,6 @@ the model, the training loop, and the **artifact contract**. Package: `src/table
 managed with `uv`.
 
 ## Overview
-_updated: 2026-06-21_
 
 The dataset builder and the artifact contract are built; the model + training loop are next. A
 compositional spec API — `FieldSpec`/`LayoutSpec`/`StructureSpec`/`RenderSpec`/`JitterSpec`/
@@ -30,7 +34,7 @@ instances), never reconstructed from geometry.
 The **model loop** has not started — it is the spine's M0 (spatial): a from-scratch, box-only model
 that produces the materialized target and beats the geosort baseline on geometrically-varied data
 (skew / perspective / aspect), proven by prediction invariance under transform. Sequencing →
-[roadmap.md](../docs/config/roadmap.md).
+[roadmap.md](../docs/roadmap.md).
 
 ## Setup
 
@@ -98,6 +102,7 @@ Datasets are written to the repo-root `datasets/` (local, gitignored); run artif
 - **The contract is the seam.** `schema_version = 5` in `artifacts.py`; observables stay `bbox` + `text` (+ image), structural/semantic truth lives in the cell/region annotation layer, and targets are additive over both.
 - **Targets are authored, never reconstructed** — the placement loop emits the grounded `fields` / `field_groups` target; do not rebuild it from geometry.
 - **Keep the source representation task-agnostic** — task framings (token classification, NLQ, structure, record extraction) are `derive_*` projections, not baked into the data.
+- **Don't classify value types** (date/dollar/id) — the useful semantic label is the template's **field slot** (`copay`, `total`), not the data type.
 
 **Working guidance:**
 - Use `uv` as the default Python runner (`uv sync`, then `uv run ...`) for commands in this module.

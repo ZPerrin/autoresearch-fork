@@ -1,17 +1,17 @@
 ---
 kind: roadmap
 status: living
-updated: 2026-06-20
+updated: 2026-07-01
 ---
 
 # Roadmap
 
 Long-horizon milestones over a fixed contract; recent activity is in git (`git log`), not here. What
-exists today → the module READMEs (root [README.md](../../README.md) `## Module Map`); the *why* →
-[charter.md](charter.md).
+exists today → the module READMEs (root [README.md](../README.md) `## Module Map`); the *why*
+(mission + the bet) → the root README `## Overview`.
 
 The invariant: one **target** per document — materialized, grounded `fields` / `field_groups`
-(contract v5; see the Contract entry in [harness/README.md](../../harness/README.md)); every experiment
+(contract v5; see the Contract entry in [harness/README.md](../harness/README.md)); every experiment
 reproduces or projects it. Progress is movement along two axes — **modality** (spatial → +semantic →
 +visual → fusion) and **difficulty** (clean → realistic → geometric → visual → real) — and the
 toolkit's realism is the model's **adversary**: it exists to defeat the geosort baseline (sort
@@ -21,10 +21,10 @@ y→record, x→field), which survives clean grids and local jitter, so the rung
 ## Now
 
 **Targets in the viewer.** Build the
-[viewer targets + prediction-diff spec](../specs/2026-06-20-viewer-targets-diff-spec.md): render the
+[viewer targets + prediction-diff spec](specs/2026-06-20-viewer-targets-diff-spec.md): render the
 grounded `fields` / `field_groups` tree in the right pane, ground each leaf on the page via a new lens,
 and stand up a first-pass (grounding-keyed) prediction diff fed by a `mock-run` generator. The harness
-already emits v5 targets (see the Contract entry in [harness/README.md](../../harness/README.md)); this
+already emits v5 targets (see the Contract entry in [harness/README.md](../harness/README.md)); this
 is the remaining half of the materialized-targets milestone.
 
 ## Next
@@ -51,7 +51,7 @@ The spine — the modality × difficulty progression:
   loop is a clean ablation rig. *Done when: each added modality earns a measurable lift on a regime
   where the prior one plateaus.*
 - [ ] **Difficulty → real** — the remaining hard axes:
-  [visual realism](../design/visual-realism/physicalized-document-capture-design.md) (the renderer
+  [visual realism](design/visual-realism/physicalized-document-capture-design.md) (the renderer
   seam — fonts, scan noise, capture artifacts), then real Textract data, then transfer. *Done when: a
   synthetic-trained model holds up on real Textract output.*
 

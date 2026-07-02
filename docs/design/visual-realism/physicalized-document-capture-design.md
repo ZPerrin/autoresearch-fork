@@ -1,3 +1,8 @@
+---
+kind: design
+status: ideation
+updated: 2026-07-01
+---
 # Physicalized document capture — design spec
 
 - **Status:** Deferred / north-star. Captures a direction we agreed on; nothing here is scheduled
@@ -5,7 +10,7 @@
   and tier 1 (below) comes before any of the 3D work.
 - **Date:** 2026-06-18
 - **Idea space:** `visual-realism`
-- **Relates to:** the **Difficulty → real** milestone in `docs/config/roadmap.md` (the
+- **Relates to:** the **Difficulty → real** milestone in `docs/roadmap.md` (the
   `RenderSpec` visual-realism seam), the v4 Region/Cell/Word contract (`harness/src/tablelab/artifacts.py`),
   `JitterSpec` (`harness/src/tablelab/specs.py`).
 

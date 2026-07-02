@@ -1,0 +1,15 @@
+# loom.toml — per-repo harness config. The plugin ships generic code; this drives it.
+# [context] tunes the SessionStart slice; [lint] is the validation vocabulary;
+# [discovery] exclude keeps chosen trees out of the managed set entirely.
+
+[discovery]
+exclude = ["reference"]   # vendored upstream (karpathy autoresearch) docs — not ours to manage
+
+[context]
+recent_commits = 15
+slice_headers = ["## Now", "## Module Map", "## Overview"]  # bearings + maps + per-module state
+inject_fields = ["updated", "kind", "location"]             # frontmatter prefixed to each slice
+
+[lint]
+kinds = ["readme", "reference", "roadmap", "spec", "plan", "design", "review", "loom-config"]
+statuses = ["living", "hardened", "superseded", "scaffolding", "ideation"]

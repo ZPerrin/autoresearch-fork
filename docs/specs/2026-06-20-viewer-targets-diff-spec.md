@@ -1,7 +1,7 @@
 ---
 kind: spec
 status: scaffolding
-updated: 2026-06-20
+updated: 2026-07-01
 ---
 
 # Viewer — target tree + prediction diff — design
@@ -10,7 +10,7 @@ updated: 2026-06-20
   in [harness/README.md](../../harness/README.md), source [artifacts.py](../../harness/src/tablelab/artifacts.py).
 - Extends the **viewer** (split-pane review app): overview in [viewer/README.md](../../viewer/README.md),
   code [viewer/src/](../../viewer/src/).
-- Roadmap home: the [## Now](../config/roadmap.md) — "Targets in the viewer".
+- Roadmap home: the [## Now](../roadmap.md) — "Targets in the viewer".
 
 ## 1. Why / scope
 
